@@ -1,7 +1,9 @@
-DOCKER_COMPOSE=docker compose -f docker-compose.dev.yml
+DOCKER_COMPOSE = docker compose -f docker-compose.dev.yml
 
+# ─── Default ───────────────────────────────────────────────────────────────────
 all: full-up
 
+# ─── Frontend ──────────────────────────────────────────────────────────────────
 front-up:
 	$(DOCKER_COMPOSE) up -d --build frontend
 
@@ -9,14 +11,14 @@ front-stop:
 	$(DOCKER_COMPOSE) stop frontend
 
 front-down:
-	$(DOCKER_COMPOSE) stop frontend
+	$(DOCKER_COMPOSE) rm -sfv frontend
+
+front-re: front-down front-up
 
 front-logs:
 	$(DOCKER_COMPOSE) logs -f frontend
 
-front-re:
-	$(DOCKER_COMPOSE) up -d --build frontend
-
+# ─── Backend ───────────────────────────────────────────────────────────────────
 back-up:
 	$(DOCKER_COMPOSE) up -d --build backend db
 
@@ -24,7 +26,9 @@ back-stop:
 	$(DOCKER_COMPOSE) stop backend db
 
 back-down:
-	$(DOCKER_COMPOSE) stop backend db
+	$(DOCKER_COMPOSE) rm -sf backend db
+
+back-re: back-down back-up
 
 back-logs:
 	$(DOCKER_COMPOSE) logs -f backend db
@@ -41,6 +45,7 @@ back-shell:
 back-test:
 	$(DOCKER_COMPOSE) run --rm backend python manage.py test
 
+# ─── Full stack ────────────────────────────────────────────────────────────────
 full-up:
 	$(DOCKER_COMPOSE) up -d --build
 
@@ -48,14 +53,18 @@ full-stop:
 	$(DOCKER_COMPOSE) stop
 
 full-down:
-	$(DOCKER_COMPOSE) down
+	$(DOCKER_COMPOSE) down --remove-orphans
+
+full-re: full-down full-up
 
 full-logs:
 	$(DOCKER_COMPOSE) logs -f
 
-full-re:
-	$(DOCKER_COMPOSE) up -d --build
+# ─── Limpieza total ────────────────────────────────────────────────────────────
+fclean:
+	$(DOCKER_COMPOSE) down --volumes --rmi all --remove-orphans
 
+# ─── Aliases ───────────────────────────────────────────────────────────────────
 up: back-up
 stop: back-stop
 down: back-down
@@ -71,4 +80,11 @@ dev-down: front-down
 dev-logs: front-logs
 dev-re: front-re
 
-.PHONY: all front-up front-stop front-down front-logs front-re back-up back-stop back-down back-logs back-migrate back-superuser back-shell back-test full-up full-stop full-down full-logs full-re up stop down logs migrate superuser shell test dev-up dev-stop dev-down dev-logs dev-re
+.PHONY: all \
+        front-up front-stop front-down front-re front-logs \
+        back-up back-stop back-down back-re back-logs \
+        back-migrate back-superuser back-shell back-test \
+        full-up full-stop full-down full-re full-logs \
+        fclean \
+        up stop down logs migrate superuser shell test \
+        dev-up dev-stop dev-down dev-re dev-logs
