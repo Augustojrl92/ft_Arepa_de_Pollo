@@ -2,31 +2,39 @@
 
 /* ── Tokens de diseño (generan utilidades Tailwind) ──────────── */
 @theme {
-  --color-text:       var(--text);
-  --color-card:       var(--card);
-  --color-surface:    var(--surface);
-  --color-border:     var(--border);
+  --color-text: var(--text);
+  --color-card: var(--card);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
   --color-card-hover: var(--card-hover);
-  --color-accent:     #00BABC;
+  --color-text-secondary: var(--text-secondary);
+  --color-accent: #00BABC;
+
+  --color-coalition-tiamant: #9FC131;
+  --color-coalition-zefiria: #E39F09;
+  --color-coalition-marventis: #0EA5E9;
+  --color-coalition-ignisaria: #C2301C;
 }
 
 /* ── Tema claro ──────────────────────────────────────────────── */
 html.light {
-  --text:       #171717;
-  --card:       #FCFCFD;
-  --surface:    #F1F2F5;
-  --border:     #F0F0F0;
+  --text: #171717;
+  --card: #FCFCFD;
+  --surface: #F1F2F5;
+  --border: #F0F0F0;
   --card-hover: #E8F6F6;
+  --text-secondary: #475569;
   color-scheme: light;
 }
 
 /* ── Tema oscuro ─────────────────────────────────────────────── */
 html.dark {
-  --text:       #fefefe;
-  --card:       #23272E;
-  --surface:    #1A1D23;
-  --border:     #30363D;
+  --text: #fefefe;
+  --card: #23272E;
+  --surface: #1A1D23;
+  --border: #30363D;
   --card-hover: #2b3442;
+  --text-secondary: #64748B;
   color-scheme: dark;
 }
 
@@ -44,10 +52,63 @@ html.dark {
   transition-property: all;
   transition-timing-function: ease;
   transition-duration: 150ms;
+}
 
-  &:hover,
-  &.active {
+@layer components {
+  .nav-item:hover,
+  .nav-item.active {
     background-color: var(--color-card-hover);
     color: var(--color-accent);
+  }
+}
+
+@utility coalition-level {
+  position: absolute;
+  bottom: -0.8rem;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background-color: var(--color-card);
+  padding-inline: 0.75rem;
+  padding-block: 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+}
+
+@layer components {
+
+  .coalition-badge {
+    display: inline-block;
+    padding: 1px 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+
+    &.tiamant {
+      background-color: color-mix(in srgb, var(--color-coalition-tiamant) 10%, transparent);
+      border-color: color-mix(in srgb, var(--color-coalition-tiamant) 20%, transparent);
+      color: var(--color-coalition-tiamant);
+    }
+
+    &.zefiria {
+      background-color: color-mix(in srgb, var(--color-coalition-zefiria) 10%, transparent);
+      border-color: color-mix(in srgb, var(--color-coalition-zefiria) 20%, transparent);
+      color: var(--color-coalition-zefiria);
+    }
+
+    &.marventis {
+      background-color: color-mix(in srgb, var(--color-coalition-marventis) 10%, transparent);
+      border-color: color-mix(in srgb, var(--color-coalition-marventis) 20%, transparent);
+      color: var(--color-coalition-marventis);
+    }
+
+    &.ignisaria {
+      background-color: color-mix(in srgb, var(--color-coalition-ignisaria) 20%, transparent);
+      border-color: color-mix(in srgb, var(--color-coalition-ignisaria) 20%, transparent);
+      color: var(--color-coalition-ignisaria);
+    }
   }
 }
