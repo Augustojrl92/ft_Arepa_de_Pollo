@@ -1,5 +1,6 @@
 import CardContainer from "@/components/CardContainer"
 import { Coalition } from "@/types"
+import { Crown } from "lucide-react"
 
 const coalitionColor: Record<string, { bgColor: string }> = {
 	tiamant: { bgColor: "bg-coalition-tiamant" },
@@ -14,8 +15,11 @@ export default function TournamentCard({ coalitions }: { coalitions: Coalition[]
 	return (
 		<CardContainer className="relative flex flex-col items-center gap-5 w-full">
 			<div className="flex items-center justify-between w-full">
-				<h2 className="font-bold">Coalition Tournament</h2>
-				<span className="text-xs">Last update: 8 min ago</span>
+				<div className="flex items-center gap-2">
+					<Crown fill="#F59E0B" strokeWidth={0} />
+					<h2 className="font-bold">Coalition Tournament</h2>
+				</div>
+				<span className="text-xs bg-card-hover px-3 py-1 rounded-lg">Last update: 8 min ago</span>
 			</div>
 			<div className="flex flex-col gap-3 w-full">
 				{coalitions.map((coalition, i) => {
@@ -28,7 +32,7 @@ export default function TournamentCard({ coalitions }: { coalitions: Coalition[]
 						<div key={coalition.name} className="flex flex-col items-center gap-2 w-full text-text-secondary">
 							<div className={"w-full flex items-center justify-between " + (maxPoints === coalition.totalPoints ? 'text-text' : '')}>
 								<div className="flex items-center gap-2">
-									<p className={`text-xs font-semibold`}>0{i + 1}</p>
+									<p className={`text-xs font-semibold ${maxPoints === coalition.totalPoints ? 'text-[#F59E0B]' : ''}`}>0{i + 1}</p>
 									<p className={`text-xs font-semibold`}>{coalition.name}</p>
 								</div>
 								<p className={`text-xs font-semibold`}>{coalitionPoints}</p>
