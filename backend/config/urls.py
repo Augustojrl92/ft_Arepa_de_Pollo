@@ -17,6 +17,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
+from .views import server_message
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/message/', server_message, name='server-message'),
 ]
