@@ -1,48 +1,33 @@
-"use client"
+import UserCard from "./_components/UserCard"
+import TournamentCard from "./_components/TournamentCard"
+import CoalitionCard from "./_components/CoalitionCard"
+import { User } from "@/types"
 
-import { useEffect, useState } from "react"
+const mockUser: User = {
+	avatar: 'https://i.pravatar.cc/150?img=51',
+	login: 'fmorenil',
+	coalition: 'tiamant',
+	intraLevel: 8.99,
+	coalitionPoints: 89000,
+	coalitionRank: 42,
+	walletAmount: 1337,
+	evalPoints: 6,
+}
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+const mockCoalitions = [
+	{ name: "Tiamant", totalPoints: 89000 },
+	{ name: "Zefiria", totalPoints: 75000 },
+	{ name: "Marventis", totalPoints: 62000 },
+	{ name: "Ignisaria", totalPoints: 54000 },
+]
 
 export default function Home() {
-	const [message, setMessage] = useState("Cargando respuesta del servidor...")
-	const [hasError, setHasError] = useState(false)
-
-	useEffect(() => {
-		let isMounted = true
-
-		async function loadMessage() {
-			try {
-				const response = await fetch(`${apiUrl}/api/message/`)
-
-				if (!response.ok) {
-					throw new Error(`Request failed with status ${response.status}`)
-				}
-
-				const data: { message?: string } = await response.json()
-
-				if (isMounted) {
-					setMessage(data.message ?? "El servidor no devolvió mensaje")
-				}
-			} catch {
-				if (isMounted) {
-					setHasError(true)
-					setMessage("No se pudo obtener respuesta del servidor")
-				}
-			}
-		}
-
-		void loadMessage()
-
-		return () => {
-			isMounted = false
-		}
-	}, [])
 
 	return (
-		<section className="p-4 space-y-4">
-			<h1 className="text-2xl font-bold">Home</h1>
-			<p className={hasError ? "text-red-600" : "text-inherit"}>{message}</p>
+		<section className="py-5 flex gap-5">
+			<UserCard user={mockUser} />
+			<TournamentCard coalitions={mockCoalitions} />
+			<CoalitionCard user={mockUser} />
 		</section>
 	)
 }
