@@ -1,5 +1,3 @@
-'use client'
-
 import UserCard from "./_components/UserCard"
 import TournamentCard from "./_components/TournamentCard"
 import CoalitionCard from "./_components/CoalitionCard"
