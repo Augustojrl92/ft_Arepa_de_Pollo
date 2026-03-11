@@ -14,7 +14,7 @@ export default function UserCard({ user }: { user: User }) {
 		? `${(user.coalitionPoints / 1000).toFixed(0)}K`
 		: user.coalitionPoints.toLocaleString("en-US")
 	return (
-		<CardContainer className="relative flex items-center gap-8">
+		<CardContainer className="relative flex items-center gap-8 min-w-80 shrink-0">
 			<span className="absolute top-3 right-3 text-6xl text-border font-bold">#{user.coalitionRank}</span>
 			<div className="relative">
 				<img src={user.avatar} alt={user.login} className={`border-4 border-card outline-3 ${outline} w-25 h-25 rounded-full`} />
