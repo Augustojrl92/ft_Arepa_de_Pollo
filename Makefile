@@ -36,6 +36,22 @@ back-logs:
 back-migrate:
 	$(DOCKER_COMPOSE) run --rm backend python manage.py migrate
 
+back-makemigrations:
+	$(DOCKER_COMPOSE) run --rm backend python manage.py makemigrations
+
+back-makemigrations-app:
+	@if [ -z "$(APP)" ]; then echo "Uso: make back-makemigrations-app APP=authentication"; exit 1; fi
+	$(DOCKER_COMPOSE) run --rm backend python manage.py makemigrations $(APP)
+
+back-showmigrations:
+	$(DOCKER_COMPOSE) run --rm backend python manage.py showmigrations
+
+back-showmigrations-app:
+	@if [ -z "$(APP)" ]; then echo "Uso: make back-showmigrations-app APP=authentication"; exit 1; fi
+	$(DOCKER_COMPOSE) run --rm backend python manage.py showmigrations $(APP)
+
+back-syncdb: back-makemigrations back-migrate
+
 back-superuser:
 	$(DOCKER_COMPOSE) run --rm backend python manage.py createsuperuser
 
@@ -70,6 +86,7 @@ stop: back-stop
 down: back-down
 logs: back-logs
 migrate: back-migrate
+makemigrations: back-makemigrations
 superuser: back-superuser
 shell: back-shell
 test: back-test
@@ -83,8 +100,10 @@ dev-re: front-re
 .PHONY: all \
         front-up front-stop front-down front-re front-logs \
         back-up back-stop back-down back-re back-logs \
-        back-migrate back-superuser back-shell back-test \
+		back-migrate back-makemigrations back-makemigrations-app \
+		back-showmigrations back-showmigrations-app back-syncdb \
+		back-superuser back-shell back-test \
         full-up full-stop full-down full-re full-logs \
         fclean \
-        up stop down logs migrate superuser shell test \
+		up stop down logs migrate makemigrations superuser shell test \
         dev-up dev-stop dev-down dev-re dev-logs
