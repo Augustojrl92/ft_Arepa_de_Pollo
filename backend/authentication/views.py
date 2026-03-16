@@ -3,6 +3,7 @@ import secrets
 
 import requests
 from urllib.parse import urlencode
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.shortcuts import redirect
 from rest_framework.views import APIView
@@ -10,7 +11,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 
 from .models import FortyTwoProfile
 
@@ -42,6 +43,40 @@ def _build_42_authorize_url(request):
 	return auth_url, state, None
 
 
+def _cookie_options():
+	return {
+		'httponly': True,
+		'secure': os.getenv('JWT_COOKIE_SECURE', 'False').lower() == 'true',
+		'samesite': os.getenv('JWT_COOKIE_SAMESITE', 'Lax'),
+		'path': '/',
+	}
+
+
+def _set_auth_cookies(response, refresh_token):
+	options = _cookie_options()
+	access_lifetime = int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
+	refresh_lifetime = int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
+
+	response.set_cookie(
+		'access_token',
+		str(refresh_token.access_token),
+		max_age=access_lifetime,
+		**options,
+	)
+	response.set_cookie(
+		'refresh_token',
+		str(refresh_token),
+		max_age=refresh_lifetime,
+		**options,
+	)
+
+
+def _clear_auth_cookies(response):
+	options = _cookie_options()
+	response.delete_cookie('access_token', path=options['path'], samesite=options['samesite'])
+	response.delete_cookie('refresh_token', path=options['path'], samesite=options['samesite'])
+
+
 class OAuth42LoginUrlView(APIView):
 	permission_classes = [AllowAny]
 
@@ -66,15 +101,21 @@ class OAuth42CallbackView(APIView):
 	permission_classes = [AllowAny]
 
 	def get(self, request):
+		frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000').rstrip('/')
+
+		def _redirect_with_error(message):
+			params = urlencode({'error': message})
+			return redirect(f"{frontend_url}/login/?{params}")
+
 		code = request.query_params.get('code')
 		received_state = request.query_params.get('state')
 		expected_state = request.session.pop('oauth42_state', None)
 
 		if not code:
-			return Response({'error': 'Authorization code not provided'}, status=status.HTTP_400_BAD_REQUEST)
+			return _redirect_with_error('Authorization code not provided')
 
 		if not expected_state or not received_state or received_state != expected_state:
-			return Response({'error': 'Invalid OAuth state'}, status=status.HTTP_400_BAD_REQUEST)
+			return _redirect_with_error('Invalid OAuth state')
 
 		base_url = os.getenv("FT_API_BASE_URL", "https://api.intra.42.fr")
 
@@ -91,11 +132,11 @@ class OAuth42CallbackView(APIView):
 		)
 
 		if token_data.status_code != 200:
-			return Response({'error': 'Failed to obtain access token'}, status=status.HTTP_400_BAD_REQUEST)
+			return _redirect_with_error('Failed to obtain access token')
 		
 		access_token = token_data.json().get('access_token')
 		if not access_token:
-			return Response({'error': 'Access token not found in response'}, status=status.HTTP_400_BAD_REQUEST)
+			return _redirect_with_error('Access token not found in response')
 		
 		user_data = requests.get(
 			f'{base_url}/v2/me',
@@ -103,17 +144,17 @@ class OAuth42CallbackView(APIView):
 			timeout=10
 		)
 		if user_data.status_code != 200:
-			return Response({'error': 'Failed to fetch user data'}, status=status.HTTP_400_BAD_REQUEST)
+			return _redirect_with_error('Failed to fetch user data')
 
 		user_42 = user_data.json()
 		if not user_42:
-			return Response({'error': 'Failed to fetch user data'}, status=status.HTTP_400_BAD_REQUEST)
+			return _redirect_with_error('Failed to fetch user data')
 		
 		login = user_42.get('login')
 		email = user_42.get('email')
 
 		if not login:
-			return Response({"error": "Missing login in 42 payload"}, status=status.HTTP_400_BAD_REQUEST)
+			return _redirect_with_error('Missing login in 42 payload')
 
 		user, _created = User.objects.get_or_create(
             username=login,
@@ -153,20 +194,9 @@ class OAuth42CallbackView(APIView):
 		profile.save()
 
 		refresh = RefreshToken.for_user(user)
-
-		return Response(
-            {
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
-                "user": {
-                    "id": user.id,
-                    "username": user.username,
-                    "email": user.email,
-                },
-                "profile_id": profile.id,
-            },
-            status=status.HTTP_200_OK,
-        )
+		response = redirect(f"{frontend_url}/")
+		_set_auth_cookies(response, refresh)
+		return response
 
 # Returns the authenticated user's profile information
 class UserProfileView(APIView):
@@ -179,6 +209,8 @@ class UserProfileView(APIView):
 			return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
 
 		data = {
+			'user_id': user.id,
+			'username': user.username,
 			'intra_id': profile.intra_id,
 			'intra_level': profile.intra_level,
 			'intra_wallet': profile.intra_wallet,
@@ -191,13 +223,49 @@ class UserProfileView(APIView):
 		return Response(data, status=status.HTTP_200_OK)
 
 
-class AuthTokenRefreshView(TokenRefreshView):
+class AuthTokenRefreshView(APIView):
 	permission_classes = [AllowAny]
+
+	def post(self, request):
+		refresh_token = request.data.get('refresh') or request.COOKIES.get('refresh_token')
+
+		if not refresh_token:
+			return Response({'error': 'Refresh token not provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+		serializer = TokenRefreshSerializer(data={'refresh': refresh_token})
+		if not serializer.is_valid():
+			response = Response({'error': 'Invalid refresh token'}, status=status.HTTP_401_UNAUTHORIZED)
+			_clear_auth_cookies(response)
+			return response
+
+		validated = serializer.validated_data
+		response = Response({'detail': 'Token refreshed'}, status=status.HTTP_200_OK)
+
+		options = _cookie_options()
+		access_lifetime = int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
+		response.set_cookie(
+			'access_token',
+			validated['access'],
+			max_age=access_lifetime,
+			**options,
+		)
+
+		if 'refresh' in validated:
+			refresh_lifetime = int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
+			response.set_cookie(
+				'refresh_token',
+				validated['refresh'],
+				max_age=refresh_lifetime,
+				**options,
+			)
+
+		return response
 
 
 class AuthLogoutView(APIView):
-	permission_classes = [IsAuthenticated]
+	permission_classes = [AllowAny]
 
 	def post(self, request):
-		# JWT is stateless here; frontend must discard access/refresh tokens.
-		return Response({'detail': 'Logout successful. Remove tokens client-side.'}, status=status.HTTP_200_OK)
+		response = Response({'detail': 'Logout successful'}, status=status.HTTP_200_OK)
+		_clear_auth_cookies(response)
+		return response
