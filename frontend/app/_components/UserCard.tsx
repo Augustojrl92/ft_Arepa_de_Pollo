@@ -1,5 +1,7 @@
-import { User } from "@/types"
+'use client'
+
 import CardContainer from "@/components/CardContainer"
+import { useAuthStore } from "@/hooks/useAuth"
 
 const coalitionStyles: Record<string, { coaColor: string; outline: string; border: string }> = {
 	tiamant: { coaColor: "text-coalition-tiamant", outline: "outline-coalition-tiamant", border: "border-coalition-tiamant" },
@@ -8,7 +10,10 @@ const coalitionStyles: Record<string, { coaColor: string; outline: string; borde
 	ignisaria: { coaColor: "text-coalition-ignisaria", outline: "outline-coalition-ignisaria", border: "border-coalition-ignisaria" },
 }
 
-export default function UserCard({ user }: { user: User }) {
+export default function UserCard() {
+	const user = useAuthStore((s) => s.user)
+	if (!user) return null
+	
 	const { coaColor, outline, border } = coalitionStyles[user.coalition] ?? { coaColor: "", outline: "", border: "" }
 	const coalitionPoints = user.coalitionPoints > 1000 
 		? `${(user.coalitionPoints / 1000).toFixed(0)}K`
@@ -17,7 +22,7 @@ export default function UserCard({ user }: { user: User }) {
 		<CardContainer className="relative flex items-center gap-8 min-w-80 shrink-0">
 			<span className="absolute top-3 right-3 text-6xl text-border font-bold">#{user.coalitionRank}</span>
 			<div className="relative">
-				<img src={user.avatar} alt={user.login} className={`border-4 border-card outline-3 ${outline} w-25 h-25 rounded-full`} />
+				<img src={user.avatar} alt={user.login} className={`border-4 border-card outline-3 ${outline} w-25 h-25 rounded-full object-cover`} />
 				<span className={`coalition-level ${border}`}>LVL {user.intraLevel}</span>
 			</div>
 			<div className="flex flex-col gap-1 items-start">
