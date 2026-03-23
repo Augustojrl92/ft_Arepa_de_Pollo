@@ -10,7 +10,7 @@ const coalitionColor: Record<string, { bgColor: string }> = {
 }
 
 export default function TournamentCard({ coalitions }: { coalitions: Coalition[] }) {
-	const maxPoints = Math.max(...coalitions.map(c => c.totalPoints))
+	const maxPoints = Math.max(...coalitions.map(c => c.points))
 
 	return (
 		<CardContainer className="relative flex flex-col items-center gap-5 w-full">
@@ -23,22 +23,22 @@ export default function TournamentCard({ coalitions }: { coalitions: Coalition[]
 			</div>
 			<div className="flex flex-col gap-3 w-full">
 				{coalitions.map((coalition, i) => {
-					const coalitionPoints = coalition.totalPoints > 1000
-						? `${(coalition.totalPoints / 1000).toFixed(0)}K`
-						: coalition.totalPoints.toLocaleString("en-US")
+					const coalitionPoints = coalition.points > 1000
+						? `${(coalition.points / 1000).toFixed(0)}K`
+						: coalition.points.toLocaleString("en-US")
 					const {bgColor} = coalitionColor[coalition.name.toLowerCase()] ?? { bgColor: "bg-gray-500" }
 
 					return (
 						<div key={coalition.name} className="flex flex-col items-center gap-2 w-full text-text-secondary">
-							<div className={"w-full flex items-center justify-between " + (maxPoints === coalition.totalPoints ? 'text-text' : '')}>
+							<div className={`w-full flex items-center justify-between ${maxPoints === coalition.points ? 'text-text' : ''}`}>
 								<div className="flex items-center gap-2">
-									<p className={`text-xs font-semibold ${maxPoints === coalition.totalPoints ? 'text-[#F59E0B]' : ''}`}>0{i + 1}</p>
+									<p className={`text-xs font-semibold ${maxPoints === coalition.points ? 'text-[#F59E0B]' : ''}`}>0{i + 1}</p>
 									<p className={`text-xs font-semibold`}>{coalition.name}</p>
 								</div>
 								<p className={`text-xs font-semibold`}>{coalitionPoints}</p>
 							</div>
 							<div className="w-full h-1 bg-border rounded overflow-hidden">
-								<div className={`h-full ${bgColor} rounded`} style={{ width: `${(coalition.totalPoints / maxPoints) * 100}%` }}></div>
+								<div className={`h-full ${bgColor} rounded`} style={{ width: `${(coalition.points / maxPoints) * 100}%` }}></div>
 							</div>
 						</div>
 					)

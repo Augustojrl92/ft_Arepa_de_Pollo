@@ -13,6 +13,7 @@ export interface User {
 }
 
 export interface Coalition {
+	id: number
 	name: string
-	totalPoints: number
+	points: number
 }

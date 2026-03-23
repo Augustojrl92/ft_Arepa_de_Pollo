@@ -3,10 +3,10 @@ import TournamentCard from "./_components/TournamentCard"
 import CoalitionCard from "./_components/CoalitionCard"
 
 const mockCoalitions = [
-	{ name: "Tiamant", totalPoints: 89000 },
-	{ name: "Zefiria", totalPoints: 75000 },
-	{ name: "Marventis", totalPoints: 62000 },
-	{ name: "Ignisaria", totalPoints: 54000 },
+	{ id: 1, name: "Tiamant", points: 89000 },
+	{ id: 2, name: "Zefiria", points: 75000 },
+	{ id: 3, name: "Marventis", points: 62000 },
+	{ id: 4, name: "Ignisaria", points: 54000 },
 ]
 
 export default function Home() {
