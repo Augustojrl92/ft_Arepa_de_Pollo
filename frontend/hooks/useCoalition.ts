@@ -8,7 +8,7 @@ import { Coalition } from "@/types";
 
 interface CoalitionState {
 	coalitions: Coalition[];
-	maxPoints: number;
+	maxScore: number;
 	error: string | null;
 	hasHydrated: boolean;
 
@@ -21,15 +21,15 @@ export const useCoalitionStore = create<CoalitionState>()(
 	persist(
 		(set) => ({
 			coalitions: [],
-			maxPoints: 0,
+			maxScore: 0,
 			error: null,
 			hasHydrated: false,
 
 			setCoalitions: async () => {
 				try {
 					const coalitions = await getCoalitions();
-					const maxPoints = Math.max(...coalitions.map(c => c.points));
-					set({ coalitions, maxPoints, error: null });
+					const maxScore = Math.max(...coalitions.map(c => c.score));
+					set({ coalitions, maxScore, error: null });
 				} catch (error) {
 					const message = error instanceof Error ? error.message : "Failed to fetch coalitions";
 					set({ error: message });
@@ -43,7 +43,7 @@ export const useCoalitionStore = create<CoalitionState>()(
 			storage: createJSONStorage(() => localStorage),
 			partialize: (state) => ({
 				coalitions: state.coalitions,
-				maxPoints: state.maxPoints,
+				maxScore: state.maxScore,
 			}),
 			onRehydrateStorage: () => (state) => {
 				state?.setHasHydrated(true);

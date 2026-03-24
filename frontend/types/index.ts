@@ -12,8 +12,34 @@ export interface User {
 	evalPoints: number
 }
 
+export interface TopMember {
+	login: string
+	level: number
+	points: number
+	avatarUrl?: string
+}
+
 export interface Coalition {
 	id: number
 	name: string
-	points: number
+	slug: string
+	imageUrl: string
+	coverUrl: string
+	color: string
+	score: number
+	memberCount: number
+	activeMembers: number
+	averageLevel: number
+	scoreChange24h: number
+	scoreChangeWeekly: number
+	scoreChangeMonthly: number
+	topMembers: TopMember[]
+	allMembers: TopMember[]
+	description: string
+	foundedDate: string
+	memberGrowth: number
+	levelDistribution: {
+		range: string
+		count: number
+	}[]
 }
