@@ -7,7 +7,9 @@ export interface User {
 	coalition: string
 	intraLevel: number
 	coalitionPoints: number
-	coalitionRank: number
+	coalitionRank: number | null
+	campusUserRank: number | null
+	coalitionUserRank: number | null
 	walletAmount: number
 	evalPoints: number
 }

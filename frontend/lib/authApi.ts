@@ -27,6 +27,25 @@ export const getProfile = async () => {
 	return response.json()
 }
 
+export const getCoalitionLeaderboard = async () => {
+	const response = await fetch(`${AUTH_BASE_URL}/coalitions/leaderboard/`, {
+		method: "GET",
+		credentials: "include",
+	})
+
+	if (!response.ok) {
+		throw new Error(await getErrorMessage(response, "Failed to fetch coalition leaderboard"))
+	}
+
+	const payload = await response.json()
+	return {
+		coalitions: (payload.coalitions ?? []).map((coalition: { name: string; total_points: number }) => ({
+			name: coalition.name,
+			totalPoints: coalition.total_points,
+		})),
+	}
+}
+
 export const postTokenRefresh = async () => {
 	const response = await fetch(`${AUTH_BASE_URL}/token/refresh/`, {
 		method: "POST",
