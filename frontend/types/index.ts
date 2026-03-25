@@ -14,7 +14,15 @@ export interface User {
 	evalPoints: number
 }
 
+export interface TopMember {
+	login: string
+	level: number
+	points: number
+	avatarUrl?: string
+}
+
 export interface Coalition {
+	id: number
 	name: string
 	totalPoints: number
 }
