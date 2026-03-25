@@ -16,6 +16,11 @@ export default function CoalitionCard() {
 	if (!user) return null
 
 	const { bgColor } = coalitionStyles[user.coalition] ?? { coaColor: "", outline: "", border: "" }
+	const coalitionLabel = user.coalition
+		? user.coalition[0].toUpperCase() + user.coalition.slice(1)
+		: "-"
+	const campusUserRank = user.campusUserRank ? `#${user.campusUserRank}` : "-"
+	const coalitionUserRank = user.coalitionUserRank ? `#${user.coalitionUserRank}` : "-"
 
 	return (
 		<CardContainer className={`relative flex flex-col justify-between gap-8 min-w-80 shrink-0 ${bgColor}`}>
@@ -25,10 +30,10 @@ export default function CoalitionCard() {
 			</div>
 			<div>
 				<p className="text-sm text-white/70 uppercase font-bold">42 Madrid</p>
-				<span className="font-bold text-4xl">#{user.coalitionRank}</span>
+				<span className="font-bold text-4xl">{campusUserRank}</span>
 				<div className="flex flex-col mt-3 pt-3 border-t border-white/70">
-					<span className="text-sm text-white/70 uppercase font-bold">{user.coalition[0].toUpperCase() + user.coalition.slice(1)}</span>
-					<span className="font-bold text-2xl">#{user.coalitionRank}</span>
+					<span className="text-sm text-white/70 uppercase font-bold">{coalitionLabel}</span>
+					<span className="font-bold text-2xl">{coalitionUserRank}</span>
 				</div>
 			</div>
 		</CardContainer>
