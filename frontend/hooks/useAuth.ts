@@ -65,7 +65,6 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           const profile = await getProfile()
-          console.log("🚀 ~ profile:", profile);
           set({
             user: {
               id: profile.user_id,
