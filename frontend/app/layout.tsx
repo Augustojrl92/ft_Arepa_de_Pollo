@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import AuthLayout from "@/components/AuthLayout";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -25,11 +24,7 @@ export default function RootLayout({
         className={`${inter.className} antialiased flex flex-col min-h-screen bg-surface text-text`}
       >
         <ThemeProvider>
-          <Header />
-          <main className="aedlph-container flex-1">
-            {children}
-          </main>
-          <Footer />
+          <AuthLayout>{children}</AuthLayout>
         </ThemeProvider>
       </body>
     </html>

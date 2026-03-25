@@ -1,5 +1,7 @@
-import { User } from "@/types"
+'use client'
+
 import CardContainer from "@/components/CardContainer"
+import { useAuthStore } from "@/hooks" 
 import { Medal } from "lucide-react"
 
 const coalitionStyles: Record<string, { bgColor: string }> = {
@@ -9,7 +11,10 @@ const coalitionStyles: Record<string, { bgColor: string }> = {
 	ignisaria: { bgColor: "bg-coalition-ignisaria" },
 }
 
-export default function CoalitionCard({ user }: { user: User }) {
+export default function CoalitionCard() {
+	const user = useAuthStore((s) => s.user)
+	if (!user) return null
+
 	const { bgColor } = coalitionStyles[user.coalition] ?? { coaColor: "", outline: "", border: "" }
 
 	return (
