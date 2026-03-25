@@ -169,6 +169,7 @@ class OAuth42CallbackView(APIView):
             user=user,
             defaults={
                 "intra_id": str(user_42.get("id", "")),
+                "eval_points": user_42.get("correction_point", 0),
                 "login": login,
                 "display_name": user_42.get("displayname", login),
                 "email": email,
@@ -186,10 +187,19 @@ class OAuth42CallbackView(APIView):
 		profile.email = email
 		profile.avatar_url = (user_42.get("image") or {}).get("link", profile.avatar_url)
 		profile.intra_wallet = user_42.get("wallet", profile.intra_wallet)
+		profile.eval_points = user_42.get("correction_point", profile.eval_points)
 
 		cursus_users = user_42.get("cursus_users") or []
-		if cursus_users and cursus_users[0].get("level") is not None:
-			profile.intra_level = cursus_users[0].get("level")
+		selected_cursus = next(
+			(
+				cursus_user
+				for cursus_user in cursus_users
+				if ((cursus_user.get("cursus") or {}).get("name") or "").lower() == "42cursus"
+			),
+			None,
+		)
+		if selected_cursus and selected_cursus.get("level") is not None:
+			profile.intra_level = selected_cursus.get("level")
 
 		profile.save()
 
@@ -214,6 +224,7 @@ class UserProfileView(APIView):
 			'intra_id': profile.intra_id,
 			'intra_level': profile.intra_level,
 			'intra_wallet': profile.intra_wallet,
+			'eval_points': profile.eval_points,
 			'login': profile.login,
 			'display_name': profile.display_name,
 			'email': profile.email,
