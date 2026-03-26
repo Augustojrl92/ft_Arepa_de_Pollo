@@ -1,5 +1,6 @@
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "")
 const AUTH_BASE_URL = `${API_URL}/api/auth`
+const COALITIONS_BASE_URL = `${API_URL}/api/coalitions`
 
 type ApiErrorPayload = {
 	error?: string
@@ -28,7 +29,7 @@ export const getProfile = async () => {
 }
 
 export const getCoalitionLeaderboard = async () => {
-	const response = await fetch(`${AUTH_BASE_URL}/coalitions/leaderboard/`, {
+	const response = await fetch(`${COALITIONS_BASE_URL}/leaderboard/`, {
 		method: "GET",
 		credentials: "include",
 	})
