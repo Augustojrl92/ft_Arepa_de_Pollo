@@ -176,6 +176,7 @@ class OAuth42CallbackView(APIView):
                 "coalition": "",
                 "intra_level": 0,
                 "intra_wallet": user_42.get("wallet", 0),
+				"eval_points": user_42.get("correction_point", 0),
             },
         )
 
@@ -186,6 +187,7 @@ class OAuth42CallbackView(APIView):
 		profile.email = email
 		profile.avatar_url = (user_42.get("image") or {}).get("link", profile.avatar_url)
 		profile.intra_wallet = user_42.get("wallet", profile.intra_wallet)
+		profile.eval_points = user_42.get("correction_point", profile.eval_points)
 
 		cursus_users = user_42.get("cursus_users") or []
 		if cursus_users and cursus_users[0].get("level") is not None:
@@ -214,6 +216,7 @@ class UserProfileView(APIView):
 			'intra_id': profile.intra_id,
 			'intra_level': profile.intra_level,
 			'intra_wallet': profile.intra_wallet,
+			'eval_points': profile.eval_points,
 			'login': profile.login,
 			'display_name': profile.display_name,
 			'email': profile.email,

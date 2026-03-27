@@ -7,6 +7,7 @@ class FortyTwoProfile(models.Model):
 	intra_id = models.PositiveBigIntegerField(unique=True)
 	intra_level = models.DecimalField(max_digits=5, decimal_places=2)
 	intra_wallet = models.IntegerField()
+	eval_points = models.IntegerField(default=0)
 	login = models.CharField(max_length=255, unique=True)
 	display_name = models.CharField(max_length=255)
 	email = models.EmailField(max_length=255, unique=True)
