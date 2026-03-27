@@ -1,7 +1,10 @@
 'use client'
 
+import { useEffect, useState } from "react"
+
 import CardContainer from "@/components/CardContainer"
-import { useCoalitionStore } from "@/hooks"
+import { getCoalitionLeaderboard } from "@/lib/authApi"
+import { Coalition } from "@/types"
 import { Crown } from "lucide-react"
 
 const coalitionColor: Record<string, { bgColor: string }> = {
@@ -12,9 +15,36 @@ const coalitionColor: Record<string, { bgColor: string }> = {
 }
 
 export default function TournamentCard() {
-	const { coalitions, maxScore } = useCoalitionStore()
+	const [coalitions, setCoalitions] = useState<Coalition[]>([])
 
-	const orderedCoalitions = [...coalitions].sort((a, b) => b.score - a.score)
+	useEffect(() => {
+		let cancelled = false
+
+		const loadLeaderboard = async () => {
+			try {
+				const payload = await getCoalitionLeaderboard()
+				if (!cancelled) {
+					setCoalitions(payload.coalitions ?? [])
+				}
+			} catch {
+				if (!cancelled) {
+					setCoalitions([])
+				}
+			}
+		}
+
+		loadLeaderboard()
+
+		return () => {
+			cancelled = true
+		}
+	}, [])
+
+	if (coalitions.length === 0) {
+		return null
+	}
+
+	const maxPoints = Math.max(...coalitions.map(c => c.totalPoints))
 
 	return (
 		<CardContainer className="relative flex flex-col items-center gap-5 w-full">
