@@ -1,5 +1,5 @@
 DOCKER_COMPOSE = docker compose -f docker-compose.dev.yml
-
+MODE ?= full
 # ─── Default ───────────────────────────────────────────────────────────────────
 all: full-up
 
@@ -58,8 +58,8 @@ back-superuser:
 back-shell:
 	$(DOCKER_COMPOSE) run --rm backend python manage.py shell
 
-back-test:
-	$(DOCKER_COMPOSE) run --rm backend python manage.py test
+back-syncapi:
+	$(DOCKER_COMPOSE) exec -T backend python manage.py sync_campus_users --mode=$(MODE)
 
 # ─── Full stack ────────────────────────────────────────────────────────────────
 full-up:
