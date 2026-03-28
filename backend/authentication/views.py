@@ -188,6 +188,7 @@ class OAuth42CallbackView(APIView):
                 "coalition": None,
                 "intra_level": 0,
                 "intra_wallet": user_42.get("wallet", 0),
+				"eval_points": user_42.get("correction_point", 0),
             },
         )
 
