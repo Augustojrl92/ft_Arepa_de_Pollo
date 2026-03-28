@@ -8,8 +8,7 @@ export default function UserCard() {
 	const coalition = useCoalitionStore((s) => s.coalitions.find(c => c.slug === user?.coalition))
 
 	if (!user) return null
-	
-	const { coaColor, outline, border } = coalitionStyles[user.coalition] ?? { coaColor: "", outline: "", border: "" }
+
 	const coalitionLabel = user.coalition
 		? user.coalition[0].toUpperCase() + user.coalition.slice(1)
 		: "-"

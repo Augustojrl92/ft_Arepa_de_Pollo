@@ -1,6 +1,5 @@
 from django.contrib import admin
-from .models import Coalition, FortyTwoProfile
+from .models import FortyTwoProfile
 
-# Register your models here.
-admin.site.register(Coalition)
+
 admin.site.register(FortyTwoProfile)
