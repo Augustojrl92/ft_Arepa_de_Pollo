@@ -231,6 +231,7 @@ def filter_and_save_to_database(cursus_users, coalition_data_by_user_id):
 			'is_active': bool(user_payload.get('active?', True)),
 			'coalition_id': coalition_data.get('coalition_id'),
 			'coalition_name': coalition_data.get('coalition_name', ''),
+			'coalition_slug': coalition_data.get('coalition_slug', ''),
 			'coalition_user_score': coalition_data.get('coalition_score', 0),
 			'coalition_total_score': coalition_data.get('coalition_total_score', 0),
 			'created_at': parse_datetime(cursus_user.get('created_at')),
