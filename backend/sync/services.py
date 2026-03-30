@@ -255,6 +255,21 @@ def filter_and_save_to_database(cursus_users, coalition_data_by_user_id):
 	)
 	return created_count, update_count, skipped_count
 
+
+def update_general_ranks():
+	"""Persist the campus-wide ranking based on coalition score."""
+	users = list(
+		CampusUser.objects.filter(is_active=True).order_by('-coalition_user_score', 'intra_id')
+	)
+
+	for index, user in enumerate(users, start=1):
+		user.general_rank = index
+
+	if users:
+		CampusUser.objects.bulk_update(users, ['general_rank'])
+
+	return len(users)
+
 def _build_sync_context(campus_id=22, cursus_id=21, bloc_id=110, per_page=100):
 	token = _get_42_token()
 	base_url = os.getenv('FT_API_BASE_URL', 'https://api.intra.42.fr').rstrip('/')
@@ -342,6 +357,7 @@ def run_full_sync(request_interval=0.25, max_pages=None):
 		cursus_users=all_results,
 		coalition_data_by_user_id=coalition_info['coalition_data_by_user_id'],
 	)
+	ranked_count = update_general_ranks()
 
 	return {
 		'total_fetched': len(all_results),
@@ -352,6 +368,7 @@ def run_full_sync(request_interval=0.25, max_pages=None):
 		'created_count': created_count,
 		'updated_count': updated_count,
 		'skipped_count': skipped_count,
+		'ranked_count': ranked_count,
 		'campus_id': ctx['campus_id'],
 		'cursus_id': ctx['cursus_id'],
 	}
@@ -369,6 +386,7 @@ def run_users_only_sync(request_interval=0.25, max_pages=None):
 		cursus_users=all_results,
 		coalition_data_by_user_id={},
 	)
+	ranked_count = update_general_ranks()
 
 	return {
 		'total_fetched': len(all_results),
@@ -379,6 +397,7 @@ def run_users_only_sync(request_interval=0.25, max_pages=None):
 		'created_count': created_count,
 		'updated_count': updated_count,
 		'skipped_count': skipped_count,
+		'ranked_count': ranked_count,
 		'campus_id': ctx['campus_id'],
 		'cursus_id': ctx['cursus_id'],
 	}
@@ -399,6 +418,7 @@ def run_coalitions_only_sync(request_interval=0.25):
 		'created_count': 0,
 		'updated_count': 0,
 		'skipped_count': 0,
+		'ranked_count': 0,
 		'campus_id': ctx['campus_id'],
 		'cursus_id': ctx['cursus_id'],
 	}

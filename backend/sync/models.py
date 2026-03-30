@@ -45,6 +45,7 @@ class CampusUser(models.Model):
 	coalition_slug = models.CharField(max_length=255, blank=True)
 	coalition_user_score = models.IntegerField(default=0)
 	coalition_total_score = models.IntegerField(default=0)
+	general_rank = models.PositiveIntegerField(null=True, blank=True)
 
 	# Timestamps del registro de cursus_users
 	created_at = models.DateTimeField()
