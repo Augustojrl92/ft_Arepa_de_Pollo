@@ -15,6 +15,7 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 
+from coalitions.services import _get_sync_user_ranks, _serialize_simple_coalitions
 from sync.models import CampusUser
 
 # Create your views here.
@@ -246,6 +247,9 @@ class UserProfileView(APIView):
 		if campus_user is None:
 			return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
 
+		campus_rank, coalition_user_rank = _get_sync_user_ranks(campus_user)
+		coalition_summary = _serialize_simple_coalitions(campus_user.coalition_slug) if campus_user.coalition_slug else None
+
 		data = {
 			'user_id': user.id,
 			'username': user.username,
@@ -259,9 +263,9 @@ class UserProfileView(APIView):
 			'avatar_url': campus_user.avatar_url,
 			'coalition': campus_user.coalition_slug or None,
 			'coalition_points': campus_user.coalition_user_score,
-			'coalition_rank': None,
-			'campus_user_rank': None,
-			'coalition_user_rank': None,
+			'coalition_rank': coalition_summary['rank'] if coalition_summary else None,
+			'campus_user_rank': campus_rank,
+			'coalition_user_rank': coalition_user_rank,
 		}
 		return Response(data, status=status.HTTP_200_OK)
 

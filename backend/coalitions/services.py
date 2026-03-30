@@ -1,4 +1,6 @@
-from sync.models import Coalition as SyncedCoalition
+from django.db.models import Q
+
+from sync.models import CampusUser, Coalition as SyncedCoalition
 
 
 def get_coalitions():
@@ -38,3 +40,40 @@ def _serialize_simple_coalitions(coalition_slug=None):
 			return coalition
 
 	return None
+
+
+def _get_sync_user_ranks(sync_user):
+	if sync_user is None:
+		return None, None
+
+	score = sync_user.coalition_user_score or 0
+	intra_id = sync_user.intra_id
+	base_qs = CampusUser.objects.filter(is_active=True)
+
+	ahead_global = base_qs.filter(
+		Q(coalition_user_score__gt=score)
+		| Q(coalition_user_score=score, intra_id__lt=intra_id)
+	).count()
+	campus_rank = ahead_global + 1
+
+	coalition_rank = None
+	if sync_user.coalition_id is not None:
+		coalition_qs = base_qs.filter(coalition_id=sync_user.coalition_id)
+		coalition_rank = coalition_qs.filter(
+			Q(coalition_user_score__gt=score)
+			| Q(coalition_user_score=score, intra_id__lt=intra_id)
+		).count() + 1
+	elif sync_user.coalition_name:
+		coalition_qs = base_qs.filter(coalition_name=sync_user.coalition_name)
+		coalition_rank = coalition_qs.filter(
+			Q(coalition_user_score__gt=score)
+			| Q(coalition_user_score=score, intra_id__lt=intra_id)
+		).count() + 1
+	elif sync_user.coalition_slug:
+		coalition_qs = base_qs.filter(coalition_slug=sync_user.coalition_slug)
+		coalition_rank = coalition_qs.filter(
+			Q(coalition_user_score__gt=score)
+			| Q(coalition_user_score=score, intra_id__lt=intra_id)
+		).count() + 1
+
+	return campus_rank, coalition_rank
