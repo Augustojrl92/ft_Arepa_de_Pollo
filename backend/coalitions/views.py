@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .services import _serialize_coalition_leaderboard, _serialize_simple_coalitions
+from .services import _serialize_coalition_leaderboard, _serialize_simple_coalitions, _serialize_user_ranking
 
 
 class CoalitionLeaderboardView(APIView):
@@ -32,5 +32,16 @@ class CoalitionSimpleView(APIView):
 
 		return Response(
 			{'coalitions': _serialize_simple_coalitions()},
+			status=status.HTTP_200_OK,
+		)
+
+
+class UserRankingView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def get(self, request):
+		coalition_filter = request.query_params.get('coalition')
+		return Response(
+			{'users': _serialize_user_ranking(coalition_filter)},
 			status=status.HTTP_200_OK,
 		)
