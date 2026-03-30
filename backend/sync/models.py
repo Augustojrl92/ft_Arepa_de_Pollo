@@ -26,7 +26,7 @@ class CampusUser(models.Model):
 
 	# Datos de progreso en el cursus
 	grade = models.CharField(max_length=64, blank=True)
-	level = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+	level = models.DecimalField(max_digits=8, decimal_places=2, default=0)
 
 	# Datos del usuario embebido en la respuesta
 	login = models.CharField(max_length=255, blank=True)
