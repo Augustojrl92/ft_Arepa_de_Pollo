@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 class Coalition(models.Model):
@@ -17,6 +18,8 @@ class Coalition(models.Model):
 
 
 class CampusUser(models.Model):
+	django_user = models.OneToOneField(User, on_delete=models.SET_NULL, related_name='campus_user_profile', null=True, blank=True)
+
 	# IDs principales
 	intra_id = models.PositiveBigIntegerField(unique=True)
 	user_id = models.PositiveBigIntegerField()

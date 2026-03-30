@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.shortcuts import redirect
+from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -14,15 +15,9 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 
-from coalitions.services import (
-	_get_madrid_coalitions,
-	_sync_profile_coalition,
-	_sync_madrid_coalitions_from_api,
-)
-from .models import FortyTwoProfile
+from sync.models import CampusUser
 
 # Create your views here.
-
 
 def _build_42_authorize_url(request):
 	client_id = os.getenv('FT_CLIENT_ID')
@@ -48,7 +43,6 @@ def _build_42_authorize_url(request):
 	auth_url = f"{base_url}/oauth/authorize?{urlencode(params)}"
 	return auth_url, state, None
 
-
 def _cookie_options():
 	return {
 		'httponly': True,
@@ -56,7 +50,6 @@ def _cookie_options():
 		'samesite': os.getenv('JWT_COOKIE_SAMESITE', 'Lax'),
 		'path': '/',
 	}
-
 
 def _set_auth_cookies(response, refresh_token):
 	options = _cookie_options()
@@ -76,11 +69,70 @@ def _set_auth_cookies(response, refresh_token):
 		**options,
 	)
 
-
 def _clear_auth_cookies(response):
 	options = _cookie_options()
 	response.delete_cookie('access_token', path=options['path'], samesite=options['samesite'])
 	response.delete_cookie('refresh_token', path=options['path'], samesite=options['samesite'])
+
+def _upsert_campus_user_from_42_payload(user, user_42):
+	intra_id = user_42.get('id')
+	if intra_id is None:
+		return None
+
+	user_payload = user_42 or {}
+	image_payload = user_payload.get('image') or {}
+	now = timezone.now()
+
+	campus_user, _created = CampusUser.objects.get_or_create(
+		intra_id=intra_id,
+		defaults={
+			'django_user': user,
+			'user_id': intra_id,
+			'grade': '',
+			'level': 0,
+			'login': user_payload.get('login') or user.username,
+			'email': user_payload.get('email') or user.email or '',
+			'display_name': user_payload.get('displayname') or user.username,
+			'avatar_url': image_payload.get('link') or '',
+			'wallet': user_payload.get('wallet') or 0,
+			'correction_points': user_payload.get('correction_point') or 0,
+			'pool_month': user_payload.get('pool_month') or '',
+			'pool_year': None,
+			'is_active': True,
+			'coalition_id': None,
+			'coalition_name': '',
+			'coalition_slug': '',
+			'coalition_user_score': 0,
+			'coalition_total_score': 0,
+			'created_at': now,
+			'updated_at': now,
+		},
+	)
+
+	campus_user.django_user = user
+	campus_user.user_id = intra_id
+	campus_user.login = user_payload.get('login') or campus_user.login
+	campus_user.email = user_payload.get('email') or campus_user.email
+	campus_user.display_name = user_payload.get('displayname') or campus_user.display_name
+	campus_user.avatar_url = image_payload.get('link') or campus_user.avatar_url
+	campus_user.wallet = user_payload.get('wallet') or 0
+	campus_user.correction_points = user_payload.get('correction_point') or 0
+	campus_user.updated_at = now
+
+	cursus_users = user_payload.get('cursus_users') or []
+	selected_cursus = next(
+		(
+			cursus_user
+			for cursus_user in cursus_users
+			if ((cursus_user.get('cursus') or {}).get('name') or '').lower() == '42cursus'
+		),
+		None,
+	)
+	if selected_cursus and selected_cursus.get('level') is not None:
+		campus_user.level = selected_cursus.get('level')
+
+	campus_user.save()
+	return campus_user
 
 class OAuth42LoginUrlView(APIView):
 	permission_classes = [AllowAny]
@@ -176,49 +228,10 @@ class OAuth42CallbackView(APIView):
 			user.email = email
 			user.save(update_fields=["email"])
 
-		profile, _ = FortyTwoProfile.objects.get_or_create(
-            user=user,
-            defaults={
-                "intra_id": str(user_42.get("id", "")),
-                "eval_points": user_42.get("correction_point", 0),
-                "login": login,
-                "display_name": user_42.get("displayname", login),
-                "email": email,
-                "avatar_url": (user_42.get("image") or {}).get("link", ""),
-                "coalition": None,
-                "intra_level": 0,
-                "intra_wallet": user_42.get("wallet", 0),
-				"eval_points": user_42.get("correction_point", 0),
-            },
-        )
-
-		# Keep profile in sync on every login when 42 data changes.
-		profile.intra_id = user_42.get("id", profile.intra_id)
-		profile.login = login
-		profile.display_name = user_42.get("displayname", login)
-		profile.email = email
-		profile.avatar_url = (user_42.get("image") or {}).get("link", profile.avatar_url)
-		profile.intra_wallet = user_42.get("wallet", profile.intra_wallet)
-		profile.eval_points = user_42.get("correction_point", profile.eval_points)
-
-		cursus_users = user_42.get("cursus_users") or []
-		selected_cursus = next(
-			(
-				cursus_user
-				for cursus_user in cursus_users
-				if ((cursus_user.get("cursus") or {}).get("name") or "").lower() == "42cursus"
-			),
-			None,
-		)
-		if selected_cursus and selected_cursus.get("level") is not None:
-			profile.intra_level = selected_cursus.get("level")
-		_sync_madrid_coalitions_from_api(base_url, access_token)
-		_sync_profile_coalition(profile, user_42.get("id"), base_url, access_token)
-
-		profile.save()
+		_upsert_campus_user_from_42_payload(user, user_42)
 
 		refresh = RefreshToken.for_user(user)
-		response = redirect(f"{frontend_url}/")
+		response = redirect(f"{frontend_url}/?auth=1")
 		_set_auth_cookies(response, refresh)
 		return response
 
@@ -228,34 +241,29 @@ class UserProfileView(APIView):
 
 	def get(self, request):
 		user = request.user
-		profile = getattr(user, 'forty_two_profile', None)
-		if not profile:
-			return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
+		campus_user = CampusUser.objects.filter(django_user=user).first()
 
-		rank_by_slug = {
-			coalition.slug: index
-			for index, coalition in enumerate(_get_madrid_coalitions(), start=1)
-		}
+		if campus_user is None:
+			return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
 
 		data = {
 			'user_id': user.id,
 			'username': user.username,
-			'intra_id': profile.intra_id,
-			'intra_level': profile.intra_level,
-			'intra_wallet': profile.intra_wallet,
-			'eval_points': profile.eval_points,
-			'login': profile.login,
-			'display_name': profile.display_name,
-			'email': profile.email,
-			'avatar_url': profile.avatar_url,
-			'coalition': profile.coalition.slug if profile.coalition else None,
-			'coalition_points': profile.coalition_user_score,
-			'coalition_rank': rank_by_slug.get(profile.coalition.slug) if profile.coalition else None,
-			'campus_user_rank': profile.campus_user_rank,
-			'coalition_user_rank': profile.coalition_user_rank,
+			'intra_id': campus_user.intra_id,
+			'intra_level': campus_user.level,
+			'intra_wallet': campus_user.wallet,
+			'eval_points': campus_user.correction_points,
+			'login': campus_user.login,
+			'display_name': campus_user.display_name,
+			'email': campus_user.email or user.email,
+			'avatar_url': campus_user.avatar_url,
+			'coalition': campus_user.coalition_slug or None,
+			'coalition_points': campus_user.coalition_user_score,
+			'coalition_rank': None,
+			'campus_user_rank': None,
+			'coalition_user_rank': None,
 		}
 		return Response(data, status=status.HTTP_200_OK)
-
 
 class AuthTokenRefreshView(APIView):
 	permission_classes = [AllowAny]
@@ -294,7 +302,6 @@ class AuthTokenRefreshView(APIView):
 			)
 
 		return response
-
 
 class AuthLogoutView(APIView):
 	permission_classes = [AllowAny]
