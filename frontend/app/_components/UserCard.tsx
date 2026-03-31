@@ -4,14 +4,10 @@ import CardContainer from "@/components/CardContainer"
 import { useAuthStore, useCoalitionStore } from "@/hooks"
 
 export default function UserCard() {
-	const user = useAuthStore((s) => s.user)
-	const coalition = useCoalitionStore((s) => s.coalitions.find(c => c.slug === user?.coalition))
-
+	const { user } = useAuthStore()
 	if (!user) return null
 
-	const coalitionLabel = user.coalition
-		? user.coalition[0].toUpperCase() + user.coalition.slice(1)
-		: "-"
+	const coalition = useCoalitionStore((s) => s.coalitions.find(c => c.slug === user?.coalition))
 	const coalitionPoints = user.coalitionPoints > 1000 
 		? `${(user.coalitionPoints / 1000).toFixed(0)}K`
 		: user.coalitionPoints.toLocaleString("en-US")
@@ -25,7 +21,7 @@ export default function UserCard() {
 			</div>
 			<div className="flex flex-col gap-1 items-start">
 				<h2 className="text-2xl font-bold">{user.login}</h2>
-				<p className={`coalition-badge ${user.coalition}`}>{coalitionLabel}</p>
+				<p className={`coalition-badge ${user.coalition}`}>{coalition?.name}</p>
 				<div className="flex items-start justify-between mt-5 gap-10">
 					<div>
 						<p className="text-2xl font-bold">{user.walletAmount}</p>

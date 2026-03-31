@@ -4,7 +4,7 @@ import { useEffect } from "react"
 
 declare global {
 	interface Window {
-		__mswStarted?: boolean
+		__mswStartPromise?: Promise<void>
 	}
 }
 
@@ -14,26 +14,22 @@ type MswProviderProps = {
 
 export default function MswProvider({ children }: MswProviderProps) {
 	useEffect(() => {
-		if (process.env.NODE_ENV !== "development") {
+		const isMockingEnabled = process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_API_MOCKING !== "disabled"
+
+		if (!isMockingEnabled) {
 			return
 		}
-
-		if (process.env.NEXT_PUBLIC_API_MOCKING === "disabled") {
-			return
-		}
-
-		if (window.__mswStarted) {
-			return
-		}
-
-		window.__mswStarted = true
 
 		const startWorker = async () => {
-			const { worker } = await import("@/mocks/browser")
-			await worker.start({ onUnhandledRequest: "bypass" })
+			if (!window.__mswStartPromise) {
+				window.__mswStartPromise = (async () => {
+					const { worker } = await import("@/mocks/browser")
+					await worker.start({ onUnhandledRequest: "bypass" })
+				})()
+			}
 		}
 
-		startWorker()
+		void startWorker()
 	}, [])
 
 	return <>{children}</>
