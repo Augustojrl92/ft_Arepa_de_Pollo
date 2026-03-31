@@ -1,6 +1,5 @@
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "")
 const AUTH_BASE_URL = `${API_URL}/api/auth`
-const COALITIONS_BASE_URL = `${API_URL}/api/coalitions`
 
 type ApiErrorPayload = {
 	error?: string
@@ -26,38 +25,6 @@ export const getProfile = async () => {
 	}
 
 	return response.json()
-}
-
-export const getCoalitionLeaderboard = async () => {
-	const response = await fetch(`${COALITIONS_BASE_URL}/leaderboard/`, {
-		method: "GET",
-		credentials: "include",
-	})
-
-	if (!response.ok) {
-		throw new Error(await getErrorMessage(response, "Failed to fetch coalition leaderboard"))
-	}
-
-	const payload = await response.json()
-	return {
-		coalitions: (payload.coalitions ?? []).map((coalition: { name: string; total_points: number }) => ({
-			name: coalition.name,
-			totalPoints: coalition.total_points,
-		})),
-	}
-}
-
-export const postTokenRefresh = async () => {
-	const response = await fetch(`${AUTH_BASE_URL}/token/refresh/`, {
-		method: "POST",
-		credentials: "include",
-	})
-
-	if (!response.ok) {
-		throw new Error(await getErrorMessage(response, "Failed to refresh token"))
-	}
-
-	return true
 }
 
 export const postLogout = async () => {

@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { getProfile, postLogout, postTokenRefresh } from "@/lib/authApi";
+import { getProfile, postLogout } from "@/lib/authApi";
 import { User } from "@/types";
 
 type AuthStatus = "idle" | "loading" | "authenticated" | "unauthenticated";
@@ -28,7 +28,7 @@ export const useAuthStore = create<AuthState>()(
       status: "idle",
       error: null,
       hasHydrated: false,
-			
+
       setSession: ({ user }) =>
         set({
           user,
@@ -65,33 +65,16 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           const profile = await getProfile()
-          set({
-            user: {
-              id: profile.user_id,
-              username: profile.display_name,
-              email: profile.email ?? "",
-              avatar: profile.avatar_url,
-              login: profile.login,
-              coalition: profile.coalition ?? "",
-              intraLevel: profile.intra_level,
-              coalitionPoints: profile.coalition_points ?? 0,
-              coalitionRank: profile.coalition_rank ?? null,
-              campusUserRank: profile.campus_user_rank ?? null,
-              coalitionUserRank: profile.coalition_user_rank ?? null,
-              walletAmount: profile.intra_wallet,
-              evalPoints: profile.eval_points || 100,
-            },
-            status: "authenticated",
-            error: null,
-          })
-          return
-        } catch {
-          // Try refresh cookie if access cookie expired.
-        }
 
-        try {
-          await postTokenRefresh()
-          const profile = await getProfile()
+          if (!profile) {
+            set({
+              user: null,
+              status: "unauthenticated",
+              error: null,
+            })
+            return
+          }
+
           set({
             user: {
               id: profile.user_id,
@@ -116,6 +99,7 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: null,
             status: "unauthenticated",
+            error: null,
           })
         }
       },
