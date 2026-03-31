@@ -13,8 +13,6 @@
 		"scoreChange24h": 45000,
 		"scoreChangeWeekly": 280000,
 		"scoreChangeMonthly": 850000,
-		"description": "Coalition dedicada a la excelencia técnica y la innovación. Conocida por mentorías avanzadas y proyectos colaborativos.",
-		"foundedDate": "2024-09-15",
 		"memberGrowth": 8,
 		"topMembers": [
 			{ "login": "jgarcia", "level": 18, "points": 12450 },
@@ -59,8 +57,6 @@
 		"scoreChange24h": -12000,
 		"scoreChangeWeekly": 150000,
 		"scoreChangeMonthly": 620000,
-		"description": "Equipo especializado en desarrollo web y sistemas. Foco en proyectos prácticos y colaboración.",
-		"foundedDate": "2024-08-22",
 		"memberGrowth": 5,
 		"topMembers": [
 			{ "login": "csmith", "level": 17, "points": 11890 },
@@ -102,8 +98,6 @@
 		"scoreChange24h": 62000,
 		"scoreChangeWeekly": 320000,
 		"scoreChangeMonthly": 920000,
-		"description": "Líder en innovación académica. Comunidad activa enfocada en impacto social y tecnología.",
-		"foundedDate": "2024-07-10",
 		"memberGrowth": 12,
 		"topMembers": [
 			{ "login": "frodriguez", "level": 19, "points": 13200 },
@@ -147,8 +141,6 @@
 		"scoreChange24h": 8000,
 		"scoreChangeWeekly": 95000,
 		"scoreChangeMonthly": 380000,
-		"description": "En crecimiento. Energía y pasión por el aprendizaje. Comunidad acogedora para todos los niveles.",
-		"foundedDate": "2024-10-05",
 		"memberGrowth": 10,
 		"topMembers": [
 			{ "login": "igarc", "level": 16, "points": 10200 },

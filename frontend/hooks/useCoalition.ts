@@ -1,53 +1,51 @@
 'use client'
 
-import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
-import { getCoalitions } from "@/lib/coalitionApi";
-import { Coalition } from "@/types";
-
+import { create } from "zustand"
+import { fetchCoalitions, fetchRanking } from "@/lib/coalitionApi"
+import { Coalition, RankingEntry } from "@/types"
 
 interface CoalitionState {
-	coalitions: Coalition[];
-	maxScore: number;
-	error: string | null;
-	hasHydrated: boolean;
-
-	setCoalitions: () => Promise<void>;
-	setError: (msg: string | null) => void;
-	setHasHydrated: (value: boolean) => void;
+	coalitions: Coalition[]
+	ranking: RankingEntry[]
+	maxScore: number
+	error: string | null
+	getCoalitions: () => Promise<void>
+	getRanking: () => Promise<void>
+	setError: (msg: string | null) => void
 }
 
 export const useCoalitionStore = create<CoalitionState>()(
-	persist(
-		(set) => ({
-			coalitions: [],
-			maxScore: 0,
-			error: null,
-			hasHydrated: false,
+	(set) => ({
+		coalitions: [],
+		ranking: [],
+		maxScore: 0,
+		error: null,
 
-			setCoalitions: async () => {
-				try {
-					const coalitions = await getCoalitions();
-					const maxScore = Math.max(...coalitions.map(c => c.score));
-					set({ coalitions, maxScore, error: null });
-				} catch (error) {
-					const message = error instanceof Error ? error.message : "Failed to fetch coalitions";
-					set({ error: message });
-				}
-			},
-			setError: (msg) => set({ error: msg }),
-			setHasHydrated: (value) => set({ hasHydrated: value }),
-		}),
-		{
-			name: "coalition-store",
-			storage: createJSONStorage(() => localStorage),
-			partialize: (state) => ({
-				coalitions: state.coalitions,
-				maxScore: state.maxScore,
-			}),
-			onRehydrateStorage: () => (state) => {
-				state?.setHasHydrated(true);
-			},
-		}
-	)
-);
+		getCoalitions: async () => {
+			try {
+				const coalitions = await fetchCoalitions()
+				const maxScore = coalitions.length > 0 ? Math.max(...coalitions.map(c => c.score)) : 0
+
+				set({ coalitions, maxScore, error: null })
+			} catch (error) {
+				const message = error instanceof Error ? error.message : "Failed to fetch coalitions"
+				
+				set({ error: message })
+			}
+		},
+		getRanking: async () => {
+			try {
+				const ranking = await fetchRanking()
+				console.log("🚀 ~ ranking:", ranking);
+				
+				set({ ranking, error: null })
+				console.log("🚀 ~ getRanking ~ ranking:", ranking);
+			} catch (error) {
+				const message = error instanceof Error ? error.message : "Failed to fetch ranking"
+				
+				set({ error: message })
+			}
+		},
+		setError: (msg) => set({ error: msg })
+	})
+)

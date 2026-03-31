@@ -24,5 +24,22 @@ export interface TopMember {
 export interface Coalition {
 	id: number
 	name: string
-	totalPoints: number
+	slug: string
+	imageUrl: string
+	coverUrl: string
+	color: string
+	score: number
+	memberCount: number
+	activeMembers: number
+	averageLevel: number
+}
+
+export interface RankingEntry {
+	rank: number
+	login: string
+	displayName: string
+	avatar: string
+	coalition: string
+	coalitionPoints: number
+	intraLevel: number
 }
