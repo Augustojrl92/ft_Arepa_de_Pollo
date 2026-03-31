@@ -1,15 +1,10 @@
 'use client'
 
-import { useState, useEffect } from "react"
 import { useCoalitionStore } from "@/hooks"
 import CoalitionCard from "./_components/CoalitionCard"
 
 export default function CoalitionsPage() {
-	const { coalitions, setCoalitions } = useCoalitionStore()
-
-	useEffect(() => {
-		setCoalitions()
-	}, [setCoalitions])
+	const { coalitions } = useCoalitionStore()
 
 	const orderedCoalitions = [...coalitions].sort((a, b) => b.score - a.score)
 

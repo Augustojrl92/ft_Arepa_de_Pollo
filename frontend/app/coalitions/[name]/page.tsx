@@ -2,16 +2,17 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { Crown, ArrowLeft } from "lucide-react"
+
 import { useCoalitionStore } from "@/hooks"
 import CardContainer from "@/components/CardContainer"
-import { Crown, ArrowLeft } from "lucide-react"
 
 export default function CoalitionDetailPage({
 	params,
 }: {
 	params: Promise<{ name: string }>
 }) {
-	const { coalitions, setCoalitions, maxScore } = useCoalitionStore()
+	const { coalitions, maxScore } = useCoalitionStore()
 	const [name, setName] = useState<string | null>(null)
 	const [isLoading, setIsLoading] = useState(true)
 
@@ -21,12 +22,6 @@ export default function CoalitionDetailPage({
 			setIsLoading(false)
 		})
 	}, [params])
-
-	useEffect(() => {
-		if (coalitions.length === 0 && !isLoading) {
-			setCoalitions()
-		}
-	}, [coalitions.length, isLoading, setCoalitions])
 
 	const coalition = coalitions.find(
 		(c) => c.name.toLowerCase() === name?.toLowerCase()
@@ -142,7 +137,7 @@ export default function CoalitionDetailPage({
 				</div>
 			</CardContainer>
 
-			<CardContainer className="p-6">
+			{/* <CardContainer className="p-6">
 				<p className="text-text-secondary text-sm uppercase font-semibold mb-6">Distribución de Niveles</p>
 				<div className="space-y-3">
 					{coalition.levelDistribution.map((dist, i) => (
@@ -199,7 +194,7 @@ export default function CoalitionDetailPage({
 						</div>
 					))}
 				</div>
-			</CardContainer>
+			</CardContainer> */}
 		</section>
 	)
 }
