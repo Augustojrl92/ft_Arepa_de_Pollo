@@ -9,6 +9,7 @@ class CampusUserAdmin(admin.ModelAdmin):
 		'coalition_name',
 		'coalition_user_score',
 		'level',
+		'is_active',
 	)
 	list_filter = ('coalition_name', 'pool_month')
 	search_fields = ('login', 'display_name', 'email', 'intra_id')

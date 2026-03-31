@@ -1,6 +1,3 @@
 from django.contrib import admin
 
-from .models import Coalition
-
-
-admin.site.register(Coalition)
+# Coalition data is managed from the sync app admin.

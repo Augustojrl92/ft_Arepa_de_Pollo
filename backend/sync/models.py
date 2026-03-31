@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 class Coalition(models.Model):
@@ -17,13 +18,15 @@ class Coalition(models.Model):
 
 
 class CampusUser(models.Model):
+	django_user = models.OneToOneField(User, on_delete=models.SET_NULL, related_name='campus_user_profile', null=True, blank=True)
+
 	# IDs principales
 	intra_id = models.PositiveBigIntegerField(unique=True)
 	user_id = models.PositiveBigIntegerField()
 
 	# Datos de progreso en el cursus
 	grade = models.CharField(max_length=64, blank=True)
-	level = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+	level = models.DecimalField(max_digits=8, decimal_places=2, default=0)
 
 	# Datos del usuario embebido en la respuesta
 	login = models.CharField(max_length=255, blank=True)

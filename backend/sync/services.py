@@ -53,17 +53,6 @@ def _get_42_token():
 
 	return _request_42_token()
 
-def _is_active_user(cursus_user):
-	user_payload = cursus_user.get('user') or {}
-	if 'active?' in user_payload:
-		return bool(user_payload.get('active?'))
-	if 'active' in user_payload:
-		return bool(user_payload.get('active'))
-	if 'active' in cursus_user:
-		return bool(cursus_user.get('active'))
-	
-	return True
-
 def _extract_user_id(cursus_user):
 	user_payload = cursus_user.get('user') or {}
 	return user_payload.get('id') or cursus_user.get('user_id')
@@ -195,15 +184,14 @@ def filter_and_save_to_database(cursus_users, coalition_data_by_user_id):
 	update_count = 0
 	skipped_count = 0
 
-	for cursus_user in cursus_users:
-		if not _is_active_user(cursus_user):
-			skipped_count += 1
-			continue
+	valid_coalition_ids = set(Coalition.objects.values_list('coalition_id', flat=True))
 
+	for cursus_user in cursus_users:
 		user_payload = cursus_user.get('user') or {}
 		user_id = _extract_user_id(cursus_user)
+		is_staff = user_payload.get('staff?') or False
 
-		if not user_id:
+		if not user_id or is_staff:
 			skipped_count += 1
 			continue
 
@@ -215,6 +203,11 @@ def filter_and_save_to_database(cursus_users, coalition_data_by_user_id):
 			pool_year = None
 
 		coalition_data = coalition_data_by_user_id.get(user_id, {})
+		coalition_id = coalition_data.get('coalition_id')
+
+		if coalition_id not in valid_coalition_ids:
+			skipped_count += 1
+			continue
 
 		defaults = {
 			'user_id': user_id,
@@ -229,7 +222,7 @@ def filter_and_save_to_database(cursus_users, coalition_data_by_user_id):
 			'pool_month': user_payload.get('pool_month') or '',
 			'pool_year': pool_year,
 			'is_active': bool(user_payload.get('active?', True)),
-			'coalition_id': coalition_data.get('coalition_id'),
+			'coalition_id': coalition_id,
 			'coalition_name': coalition_data.get('coalition_name', ''),
 			'coalition_user_score': coalition_data.get('coalition_score', 0),
 			'coalition_total_score': coalition_data.get('coalition_total_score', 0),
@@ -250,7 +243,7 @@ def filter_and_save_to_database(cursus_users, coalition_data_by_user_id):
 	print(
 		f'Saved {created_count} new users, '
 		f'updated {update_count} existing users, '
-		f'skipped {skipped_count} inactive/invalid users.'
+		f'skipped {skipped_count} users with invalid coalition.'
 	)
 	return created_count, update_count, skipped_count
 
@@ -275,7 +268,6 @@ def fetch_campus_users_data(ctx, request_interval=0.25, max_pages=None):
 		params={
 			"filter[campus_id]": ctx['campus_id'],
 			"filter[cursus_id]": ctx['cursus_id'],
-			"filter[active]": "true",
 			"filter[has_coalition]": "true",
 			"per_page": ctx['per_page'],
 		},
