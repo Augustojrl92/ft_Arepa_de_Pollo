@@ -1,22 +1,15 @@
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { RankingEntry } from "@/types"
 import { useAuthStore, useCoalitionStore } from "@/hooks"
 import { useSearchParams } from "next/navigation"
+import Link from "next/link"
 import { Info } from 'lucide-react'
 
 type SortField = 'rank' | 'coalition' | 'login' | 'intraLevel' | 'coalitionPoints'
 type SortDirection = 'asc' | 'desc'
 
-const sortOptions: Array<{ value: SortField; label: string }> = [
-	{ value: 'rank', label: 'Posicion' },
-	{ value: 'coalitionPoints', label: 'Puntos' },
-	{ value: 'intraLevel', label: 'Nivel' },
-	{ value: 'login', label: 'Login' },
-	{ value: 'coalition', label: 'Coalicion' },
-]
-
-const levelUpperBound = 21
+const levelUpperBound = 25
 
 export const LeaderboardUsers = ({ ranking }: { ranking: RankingEntry[] }) => {
 	const { coalitions } = useCoalitionStore()
@@ -30,6 +23,8 @@ export const LeaderboardUsers = ({ ranking }: { ranking: RankingEntry[] }) => {
 	const [sortDir, setSortDir] = useState<SortDirection>('asc')
 	const [page, setPage] = useState(1)
 	const [perPage, setPerPage] = useState(25)
+	const [isRankInfoOpen, setIsRankInfoOpen] = useState(false)
+	const rankInfoRef = useRef<HTMLDivElement | null>(null)
 
 	const coalitionBySlug = useMemo(
 		() => new Map(coalitions.map((coalition) => [coalition.slug, coalition])),
@@ -59,6 +54,24 @@ export const LeaderboardUsers = ({ ranking }: { ranking: RankingEntry[] }) => {
 		setPage(1)
 	}, [coalitions, searchParams])
 
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (!rankInfoRef.current) {
+				return
+			}
+
+			if (!rankInfoRef.current.contains(event.target as Node)) {
+				setIsRankInfoOpen(false)
+			}
+		}
+
+		document.addEventListener('mousedown', handleClickOutside)
+
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside)
+		}
+	}, [])
+
 	if (!ranking || ranking.length === 0) {
 		return <div className="text-text-secondary mt-6">No hay usuarios para mostrar.</div>
 	}
@@ -80,6 +93,16 @@ export const LeaderboardUsers = ({ ranking }: { ranking: RankingEntry[] }) => {
 		setSortBy('rank')
 		setSortDir('asc')
 		setPage(1)
+	}
+
+	const handleSort = (field: SortField) => {
+		setPage(1)
+		if (sortBy === field) {
+			setSortDir((current) => (current === 'asc' ? 'desc' : 'asc'))
+			return
+		}
+		setSortBy(field)
+		setSortDir('asc')
 	}
 
 	const filtered = ranking.filter((user) => {
@@ -126,6 +149,8 @@ export const LeaderboardUsers = ({ ranking }: { ranking: RankingEntry[] }) => {
 			: 0
 
 	const userCoalition = coalitions.find((c) => c.slug === user?.coalition)
+	const minPercent = (levelMin / levelUpperBound) * 100
+	const maxPercent = (levelMax / levelUpperBound) * 100
 
 	return (
 		<div className="w-full mx-auto max-w-400 px-4 md:px-6 py-4">
@@ -197,13 +222,20 @@ export const LeaderboardUsers = ({ ranking }: { ranking: RankingEntry[] }) => {
 							<label className="block text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-2">
 								Rango de nivel
 							</label>
-							<div className="grid grid-cols-2 gap-2 mb-2">
+							<div className="level-range relative mt-3 h-8 mb-2">
+								<div className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-border"></div>
+								<div
+									className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-accent/80"
+									style={{ left: `${minPercent}%`, right: `${100 - maxPercent}%` }}
+								></div>
 								<input
-									type="number"
+									type="range"
 									min={0}
 									max={levelUpperBound}
+									step={1}
 									value={levelMin}
-									className="w-full bg-background border border-border rounded-lg py-2 px-3 text-sm outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+									className="level-range-input level-range-input-min"
+									aria-label="Nivel minimo"
 									onChange={(event) => {
 										const parsed = Number(event.target.value)
 										const nextMin = Number.isNaN(parsed)
@@ -214,11 +246,13 @@ export const LeaderboardUsers = ({ ranking }: { ranking: RankingEntry[] }) => {
 									}}
 								/>
 								<input
-									type="number"
+									type="range"
 									min={0}
 									max={levelUpperBound}
+									step={1}
 									value={levelMax}
-									className="w-full bg-background border border-border rounded-lg py-2 px-3 text-sm outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
+									className="level-range-input level-range-input-max"
+									aria-label="Nivel maximo"
 									onChange={(event) => {
 										const parsed = Number(event.target.value)
 										const nextMax = Number.isNaN(parsed)
@@ -236,38 +270,12 @@ export const LeaderboardUsers = ({ ranking }: { ranking: RankingEntry[] }) => {
 							</div>
 						</div>
 
-						<div>
-							<label className="block text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-2">
-								Ordenar por
-							</label>
-							<select
-								className="w-full bg-background border border-border rounded-lg py-2 px-3 text-sm outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
-								value={sortBy}
-								onChange={(event) => {
-									setSortBy(event.target.value as SortField)
-									setPage(1)
-								}}
-							>
-								{sortOptions.map((option) => (
-									<option key={option.value} value={option.value}>
-										{option.label}
-									</option>
-								))}
-							</select>
-						</div>
-
 						<div className="flex gap-2">
-							<button
-								onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')}
-								className="w-full bg-card-hover border border-border text-text py-2 rounded-lg text-sm font-semibold hover:border-accent/50 transition-colors"
-							>
-								Direccion: {sortDir === 'asc' ? 'Asc' : 'Desc'}
-							</button>
 							<button
 								onClick={clearFilters}
 								className="w-full bg-accent/10 border border-accent/20 text-accent py-2 rounded-lg text-sm font-semibold hover:bg-accent/20 transition-all"
 							>
-								Limpiar
+								Limpiar filtros
 							</button>
 						</div>
 					</div>
@@ -295,21 +303,72 @@ export const LeaderboardUsers = ({ ranking }: { ranking: RankingEntry[] }) => {
 								<thead>
 									<tr className="bg-background text-[10px] font-bold text-text-secondary uppercase tracking-widest border-b border-border">
 										<th className="px-6 py-4">
-											<div className="relative inline-flex items-center gap-1 group">
-												<span>Ranking (M/C)</span>
-												<Info size={12} color="var(--color-accent)" />
+											<div ref={rankInfoRef} className="relative inline-flex items-center gap-1">
+												<button
+													type="button"
+													onClick={() => setIsRankInfoOpen((current) => !current)}
+													aria-label="Mostrar informacion de ranking"
+													aria-expanded={isRankInfoOpen}
+													className="inline-flex items-center hover:text-accent transition-colors pr-1"
+												>
+													<Info size={15} />
+												</button>
+												<button
+													type="button"
+													onClick={() => handleSort('rank')}
+													className="inline-flex items-center gap-1 hover:text-text transition-colors"
+												>
+													<span>Ranking (M/C)</span>
+													<span className="text-[9px]">{sortBy === 'rank' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span>
+												</button>
 												<span
 													role="tooltip"
-													className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-64 rounded-md border border-border bg-card p-2 text-[11px] normal-case tracking-normal text-text-secondary opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+													className={`absolute left-0 top-full z-20 mt-2 w-64 rounded-md border border-border bg-card p-2 text-[12px] normal-case tracking-normal text-text-secondary shadow-lg transition-opacity ${isRankInfoOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
 												>
 													M = Ranking Madrid | C = Ranking dentro de su coalicion
 												</span>
 											</div>
 										</th>
-										<th className="px-6 py-4">Usuario</th>
-										<th className="px-6 py-4">Coalicion</th>
-										<th className="px-6 py-4 text-center">Nivel</th>
-										<th className="px-6 py-4 text-right">Puntos</th>
+										<th className="px-6 py-4">
+											<button
+												type="button"
+												onClick={() => handleSort('login')}
+												className="inline-flex items-center gap-1 hover:text-text transition-colors"
+											>
+												<span>Usuario</span>
+												<span className="text-[9px]">{sortBy === 'login' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span>
+											</button>
+										</th>
+										<th className="px-6 py-4">
+											<button
+												type="button"
+												onClick={() => handleSort('coalition')}
+												className="inline-flex items-center gap-1 hover:text-text transition-colors"
+											>
+												<span>Coalicion</span>
+												<span className="text-[9px]">{sortBy === 'coalition' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span>
+											</button>
+										</th>
+										<th className="px-6 py-4 text-center">
+											<button
+												type="button"
+												onClick={() => handleSort('intraLevel')}
+												className="inline-flex items-center gap-1 hover:text-text transition-colors"
+											>
+												<span>Nivel</span>
+												<span className="text-[9px]">{sortBy === 'intraLevel' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span>
+											</button>
+										</th>
+										<th className="px-6 py-4 text-right">
+											<button
+												type="button"
+												onClick={() => handleSort('coalitionPoints')}
+												className="inline-flex items-center gap-1 hover:text-text transition-colors"
+											>
+												<span>Puntos</span>
+												<span className="text-[9px]">{sortBy === 'coalitionPoints' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span>
+											</button>
+										</th>
 									</tr>
 								</thead>
 								<tbody className="divide-y divide-border text-sm">
@@ -338,7 +397,8 @@ export const LeaderboardUsers = ({ ranking }: { ranking: RankingEntry[] }) => {
 													</div>
 												</td>
 												<td className="px-6 py-4">
-													<span
+													<Link
+														href={`/coalitions/${coalition?.slug || user.coalition}`}
 														className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border"
 														style={{
 															color: coalition?.color || 'var(--color-text-secondary)',
@@ -348,7 +408,7 @@ export const LeaderboardUsers = ({ ranking }: { ranking: RankingEntry[] }) => {
 													>
 														<span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: coalition?.color || '#94a3b8' }}></span>
 														{coalition?.name || user.coalition}
-													</span>
+													</Link>
 												</td>
 												<td className="px-6 py-4 text-center font-mono">{user.intraLevel.toFixed(2)}</td>
 												<td className="px-6 py-4 text-right font-mono font-medium text-text">
@@ -357,6 +417,13 @@ export const LeaderboardUsers = ({ ranking }: { ranking: RankingEntry[] }) => {
 											</tr>
 										)
 									})}
+									{paginated.length === 0 && (
+										<tr>
+											<td colSpan={5} className="px-6 py-4 text-center text-text">
+												No hay usuarios que coincidan con los filtros aplicados.
+											</td>
+										</tr>
+									)}
 								</tbody>
 							</table>
 						</div>
