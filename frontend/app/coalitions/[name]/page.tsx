@@ -6,13 +6,14 @@ import { Crown, ArrowLeft } from "lucide-react"
 
 import { useCoalitionStore } from "@/hooks"
 import CardContainer from "@/components/CardContainer"
+import PointsEvolutionChart from "@/app/coalitions/_components/PointsEvolutionChart"
 
 export default function CoalitionDetailPage({
 	params,
 }: {
 	params: Promise<{ name: string }>
 }) {
-	const { coalitions, maxScore } = useCoalitionStore()
+	const { coalitions, maxScore, getCoalitionDetails } = useCoalitionStore()
 	const [name, setName] = useState<string | null>(null)
 	const [isLoading, setIsLoading] = useState(true)
 
@@ -22,6 +23,20 @@ export default function CoalitionDetailPage({
 			setIsLoading(false)
 		})
 	}, [params])
+
+	useEffect(() => {
+		if (!name) return
+
+		const coalition = coalitions.find(
+			(c) => c.name.toLowerCase() === name.toLowerCase()
+		)
+
+		if (!coalition) return
+
+		if (!coalition.details) {
+			void getCoalitionDetails(coalition.slug)
+		}
+	}, [coalitions, getCoalitionDetails, name])
 
 	const coalition = coalitions.find(
 		(c) => c.name.toLowerCase() === name?.toLowerCase()
@@ -52,16 +67,53 @@ export default function CoalitionDetailPage({
 	const formattedPoints = coalition.score > 1000
 		? `${(coalition.score / 1000).toFixed(1)}K`
 		: coalition.score.toLocaleString("en-US")
-	const progression = Math.round((coalition.score / maxScore) * 100)
-	const rank = coalitions.sort((a, b) => b.score - a.score).findIndex((c) => c.id === coalition.id) + 1
-	const isPositive24h = coalition.scoreChange24h >= 0
+	const progression = maxScore > 0 ? maxScore - coalition.score : 0
+	const rank = coalition.details?.campusRank ?? "N/A"
+	const scoreChange24h = coalition.details?.scoreChange24h ?? 0
+	const scoreChangeWeekly = coalition.details?.scoreChangeWeekly ?? 0
+	const scoreChangeMonthly = coalition.details?.scoreChangeMonthly ?? 0
+	const isPositive24h = scoreChange24h >= 0
+
+	const withOpacity = (color: string, opacity: number): string => {
+		const hex = color.replace('#', '')
+		if (!/^[0-9a-fA-F]+$/.test(hex)) return color
+
+		const normalized = hex.length === 3
+			? hex.split('').map((char) => `${char}${char}`).join('')
+			: hex
+
+		if (normalized.length !== 6) return color
+
+		const r = Number.parseInt(normalized.slice(0, 2), 16)
+		const g = Number.parseInt(normalized.slice(2, 4), 16)
+		const b = Number.parseInt(normalized.slice(4, 6), 16)
+		return `rgba(${r}, ${g}, ${b}, ${opacity})`
+	}
+
+	const getLevelRangeFromDistribution = (rangeLabel: string): { levelMin: number; levelMax: number } => {
+		if (rangeLabel.startsWith('+')) {
+			const min = Number.parseInt(rangeLabel.replace('+', ''), 10)
+			return { levelMin: Number.isNaN(min) ? 11 : min + 1, levelMax: 21 }
+		}
+
+		const [minRaw, maxRaw] = rangeLabel.split('-')
+		const levelMin = Number.parseInt(minRaw, 10)
+		const levelMax = Number.parseInt(maxRaw, 10)
+
+		return {
+			levelMin: Number.isNaN(levelMin) ? 0 : levelMin,
+			levelMax: Number.isNaN(levelMax) ? 21 : levelMax,
+		}
+	}
 
 	return (
 		<section className="py-8 space-y-8">
-			<Link href="/coalitions" className="flex items-center gap-2 text-text-secondary hover:text-text transition-colors">
-				<ArrowLeft size={20} />
-				Volver a Coaliciones
-			</Link>
+			<div className="flex items-center justify-between">
+				<Link href="/coalitions" className="flex items-center gap-2 text-text-secondary hover:text-text transition-colors">
+					<ArrowLeft size={20} />
+					Volver a Coaliciones
+				</Link>
+			</div>
 
 			<div className="relative h-64 rounded-lg overflow-hidden">
 				<img
@@ -96,23 +148,22 @@ export default function CoalitionDetailPage({
 					{rank === 1 ? (
 						<p className="text-xs text-yellow-400 mt-2">Líder</p>
 					) : (
-						<p className="text-xs text-text-secondary mt-2">{progression}% vs líder</p>
+						<p className="text-xs text-text-secondary mt-2">A <span className="text-text">{progression}</span> puntos del líder</p>
 					)}
 				</CardContainer>
 				<CardContainer className="p-6 text-center">
-					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Miembros</p>
-					<p className="text-4xl font-bold">{coalition.memberCount}</p>
-					<p className="text-xs text-green-500 mt-2">+{coalition.memberGrowth} este mes</p>
+					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Miembros Activos</p>
+					<p className="text-4xl font-bold">{coalition.details?.activeMembers ?? 0}</p>
+					<p className="text-xs text-text-secondary mt-2">{coalition.details?.totalMembers ?? 0} totales</p>
 				</CardContainer>
 				<CardContainer className="p-6 text-center">
 					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Nivel Promedio</p>
-					<p className="text-4xl font-bold">{coalition.averageLevel.toFixed(1)}</p>
-					<p className="text-xs text-text-secondary mt-2">{coalition.activeMembers} activos</p>
+					<p className="text-4xl font-bold">{coalition.details?.averageLevel ?? 0}</p>
 				</CardContainer>
 				<CardContainer className="p-6 text-center">
 					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Cambio 24h</p>
 					<p className={`text-4xl font-bold ${isPositive24h ? 'text-green-500' : 'text-red-500'}`}>
-						{isPositive24h ? '+' : ''}{(coalition.scoreChange24h / 1000).toFixed(0)}k
+						{isPositive24h ? '+' : ''}{(scoreChange24h / 1000).toFixed(0)}k
 					</p>
 				</CardContainer>
 			</div>
@@ -122,79 +173,113 @@ export default function CoalitionDetailPage({
 				<div className="grid grid-cols-3 gap-4">
 					<div className="bg-surface p-4 rounded">
 						<p className="text-xs text-text-secondary mb-2 uppercase">Últimas 24h</p>
-						<p className={`text-2xl font-bold ${coalition.scoreChange24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-							{coalition.scoreChange24h >= 0 ? '+' : ''}{(coalition.scoreChange24h / 1000).toFixed(1)}k
+						<p className={`text-2xl font-bold ${scoreChange24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+							{scoreChange24h >= 0 ? '+' : ''}{(scoreChange24h / 1000).toFixed(1)}k
 						</p>
 					</div>
 					<div className="bg-surface p-4 rounded">
 						<p className="text-xs text-text-secondary mb-2 uppercase">Esta Semana</p>
-						<p className="text-2xl font-bold text-green-500">+{(coalition.scoreChangeWeekly / 1000).toFixed(0)}k</p>
+						<p className={`text-2xl font-bold ${scoreChangeWeekly >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+							{scoreChangeWeekly >= 0 ? '+' : ''}{(scoreChangeWeekly / 1000).toFixed(0)}k
+						</p>
 					</div>
 					<div className="bg-surface p-4 rounded">
 						<p className="text-xs text-text-secondary mb-2 uppercase">Este Mes</p>
-						<p className="text-2xl font-bold text-green-500">+{(coalition.scoreChangeMonthly / 1000).toFixed(0)}k</p>
+						<p className={`text-2xl font-bold ${scoreChangeMonthly >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+							{scoreChangeMonthly >= 0 ? '+' : ''}{(scoreChangeMonthly / 1000).toFixed(0)}k
+						</p>
 					</div>
 				</div>
 			</CardContainer>
 
-			{/* <CardContainer className="p-6">
-				<p className="text-text-secondary text-sm uppercase font-semibold mb-6">Distribución de Niveles</p>
-				<div className="space-y-3">
-					{coalition.levelDistribution.map((dist, i) => (
-						<div key={i}>
-							<div className="flex justify-between items-center mb-1">
-								<span className="text-sm font-medium">Nivel {dist.range}</span>
-								<span className="text-sm font-bold">{dist.count} miembros</span>
-							</div>
-							<div className="w-full h-2 bg-border rounded overflow-hidden">
-								<div
-									className="h-full rounded"
-									style={{
-										width: `${(dist.count / coalition.memberCount) * 100}%`,
-										backgroundColor: coalition.color
-									}}
-								></div>
-							</div>
-						</div>
-					))}
-				</div>
-			</CardContainer>
+			<PointsEvolutionChart color={coalition.color} title={`Evolución de Puntos de ${coalition.name}`} />
 
-			<CardContainer className="p-6">
-				<p className="text-text-secondary text-sm uppercase font-semibold mb-6">Top Miembros</p>
-				<div className="space-y-3">
-					{coalition.topMembers.map((member, i) => (
-						<div key={i} className="flex items-center justify-between p-4 bg-surface rounded">
-							<div className="flex items-center gap-3">
-								<div className="w-10 h-10 rounded-full bg-linear-to-br flex items-center justify-center font-bold text-white" style={{ backgroundImage: `linear-gradient(135deg, ${coalition.color}, ${coalition.color}80)` }}>
-									#{i + 1}
-								</div>
-								<div>
-									<p className="font-semibold">{member.login}</p>
-									<p className="text-xs text-text-secondary">Nivel {member.level}</p>
-								</div>
-							</div>
-							<div className="text-right">
-								<p className="font-bold">{(member.points / 1000).toFixed(1)}k pts</p>
-								<p className="text-xs text-text-secondary">{Math.round((member.points / coalition.score) * 100)}% del total</p>
-							</div>
-						</div>
-					))}
-				</div>
-			</CardContainer>
+			<div className="grid grid-cols-2 gap-6">
+				<CardContainer className="p-6">
+					<p className="text-text-secondary text-sm uppercase font-semibold mb-6">Distribución de Niveles</p>
+					<div className="flex flex-col gap-4">
+						{coalition.details?.levelDistribution.map((dist, i) => {
+							const totalMembers = coalition.details?.totalMembers ?? 0
+							const widthPercent = totalMembers > 0 ? (dist.count / totalMembers) * 100 : 0
+							const { levelMin, levelMax } = getLevelRangeFromDistribution(dist.range)
 
-			<CardContainer className="p-6">
-				<p className="text-text-secondary text-sm uppercase font-semibold mb-6">Todos los Miembros ({coalition.allMembers.length})</p>
-				<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-					{coalition.allMembers.map((member, i) => (
-						<div key={i} className="p-3 bg-surface rounded text-center hover:bg-card-hover transition-colors">
-							<p className="font-semibold text-sm">{member.login}</p>
-							<p className="text-xs text-text-secondary">Lvl {member.level}</p>
-							<p className="text-xs font-semibold mt-1">{(member.points / 1000).toFixed(0)}k</p>
+							return (
+								<Link
+									key={i}
+									href={`/leaderboard?coalition=${encodeURIComponent(coalition.slug)}&levelMin=${levelMin}&levelMax=${levelMax}`}
+									className="block rounded-md p-2 -m-2 hover:bg-card-hover/60 transition-colors"
+								>
+									<div className="flex justify-between items-center mb-2">
+										<span className="text-sm text-text">Nivel {dist.range}</span>
+										<span className="text-sm font-semibold">{dist.count}</span>
+									</div>
+									<div className="w-full h-1.5 bg-border rounded-full overflow-hidden">
+										<div
+											className="h-full rounded-full transition-all duration-300"
+											style={{
+												width: `${widthPercent}%`,
+												backgroundColor: coalition.color,
+											}}
+										></div>
+									</div>
+								</Link>
+							)
+						})}
+						<div className="border-t border-border mt-6 pt-4">
+							<div className="grid grid-cols-3 gap-3 text-center">
+								<div className="flex flex-col">
+									<span className="text-xs text-text-secondary uppercase tracking-wide mb-1">Nivel Promedio</span>
+									<span className="text-lg font-bold">{coalition.details?.averageLevel?.toFixed(1) ?? 0}</span>
+								</div>
+								<div className="flex flex-col">
+									<span className="text-xs text-text-secondary uppercase tracking-wide mb-1">Activos</span>
+									<span className="text-lg font-bold">{coalition.details?.activeMembers ?? 0}</span>
+								</div>
+								<div className="flex flex-col">
+									<span className="text-xs text-text-secondary uppercase tracking-wide mb-1">Total</span>
+									<span className="text-lg font-bold">{coalition.details?.totalMembers ?? 0}</span>
+								</div>
+							</div>
 						</div>
-					))}
-				</div>
-			</CardContainer> */}
+					</div>
+				</CardContainer>
+				<CardContainer className="p-6">
+					<p className="text-text-secondary text-sm uppercase font-semibold mb-6">Top Miembros</p>
+					<div className="space-y-3">
+						{coalition.details?.topMembers.map((member, i) => (
+							<div key={i} className="flex items-center justify-between p-4 bg-surface rounded-lg">
+								<div className="flex items-center gap-3">
+									<img
+										src={member.avatar}
+										alt={member.displayName}
+										className="w-12 h-12 rounded-full bg-card p-1 object-cover"
+									/>
+									<div>
+										<p className="font-semibold">{member.login}</p>
+										<p className="text-xs text-text-secondary">Nivel {member.level}</p>
+									</div>
+								</div>
+								<div className="text-right">
+									<p className="font-bold">{(member.points / 1000).toFixed(1)}k pts</p>
+									<p className="text-xs text-text-secondary">{Math.round((member.points / coalition.score) * 100)}% del total</p>
+								</div>
+							</div>
+						))}
+					</div>
+					<div className="flex items-center justify-center mt-8">
+						<Link
+							href={`/leaderboard?coalition=${encodeURIComponent(coalition.slug)}`}
+							className="rounded-lg border px-4 py-2 text-sm font-semibold text-text hover:text-accent transition-colors"
+							style={{
+								borderColor: withOpacity(coalition.color, 0.45),
+								backgroundColor: withOpacity(coalition.color, 0.12)
+							}}
+						>
+							Ver ranking de {coalition.name}
+						</Link>
+					</div>
+				</CardContainer>
+			</div>
 		</section>
 	)
 }
