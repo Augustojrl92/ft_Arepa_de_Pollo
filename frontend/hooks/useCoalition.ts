@@ -1,7 +1,7 @@
 'use client'
 
 import { create } from "zustand"
-import { fetchCoalitions, fetchRanking } from "@/lib/coalitionApi"
+import { fetchCoalitions, fetchRanking, fetchCoalitionDetails } from "@/lib/coalitionApi"
 import { Coalition, RankingEntry } from "@/types"
 
 interface CoalitionState {
@@ -11,6 +11,7 @@ interface CoalitionState {
 	error: string | null
 	getCoalitions: () => Promise<void>
 	getRanking: () => Promise<void>
+	getCoalitionDetails: (slug: string) => Promise<void>
 	setError: (msg: string | null) => void
 }
 
@@ -36,12 +37,26 @@ export const useCoalitionStore = create<CoalitionState>()(
 		getRanking: async () => {
 			try {
 				const ranking = await fetchRanking()
-				console.log("🚀 ~ ranking:", ranking);
 				
 				set({ ranking, error: null })
-				console.log("🚀 ~ getRanking ~ ranking:", ranking);
 			} catch (error) {
 				const message = error instanceof Error ? error.message : "Failed to fetch ranking"
+				
+				set({ error: message })
+			}
+		},
+		getCoalitionDetails: async (slug: string) => {
+			try {
+				const details = await fetchCoalitionDetails(slug)
+				
+				set((state) => ({
+					coalitions: state.coalitions.map((coalition) =>
+						coalition.slug === slug ? { ...coalition, details } : coalition
+					),
+					error: null,
+				}))
+			} catch (error) {
+				const message = error instanceof Error ? error.message : "Failed to fetch coalition details"
 				
 				set({ error: message })
 			}

@@ -7,7 +7,6 @@ export interface User {
 	coalition: string
 	intraLevel: number
 	coalitionPoints: number
-	coalitionRank: number | null
 	campusUserRank: number | null
 	coalitionUserRank: number | null
 	walletAmount: number
@@ -16,9 +15,24 @@ export interface User {
 
 export interface TopMember {
 	login: string
+	displayName: string
 	level: number
 	points: number
-	avatarUrl?: string
+	avatar: string
+}
+
+interface CoalitionDetails {
+	levelDistribution: { range: string, count: number }[]
+	averageLevel: number
+	scoreChange24h: number | null
+	scoreChangeWeekly: number | null
+	scoreChangeMonthly: number | null
+	campusRank: number | null
+	campusRankChange: number | null
+	campusRankStatus: "up" | "down" | "same" | null
+	topMembers: TopMember[]
+	totalMembers: number | 1
+	activeMembers: number | 0
 }
 
 export interface Coalition {
@@ -32,10 +46,12 @@ export interface Coalition {
 	memberCount: number
 	activeMembers: number
 	averageLevel: number
+	details?: CoalitionDetails
 }
 
 export interface RankingEntry {
 	rank: number
+	coalitionRank: number
 	login: string
 	displayName: string
 	avatar: string

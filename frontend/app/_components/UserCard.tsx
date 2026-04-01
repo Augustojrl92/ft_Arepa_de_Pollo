@@ -11,7 +11,7 @@ export default function UserCard() {
 	const coalitionPoints = user.coalitionPoints > 1000 
 		? `${(user.coalitionPoints / 1000).toFixed(0)}K`
 		: user.coalitionPoints.toLocaleString("en-US")
-	const coalitionRank = user.coalitionRank ? `#${user.coalitionRank}` : "-"
+	const coalitionRank = user.coalitionUserRank ? `#${user.coalitionUserRank}` : "-"
 	return (
 		<CardContainer className="relative flex items-center gap-8 min-w-80 shrink-0">
 			<span className="absolute top-3 right-3 text-6xl text-border font-bold">{coalitionRank}</span>

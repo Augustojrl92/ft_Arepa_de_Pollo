@@ -1,12 +1,8 @@
-import { Coalition, RankingEntry } from "@/types"
+import { Coalition } from "@/types"
+import { authFetchJson } from "@/lib/authApi"
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "")
 const COALITION_BASE_URL = `${API_URL}/api/coalitions/`
-
-type ApiErrorPayload = {
-	error?: string
-	detail?: string
-}
 
 type CoalitionApiItem = {
 	id: number
@@ -33,29 +29,40 @@ type RankingApiItem = {
 	coalition: string
 	coalition_points: number
 	intra_level: number
+	coalition_rank: number
 }
 
 type RankingApiResponse = {
 	users?: RankingApiItem[]
 }
 
-const getErrorMessage = async (response: Response, fallbackMessage: string) => {
-	const payload = await response.json().catch(() => null) as ApiErrorPayload | null
+type CoalitionDetailsApiResponse = {
+	coalition: {
+		level_distribution: { range: string, count: number }[],
+		average_level: number,
+		score_change_24: number | null,
+		score_change_weekly: number | null,
+		score_change_monthly: number | null,
+		campus_rank: number | null,
+		campus_rank_change: number | null,
+		campus_rank_status: "up" | "down" | "same" | null,
+		top_members: {
+			login: string,
+			display_name: string,
+			avatar_url: string,
+			coalition_points: number,
+			intra_level: number,
+		}[],
+		total_members: number,
+		active_members: number,
 
-	return payload?.error ?? payload?.detail ?? fallbackMessage
+	}
 }
 
 export const fetchCoalitions = async (): Promise<Coalition[]> => {
-	const response = await fetch(COALITION_BASE_URL, {
+	const payload = await authFetchJson<CoalitionApiResponse>(COALITION_BASE_URL, {
 		method: "GET",
-		credentials: "include",
-	})
-
-	if (!response.ok) {
-		throw new Error(await getErrorMessage(response, "Failed to fetch coalitions"))
-	}
-
-	const payload = await response.json() as CoalitionApiResponse
+	}, "Failed to fetch coalitions")
 	const coalitions = payload.coalitions ?? []
 
 	return coalitions.map((coalition) => ({
@@ -73,20 +80,14 @@ export const fetchCoalitions = async (): Promise<Coalition[]> => {
 }
 
 export const fetchRanking = async () => {
-	const response = await fetch(`${COALITION_BASE_URL}users-ranking/`, {
+	const payload = await authFetchJson<RankingApiResponse>(`${COALITION_BASE_URL}users-ranking/`, {
 		method: "GET",
-		credentials: "include",
-	})
-
-	if (!response.ok) {
-		throw new Error(await getErrorMessage(response, "Failed to fetch ranking"))
-	}
-
-	const payload = await response.json() as RankingApiResponse
+	}, "Failed to fetch ranking")
 	const ranking = payload.users ?? []
 
 	return ranking.map((entry) => ({
 		rank: entry.rank,
+		coalitionRank: entry.coalition_rank,
 		login: entry.login,
 		displayName: entry.display_name,
 		avatar: entry.avatar_url,
@@ -94,4 +95,32 @@ export const fetchRanking = async () => {
 		coalitionPoints: entry.coalition_points,
 		intraLevel: entry.intra_level,
 	}))
+}
+
+export const fetchCoalitionDetails = async (slug: string) => {
+	const payload = await authFetchJson<CoalitionDetailsApiResponse>(`${COALITION_BASE_URL}details/?coalition=${encodeURIComponent(slug)}`, {
+		method: "GET",
+	}, "Failed to fetch coalition details")
+	const coalition = payload.coalition
+
+	return {
+		levelDistribution: coalition.level_distribution,
+		averageLevel: coalition.average_level,
+		campusRank: coalition.campus_rank,
+		scoreChange24h: coalition.score_change_24,
+		scoreChangeWeekly: coalition.score_change_weekly,
+		scoreChangeMonthly: coalition.score_change_monthly,
+		campusRankChange: coalition.campus_rank_change,
+		campusRankStatus: coalition.campus_rank_status,
+		topMembers: coalition.top_members.map((member) => ({
+			login: member.login,
+			displayName: member.display_name,
+			avatar: member.avatar_url,
+			points: member.coalition_points,
+			level: member.intra_level,
+		})),
+		totalMembers: coalition.total_members,
+		activeMembers: coalition.active_members,
+	}
+
 }

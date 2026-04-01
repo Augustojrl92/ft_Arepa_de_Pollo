@@ -75,8 +75,23 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 			return
 		}
 
+		hasInitializedCoalitionsRef.current = true
 		void getCoalitions()
 	}, [getCoalitions, isAuthenticated, isReady])
+
+	useEffect(() => {
+		if (!isReady || !isAuthenticated) {
+			return
+		}
+
+		const intervalId = window.setInterval(() => {
+			void initializeAuth()
+		}, 10 * 60 * 1000)
+
+		return () => {
+			window.clearInterval(intervalId)
+		}
+	}, [initializeAuth, isAuthenticated, isReady])
 
 	if (!isReady) {
 		return null
