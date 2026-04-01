@@ -31,8 +31,18 @@ class UserRankingView(APIView):
 
 	def get(self, request):
 		coalition_filter = request.query_params.get('coalition')
+		try:
+			page = max(int(request.query_params.get('page', 1)), 1)
+		except (TypeError, ValueError):
+			page = 1
+
+		try:
+			per_page = max(int(request.query_params.get('per_page', 30)), 1)
+		except (TypeError, ValueError):
+			per_page = 30
+
 		return Response(
-			{'users': _serialize_user_ranking(coalition_filter)},
+			_serialize_user_ranking(coalition_filter, page=page, per_page=per_page),
 			status=status.HTTP_200_OK,
 		)
 
