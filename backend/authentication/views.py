@@ -104,7 +104,6 @@ def _upsert_campus_user_from_42_payload(user, user_42):
 			'coalition_name': '',
 			'coalition_slug': '',
 			'coalition_user_score': 0,
-			'coalition_total_score': 0,
 			'created_at': now,
 			'updated_at': now,
 		},
@@ -247,7 +246,7 @@ class UserProfileView(APIView):
 		if campus_user is None:
 			return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
 
-		campus_rank, coalition_user_rank = _get_sync_user_ranks(campus_user)
+		campus_rank = _get_sync_user_ranks(campus_user)
 		coalition_summary = _serialize_simple_coalitions(campus_user.coalition_slug) if campus_user.coalition_slug else None
 
 		data = {
@@ -263,9 +262,8 @@ class UserProfileView(APIView):
 			'avatar_url': campus_user.avatar_url,
 			'coalition': campus_user.coalition_slug or None,
 			'coalition_points': campus_user.coalition_user_score,
-			'coalition_rank': coalition_summary['rank'] if coalition_summary else None,
-			'campus_user_rank': campus_rank,
-			'coalition_user_rank': coalition_user_rank,
+			'coalition_user_rank': campus_user.coalition_rank,
+			'campus_user_rank': campus_rank
 		}
 		return Response(data, status=status.HTTP_200_OK)
 

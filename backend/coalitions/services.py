@@ -1,19 +1,125 @@
-from django.db.models import Q
+from django.db.models import Q, Avg
+from django.utils import timezone
+from datetime import timedelta
 
-from sync.models import CampusUser, Coalition as SyncedCoalition
+from sync.models import CampusUser, Coalition as SyncedCoalition, CoalitionScoreSnapshot, CampusUserScoreSnapshot
 
+
+def _get_rank_change(current_rank, previous_rank):
+	if current_rank is None or previous_rank is None:
+		return None, None
+
+	delta = previous_rank - current_rank
+	if delta > 0:
+		return delta, 'up'
+	if delta < 0:
+		return delta, 'down'
+	return 0, 'same'
+
+def _get_current_coalition_rank(coalition):
+	ahead_count = SyncedCoalition.objects.filter(
+		Q(total_score__gt=coalition.total_score)
+		| Q(total_score=coalition.total_score, name__lt=coalition.name)
+	).count()
+	return ahead_count + 1
+
+def _get_level_distribution(coalition_slug):
+	coalition_users = CampusUser.objects.filter(coalition_slug=coalition_slug)
+	average_level = round(coalition_users.aggregate(average_level=Avg('level'))['average_level'] or 0, 2)
+
+	range_counts = {
+		'0': 0,
+		'1-3': 0,
+		'4-6': 0,
+		'7-10': 0,
+		'+10': 0,
+	}
+
+	for level in coalition_users.values_list('level', flat=True):
+		if level is None:
+			continue
+
+		level_number = int(level)
+		if level_number <= 0:
+			range_counts['0'] += 1
+		elif level_number <= 3:
+			range_counts['1-3'] += 1
+		elif level_number <= 6:
+			range_counts['4-6'] += 1
+		elif level_number <= 10:
+			range_counts['7-10'] += 1
+		else:
+			range_counts['+10'] += 1
+
+	return [
+		{'range': '0', 'count': range_counts['0']},
+		{'range': '1-3', 'count': range_counts['1-3']},
+		{'range': '4-6', 'count': range_counts['4-6']},
+		{'range': '7-10', 'count': range_counts['7-10']},
+		{'range': '+10', 'count': range_counts['+10']},
+	], average_level
+
+def _get_score_change(coalition_slug):
+	coalition = SyncedCoalition.objects.filter(slug=coalition_slug).first()
+	if coalition is None:
+		return None, None, None, None, None, None
+
+	today = timezone.localdate()
+	previous_day = today - timedelta(days=1)
+
+	def _get_change(days):
+		target_date = today - timedelta(days=days)
+		reference_snapshot = (
+			CoalitionScoreSnapshot.objects.filter(
+				coalition=coalition,
+				snapshot_date__lte=target_date,
+			)
+			.order_by('-snapshot_date')
+			.first()
+		)
+		if reference_snapshot is None:
+			return None
+		return coalition.total_score - reference_snapshot.total_score
+
+	current_rank = _get_current_coalition_rank(coalition)
+	previous_snapshot = (
+		CoalitionScoreSnapshot.objects.filter(
+			coalition=coalition,
+			snapshot_date__lte=previous_day,
+		)
+		.order_by('-snapshot_date')
+		.first()
+	)
+	previous_rank = previous_snapshot.campus_rank if previous_snapshot else None
+	rank_change, rank_status = _get_rank_change(current_rank, previous_rank)
+
+	return (
+		_get_change(1),
+		_get_change(7),
+		_get_change(30),
+		current_rank,
+		rank_change,
+		rank_status,
+	)
+
+def _get_top_members(coalition_slug, limit=3):
+	all_users = CampusUser.objects.filter(coalition_slug=coalition_slug)
+	all_active_users = all_users.exclude(coalition_user_score=0)
+	top_users = all_users.filter(coalition_slug=coalition_slug).order_by('-coalition_user_score', 'intra_id')[:limit]
+
+	return [
+		{
+			'login': user.login,
+			'display_name': user.display_name,
+			'avatar_url': user.avatar_url,
+			'coalition_points': user.coalition_user_score,
+			'intra_level': user.level,
+		}
+		for user in top_users
+	], all_users.count(), all_active_users.count()
 
 def get_coalitions():
 	return list(SyncedCoalition.objects.order_by('-total_score', 'name'))
-
-def _serialize_coalition_leaderboard():
-	return [
-		{
-			'name': coalition.name,
-			'total_points': coalition.total_score,
-		}
-		for coalition in get_coalitions()
-	]
 
 def _serialize_simple_coalitions(coalition_slug=None):
 	coalitions = list(SyncedCoalition.objects.order_by('-total_score', 'name')[:4])
@@ -41,6 +147,29 @@ def _serialize_simple_coalitions(coalition_slug=None):
 
 	return None
 
+def _serialize_coalition_details(coalition_slug):
+	coalition = SyncedCoalition.objects.filter(slug=coalition_slug).first()
+	
+	if coalition is None:
+		return None
+
+	level_distribution, average_level = _get_level_distribution(coalition_slug)
+	score_change_24, score_change_weekly, score_change_monthly, campus_rank, campus_rank_change, campus_rank_status = _get_score_change(coalition_slug)
+	top_members, total_members, active_members = _get_top_members(coalition_slug)
+
+	return {
+		'level_distribution': level_distribution,
+		'average_level': average_level,
+		'score_change_24': score_change_24,
+		'score_change_weekly': score_change_weekly,
+		'score_change_monthly': score_change_monthly,
+		'campus_rank': campus_rank,
+		'campus_rank_change': campus_rank_change,
+		'campus_rank_status': campus_rank_status,
+		'top_members': top_members,
+		'total_members': total_members,
+		'active_members': active_members
+	}
 
 def _get_sync_user_ranks(sync_user):
 	if sync_user is None:
@@ -56,28 +185,7 @@ def _get_sync_user_ranks(sync_user):
 	).count()
 	campus_rank = ahead_global + 1
 
-	coalition_rank = None
-	if sync_user.coalition_id is not None:
-		coalition_qs = base_qs.filter(coalition_id=sync_user.coalition_id)
-		coalition_rank = coalition_qs.filter(
-			Q(coalition_user_score__gt=score)
-			| Q(coalition_user_score=score, intra_id__lt=intra_id)
-		).count() + 1
-	elif sync_user.coalition_name:
-		coalition_qs = base_qs.filter(coalition_name=sync_user.coalition_name)
-		coalition_rank = coalition_qs.filter(
-			Q(coalition_user_score__gt=score)
-			| Q(coalition_user_score=score, intra_id__lt=intra_id)
-		).count() + 1
-	elif sync_user.coalition_slug:
-		coalition_qs = base_qs.filter(coalition_slug=sync_user.coalition_slug)
-		coalition_rank = coalition_qs.filter(
-			Q(coalition_user_score__gt=score)
-			| Q(coalition_user_score=score, intra_id__lt=intra_id)
-		).count() + 1
-
-	return campus_rank, coalition_rank
-
+	return campus_rank
 
 def _get_user_ranking_queryset(coalition_filter=None):
 	queryset = CampusUser.objects.filter(is_active=True)
@@ -93,12 +201,23 @@ def _get_user_ranking_queryset(coalition_filter=None):
 
 	return queryset.order_by('-coalition_user_score', 'intra_id')
 
-
 def _serialize_user_ranking(coalition_filter=None):
 	users = list(_get_user_ranking_queryset(coalition_filter))
+	user_ids = [user.id for user in users]
+	previous_day = timezone.localdate() - timedelta(days=1)
+
+	previous_snapshots = (
+		CampusUserScoreSnapshot.objects.filter(
+			campus_user_id__in=user_ids,
+			snapshot_date__lte=previous_day,
+		)
+		.order_by('campus_user_id', '-snapshot_date')
+		.distinct('campus_user_id')
+	)
+	previous_by_user_id = {snapshot.campus_user_id: snapshot for snapshot in previous_snapshots}
 
 	return [
-		{
+		({
 			'rank': index,
 			'login': user.login,
 			'display_name': user.display_name,
@@ -106,6 +225,14 @@ def _serialize_user_ranking(coalition_filter=None):
 			'coalition': user.coalition_slug or user.coalition_name or None,
 			'coalition_points': user.coalition_user_score,
 			'intra_level': user.level,
-		}
+			'campus_rank_change': campus_rank_change,
+			'campus_rank_status': campus_rank_status,
+			'coalition_rank': user.coalition_rank,
+			'coalition_rank_change': coalition_rank_change,
+			'coalition_rank_status': coalition_rank_status,
+		})
 		for index, user in enumerate(users, start=1)
+		for previous_snapshot in [previous_by_user_id.get(user.id)]
+		for campus_rank_change, campus_rank_status in [_get_rank_change(index, previous_snapshot.campus_user_rank if previous_snapshot else None)]
+		for coalition_rank_change, coalition_rank_status in [_get_rank_change(user.coalition_rank, previous_snapshot.coalition_user_rank if previous_snapshot else None)]
 	]
