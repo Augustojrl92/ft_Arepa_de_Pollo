@@ -93,7 +93,13 @@ export default function CoalitionDetailPage({
 	const getLevelRangeFromDistribution = (rangeLabel: string): { levelMin: number; levelMax: number } => {
 		if (rangeLabel.startsWith('+')) {
 			const min = Number.parseInt(rangeLabel.replace('+', ''), 10)
-			return { levelMin: Number.isNaN(min) ? 11 : min + 1, levelMax: 21 }
+			return { levelMin: Number.isNaN(min) ? 11 : min + 1, levelMax: 25 }
+		} else if (!rangeLabel.includes('-')) {
+			const max = Number.parseInt(rangeLabel, 10)
+			return {
+				levelMin: Number.isNaN(max) ? 0 : max,
+				levelMax: Number.isNaN(max) ? 25 : max,
+			}
 		}
 
 		const [minRaw, maxRaw] = rangeLabel.split('-')
@@ -102,7 +108,7 @@ export default function CoalitionDetailPage({
 
 		return {
 			levelMin: Number.isNaN(levelMin) ? 0 : levelMin,
-			levelMax: Number.isNaN(levelMax) ? 21 : levelMax,
+			levelMax: Number.isNaN(levelMax) ? 25 : levelMax,
 		}
 	}
 
