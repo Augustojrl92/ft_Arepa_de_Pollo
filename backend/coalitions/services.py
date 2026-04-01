@@ -125,7 +125,7 @@ def _serialize_simple_coalitions(coalition_slug=None):
 	coalitions = list(SyncedCoalition.objects.order_by('-total_score', 'name')[:4])
 
 	serialized = [
-		{
+		({
 			'id': coalition.id,
 			'name': coalition.name,
 			'slug': coalition.slug,
@@ -134,8 +134,13 @@ def _serialize_simple_coalitions(coalition_slug=None):
 			'color': coalition.color,
 			'score': coalition.total_score,
 			'rank': index,
-		}
+			'member_count': total_members,
+			'active_members': active_members,
+			'average_level': average_level,
+		})
 		for index, coalition in enumerate(coalitions, start=1)
+		for _, average_level in [_get_level_distribution(coalition.slug)]
+		for _, total_members, active_members in [_get_top_members(coalition.slug)]
 	]
 
 	if coalition_slug is None:
