@@ -13,7 +13,7 @@ export default function Leaderboard() {
 
 	return (
 		<section className="py-5">
-			<div className="text-center py-12">
+			<div className="py-6">
 				<LeaderboardUsers ranking={ranking} />
 			</div>
 		</section>
