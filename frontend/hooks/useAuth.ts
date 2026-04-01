@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { getProfile, postLogout } from "@/lib/authApi";
+import { ApiHttpError, getProfile, postLogout } from "@/lib/authApi";
 import { User } from "@/types";
 
 type AuthStatus = "idle" | "loading" | "authenticated" | "unauthenticated";
@@ -85,7 +85,6 @@ export const useAuthStore = create<AuthState>()(
               coalition: profile.coalition ?? "",
               intraLevel: profile.intra_level,
               coalitionPoints: profile.coalition_points ?? 0,
-              coalitionRank: profile.coalition_rank ?? null,
               campusUserRank: profile.campus_user_rank ?? null,
               coalitionUserRank: profile.coalition_user_rank ?? null,
               walletAmount: profile.intra_wallet,
@@ -95,11 +94,21 @@ export const useAuthStore = create<AuthState>()(
             error: null,
           })
           return
-        } catch {
+        } catch (error) {
+          if (error instanceof ApiHttpError && error.status === 401) {
+            set({
+              user: null,
+              status: "unauthenticated",
+              error: null,
+            })
+            return
+          }
+
+          const hasLocalUser = Boolean(get().user)
+          const message = error instanceof Error ? error.message : "Temporary auth error"
           set({
-            user: null,
-            status: "unauthenticated",
-            error: null,
+            status: hasLocalUser ? "authenticated" : "unauthenticated",
+            error: message,
           })
         }
       },
