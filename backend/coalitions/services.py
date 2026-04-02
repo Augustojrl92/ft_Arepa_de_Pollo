@@ -2,7 +2,17 @@ from django.db.models import Q, Avg
 from django.utils import timezone
 from datetime import timedelta
 
-from sync.models import CampusUser, Coalition as SyncedCoalition, CoalitionScoreSnapshot, CampusUserScoreSnapshot
+from sync.models import CampusUser, Coalition as SyncedCoalition, CoalitionScoreSnapshot, CampusUserScoreSnapshot, SyncMetadata
+
+
+SYNC_METADATA_KEY = 'campus_sync'
+
+
+def _get_last_time_update():
+	metadata = SyncMetadata.objects.filter(key=SYNC_METADATA_KEY).only('last_time_update').first()
+	if metadata is None or metadata.last_time_update is None:
+		return None
+	return metadata.last_time_update
 
 
 def _get_rank_change(current_rank, previous_rank):
@@ -188,8 +198,7 @@ def _get_sync_user_ranks(sync_user):
 	return campus_rank
 
 def _get_user_ranking_queryset(coalition_filter=None):
-	queryset = CampusUser.objects.filter(is_active=True)
-
+	queryset = CampusUser.objects.exclude(coalition_user_score=0)
 	if coalition_filter:
 		coalition_q = (
 			Q(coalition_slug=coalition_filter)

@@ -219,6 +219,12 @@ class OAuth42CallbackView(APIView):
 		if not login:
 			return _redirect_with_error('Missing login in 42 payload')
 
+		campuses = user_42.get('campus', [])
+		madrid_campus = next((c for c in campuses if c.get('id') == 22), None)
+
+		if not madrid_campus:
+			return _redirect_with_error('not_in_madrid_campus')
+
 		user, _created = User.objects.get_or_create(
             username=login,
             defaults={"email": email},
