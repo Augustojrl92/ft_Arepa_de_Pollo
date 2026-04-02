@@ -5,7 +5,7 @@ import { useCoalitionStore } from "@/hooks"
 import { Crown } from "lucide-react"
 
 export default function TournamentCard() {
-	const { coalitions, maxScore } = useCoalitionStore()
+	const { coalitions, maxScore, lastUpdate } = useCoalitionStore()
 
 	if (coalitions.length === 0) return null
 
@@ -18,7 +18,9 @@ export default function TournamentCard() {
 					<Crown fill="#F59E0B" strokeWidth={0} />
 					<h2 className="font-bold">Coalition Tournament</h2>
 				</div>
-				<span className="text-xs bg-card-hover px-3 py-1 rounded-lg">Last update: 8 min ago</span>
+				<span className="text-xs bg-card-hover px-3 py-1 rounded-lg">
+					Actualizado {lastUpdate || "Unknown"}
+				</span>
 			</div>
 			<div className="flex flex-col gap-3 w-full">
 				{orderedCoalitions.map((coalition, i) => {

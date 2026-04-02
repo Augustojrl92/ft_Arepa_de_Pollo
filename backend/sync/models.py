@@ -91,3 +91,11 @@ class CampusUserScoreSnapshot(models.Model):
 
 	def __str__(self):
 		return f'{self.campus_user.login} - {self.snapshot_date}: {self.coalition_user_score}'
+
+
+class SyncMetadata(models.Model):
+	key = models.CharField(max_length=64, unique=True)
+	last_time_update = models.DateTimeField(null=True, blank=True)
+
+	def __str__(self):
+		return f'{self.key}: {self.last_time_update}'
