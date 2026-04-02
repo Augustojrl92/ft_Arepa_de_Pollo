@@ -9,7 +9,8 @@ export default function CoalitionCard({ coalition, index }: { coalition: Coaliti
 	const { maxScore } = useCoalitionStore()
 
 	const isLeader = coalition.score === maxScore
-	const isPositive = coalition.scoreChange24h >= 0
+	const scoreChange24h = coalition.details?.scoreChange24h ?? 0
+	const isPositive = scoreChange24h >= 0
 
 	return (
 		<Link href={`/coalitions/${coalition.name.toLowerCase()}`} className="block">
@@ -65,7 +66,7 @@ export default function CoalitionCard({ coalition, index }: { coalition: Coaliti
 							24h
 						</p>
 						<p className={`font-bold text-2xl ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
-							{isPositive ? '+' : ''}{(coalition.scoreChange24h / 1000).toFixed(0)}k
+							{isPositive ? '+' : ''}{(scoreChange24h / 1000).toFixed(0)}k
 						</p>
 					</div>
 				</div>

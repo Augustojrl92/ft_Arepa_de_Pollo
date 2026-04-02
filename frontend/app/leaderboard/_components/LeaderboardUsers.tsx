@@ -1,6 +1,5 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { RankingEntry } from "@/types"
 import { useAuthStore, useCoalitionStore } from "@/hooks"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
@@ -11,8 +10,8 @@ type SortDirection = 'asc' | 'desc'
 
 const levelUpperBound = 25
 
-export const LeaderboardUsers = ({ ranking }: { ranking: RankingEntry[] }) => {
-	const { coalitions } = useCoalitionStore()
+export const LeaderboardUsers = () => {
+	const { coalitions, ranking, rankingMeta, getRanking } = useCoalitionStore()
 	const { user } = useAuthStore()
 	const searchParams = useSearchParams()
 	const [search, setSearch] = useState('')
@@ -53,6 +52,22 @@ export const LeaderboardUsers = ({ ranking }: { ranking: RankingEntry[] }) => {
 		setLevelMax(Math.max(safeMin, safeMax))
 		setPage(1)
 	}, [coalitions, searchParams])
+
+	const serverCoalitionFilter = selectedCoalitions.length === 1 ? selectedCoalitions[0] : undefined
+
+	useEffect(() => {
+		void getRanking({
+			page,
+			perPage,
+			coalition: serverCoalitionFilter,
+		})
+	}, [getRanking, page, perPage, serverCoalitionFilter])
+
+	useEffect(() => {
+		if (rankingMeta.totalPages > 0 && page > rankingMeta.totalPages) {
+			setPage(rankingMeta.totalPages)
+		}
+	}, [page, rankingMeta.totalPages])
 
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
@@ -134,13 +149,15 @@ export const LeaderboardUsers = ({ ranking }: { ranking: RankingEntry[] }) => {
 			: (valueB as number) - (valueA as number)
 	})
 
-	const totalPages = Math.max(1, Math.ceil(sorted.length / perPage))
-	const safePage = Math.min(page, totalPages)
-	const pageStartIndex = (safePage - 1) * perPage
-	const paginated = sorted.slice(pageStartIndex, pageStartIndex + perPage)
-
-	const usersRangeStart = sorted.length === 0 ? 0 : pageStartIndex + 1
-	const usersRangeEnd = Math.min(pageStartIndex + perPage, sorted.length)
+	const safePage = Math.min(page, Math.max(rankingMeta.totalPages, 1))
+	const paginated = sorted
+	const hasLocalFilters =
+		search.trim().length > 0 ||
+		selectedCoalitions.length > 1 ||
+		levelMin > 0 ||
+		levelMax < levelUpperBound
+	const usersRangeStart = filtered.length === 0 ? 0 : ((safePage - 1) * perPage) + 1
+	const usersRangeEnd = filtered.length === 0 ? 0 : usersRangeStart + filtered.length - 1
 
 	const totalPoints = filtered.reduce((sum, user) => sum + user.coalitionPoints, 0)
 	const avgLevel =
@@ -372,7 +389,7 @@ export const LeaderboardUsers = ({ ranking }: { ranking: RankingEntry[] }) => {
 									</tr>
 								</thead>
 								<tbody className="divide-y divide-border text-sm">
-									{paginated.map((user) => {
+								{paginated.map((user) => {
 										const coalition = coalitionBySlug.get(user.coalition)
 										return (
 											<tr key={user.login} className="hover:bg-card-hover/70 transition-colors group">
@@ -430,7 +447,9 @@ export const LeaderboardUsers = ({ ranking }: { ranking: RankingEntry[] }) => {
 
 						<div className="bg-background/50 px-6 py-4 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-3">
 							<span className="text-[10px] font-mono text-text-secondary uppercase tracking-widest">
-								Mostrando {usersRangeStart}-{usersRangeEnd} de {sorted.length} usuarios
+								{hasLocalFilters
+									? `Mostrando ${filtered.length} usuarios filtrados en esta pagina`
+									: `Mostrando ${usersRangeStart}-${usersRangeEnd} de ${rankingMeta.total} usuarios`}
 							</span>
 							<div className="flex items-center gap-2">
 								<select
@@ -454,10 +473,10 @@ export const LeaderboardUsers = ({ ranking }: { ranking: RankingEntry[] }) => {
 								>
 									Anterior
 								</button>
-								<span className="text-xs font-bold text-text-secondary">{safePage}/{totalPages}</span>
+								<span className="text-xs font-bold text-text-secondary">{safePage}/{Math.max(rankingMeta.totalPages, 1)}</span>
 								<button
-									disabled={safePage === totalPages}
-									onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+									disabled={safePage >= Math.max(rankingMeta.totalPages, 1)}
+									onClick={() => setPage((current) => Math.min(Math.max(rankingMeta.totalPages, 1), current + 1))}
 									className="px-3 py-1 text-xs font-bold rounded-md hover:bg-card-hover text-text-secondary disabled:opacity-50"
 								>
 									Siguiente
