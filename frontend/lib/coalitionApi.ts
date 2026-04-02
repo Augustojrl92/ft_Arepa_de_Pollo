@@ -19,6 +19,7 @@ type CoalitionApiItem = {
 
 type CoalitionApiResponse = {
 	coalitions?: CoalitionApiItem[]
+	last_time_update?: string
 }
 
 type RankingApiItem = {
@@ -59,17 +60,17 @@ type CoalitionDetailsApiResponse = {
 		}[],
 		total_members: number,
 		active_members: number,
-
 	}
 }
 
-export const fetchCoalitions = async (): Promise<Coalition[]> => {
+export const fetchCoalitions = async (): Promise<{ coalitions: Coalition[], lastUpdate: string | null }> => {
 	const payload = await authFetchJson<CoalitionApiResponse>(COALITION_BASE_URL, {
 		method: "GET",
 	}, "Failed to fetch coalitions")
 	const coalitions = payload.coalitions ?? []
+	const lastUpdate = payload.last_time_update ?? null
 
-	return coalitions.map((coalition) => ({
+	const parsedCoalitions = coalitions.map((coalition) => ({
 		id: coalition.id,
 		name: coalition.name,
 		slug: coalition.slug,
@@ -81,6 +82,7 @@ export const fetchCoalitions = async (): Promise<Coalition[]> => {
 		activeMembers: coalition.active_members ?? 0,
 		averageLevel: coalition.average_level ?? 0,
 	}))
+	return { coalitions: parsedCoalitions, lastUpdate }
 }
 
 export const fetchRanking = async ({

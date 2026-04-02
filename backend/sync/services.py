@@ -4,13 +4,23 @@ from django.utils import timezone
 
 import requests
 from django.utils.dateparse import parse_datetime
-from .models import CampusUser, Coalition, CoalitionScoreSnapshot, CampusUserScoreSnapshot
+from .models import CampusUser, Coalition, CoalitionScoreSnapshot, CampusUserScoreSnapshot, SyncMetadata
 
 
 _TOKEN_CACHE = {
 	'access_token': None,
 	'expires_at': 0,
 }
+
+
+SYNC_METADATA_KEY = 'campus_sync'
+
+
+def _touch_last_sync_timestamp():
+	metadata, _created = SyncMetadata.objects.get_or_create(key=SYNC_METADATA_KEY)
+	metadata.last_time_update = timezone.now()
+	metadata.save(update_fields=['last_time_update'])
+	return metadata.last_time_update
 
 def _request_42_token():
 	base_url = os.getenv('FT_API_BASE_URL', 'https://api.intra.42.fr').rstrip('/')
@@ -400,6 +410,7 @@ def run_full_sync(request_interval=0.25, max_pages=None):
 	ranked_count = update_general_ranks()
 	coalition_snapshot_created, coalition_snapshot_updated = save_coalition_score_snapshots()
 	user_snapshot_created, user_snapshot_updated = save_user_score_snapshots()
+	last_time_update = _touch_last_sync_timestamp()
 
 	return {
 		'total_fetched': len(all_results),
@@ -415,6 +426,7 @@ def run_full_sync(request_interval=0.25, max_pages=None):
 		'coalition_snapshot_updated': coalition_snapshot_updated,
 		'user_snapshot_created': user_snapshot_created,
 		'user_snapshot_updated': user_snapshot_updated,
+		'last_time_update': last_time_update,
 		'campus_id': ctx['campus_id'],
 		'cursus_id': ctx['cursus_id'],
 	}
@@ -434,6 +446,7 @@ def run_users_only_sync(request_interval=0.25, max_pages=None):
 	)
 	ranked_count = update_general_ranks()
 	user_snapshot_created, user_snapshot_updated = save_user_score_snapshots()
+	last_time_update = _touch_last_sync_timestamp()
 
 	return {
 		'total_fetched': len(all_results),
@@ -449,6 +462,7 @@ def run_users_only_sync(request_interval=0.25, max_pages=None):
 		'coalition_snapshot_updated': 0,
 		'user_snapshot_created': user_snapshot_created,
 		'user_snapshot_updated': user_snapshot_updated,
+		'last_time_update': last_time_update,
 		'campus_id': ctx['campus_id'],
 		'cursus_id': ctx['cursus_id'],
 	}
@@ -460,6 +474,7 @@ def run_coalitions_only_sync(request_interval=0.25):
 		request_interval=request_interval,
 	)
 	coalition_snapshot_created, coalition_snapshot_updated = save_coalition_score_snapshots()
+	last_time_update = _touch_last_sync_timestamp()
 
 	return {
 		'total_fetched': 0,
@@ -475,6 +490,7 @@ def run_coalitions_only_sync(request_interval=0.25):
 		'coalition_snapshot_updated': coalition_snapshot_updated,
 		'user_snapshot_created': 0,
 		'user_snapshot_updated': 0,
+		'last_time_update': last_time_update,
 		'campus_id': ctx['campus_id'],
 		'cursus_id': ctx['cursus_id'],
 	}

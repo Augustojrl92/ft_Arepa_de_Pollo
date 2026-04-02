@@ -1,20 +1,50 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
+
+import { usePathname } from 'next/navigation';
 
 import CardContainer from "@/components/CardContainer"
-import { useAuthStore } from "@/hooks/useAuth"
 import { getLoginUrl } from "@/lib/authApi"
 
 export default function Login() {
 	const [isLoading, setIsLoading] = useState(false)
-
-	const error = useAuthStore((s) => s.error)
+	const [error, setError] = useState<string | null>(null)
+	const hasProcessedQueryError = useRef(false)
+	const pathname = usePathname();
 
 	const handleLogin = () => {
 		setIsLoading(true)
 		window.location.href = getLoginUrl()
 	};
+
+	useEffect(() => {
+		if (hasProcessedQueryError.current) {
+			return
+		}
+
+		hasProcessedQueryError.current = true
+		const errorParam = new URLSearchParams(window.location.search).get('error')
+
+		switch (errorParam) {
+			case 'oauth_failed':
+				setError('Error de autenticación con 42. Por favor, inténtalo de nuevo.')
+				break
+			case 'not_in_campus_db':
+				setError('Tu cuenta de 42 no está registrada en nuestra base de datos')
+				break
+			case 'not_in_madrid_campus':
+				setError('Solo puedes acceder con una cuenta de 42 Madrid')
+				break
+			default:
+				break
+		}
+
+		if (window.location.search) {
+			window.history.replaceState({}, document.title, `${pathname}${window.location.hash}`)
+		}
+	}, [pathname]);
+
 
 	return (
 		<section className="min-h-screen bg-surface flex items-center justify-center px-4">
@@ -51,7 +81,12 @@ export default function Login() {
 					</button>
 
 					{error && (
-						<p className="text-sm text-red-500 text-center">{error}</p>
+						<div className="flex flex-col items-center gap-4 text-center">
+							<p className="text-[16px] text-red-500 ">{error}</p>
+							<p className="text-xs text-text-secondary">
+								Si crees que es un error, contacta con soporte.
+							</p>
+						</div>
 					)}
 				</CardContainer>
 
