@@ -7,10 +7,7 @@ export default function Footer() {
         <div>
           © 2026 · AEDLPH
         </div>
-        <div className="flex items-center gap-4">
-          <p>Last updated: 2026-01-01</p>
-          <ThemeToggleButton />
-        </div>
+        <ThemeToggleButton />
       </div>
     </footer>
   );

@@ -17,6 +17,23 @@ class Coalition(models.Model):
 		return f'{self.name} ({self.coalition_id})'
 
 
+class CoalitionScoreSnapshot(models.Model):
+	coalition = models.ForeignKey(Coalition, on_delete=models.CASCADE, related_name='score_snapshots')
+	snapshot_date = models.DateField()
+	total_score = models.IntegerField(default=0)
+	campus_rank = models.PositiveIntegerField(null=True, blank=True)
+	captured_at = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		unique_together = ('coalition', 'snapshot_date')
+		indexes = [
+			models.Index(fields=['coalition', 'snapshot_date']),
+		]
+
+	def __str__(self):
+		return f'{self.coalition.name} - {self.snapshot_date}: {self.total_score}'
+
+
 class CampusUser(models.Model):
 	django_user = models.OneToOneField(User, on_delete=models.SET_NULL, related_name='campus_user_profile', null=True, blank=True)
 
@@ -44,7 +61,7 @@ class CampusUser(models.Model):
 	coalition_name = models.CharField(max_length=255, blank=True)
 	coalition_slug = models.CharField(max_length=255, blank=True)
 	coalition_user_score = models.IntegerField(default=0)
-	coalition_total_score = models.IntegerField(default=0)
+	coalition_rank = models.PositiveIntegerField(null=True, blank=True)
 	general_rank = models.PositiveIntegerField(null=True, blank=True)
 
 	# Timestamps del registro de cursus_users
@@ -56,3 +73,29 @@ class CampusUser(models.Model):
 
 	def __str__(self):
 		return f'{self.login} - {self.coalition_name or "Sin coalición"}'
+
+
+class CampusUserScoreSnapshot(models.Model):
+	campus_user = models.ForeignKey(CampusUser, on_delete=models.CASCADE, related_name='score_snapshots')
+	snapshot_date = models.DateField()
+	coalition_user_score = models.IntegerField(default=0)
+	coalition_user_rank = models.PositiveIntegerField(null=True, blank=True)
+	campus_user_rank = models.PositiveIntegerField(null=True, blank=True)
+	captured_at = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		unique_together = ('campus_user', 'snapshot_date')
+		indexes = [
+			models.Index(fields=['campus_user', 'snapshot_date']),
+		]
+
+	def __str__(self):
+		return f'{self.campus_user.login} - {self.snapshot_date}: {self.coalition_user_score}'
+
+
+class SyncMetadata(models.Model):
+	key = models.CharField(max_length=64, unique=True)
+	last_time_update = models.DateTimeField(null=True, blank=True)
+
+	def __str__(self):
+		return f'{self.key}: {self.last_time_update}'

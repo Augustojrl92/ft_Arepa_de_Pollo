@@ -70,7 +70,7 @@ export default function CoalitionCard({ coalition, index }: { coalition: Coaliti
 					</div>
 				</div>
 
-				{coalition.topMembers.length > 0 && (
+				{/* {coalition.topMembers.length > 0 && (
 					<div className="pt-4 border-t border-border">
 						<p className="text-xs text-text-secondary mb-3 uppercase font-semibold">Top 3 miembros</p>
 						<div className="flex gap-3">
@@ -83,7 +83,7 @@ export default function CoalitionCard({ coalition, index }: { coalition: Coaliti
 							))}
 						</div>
 					</div>
-				)}
+				)} */}
 
 				<div className="flex items-center justify-between pt-2">
 					<span className="text-xs text-text-secondary font-semibold">Ranking #{index + 1}</span>

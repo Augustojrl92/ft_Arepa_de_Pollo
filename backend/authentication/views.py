@@ -104,7 +104,6 @@ def _upsert_campus_user_from_42_payload(user, user_42):
 			'coalition_name': '',
 			'coalition_slug': '',
 			'coalition_user_score': 0,
-			'coalition_total_score': 0,
 			'created_at': now,
 			'updated_at': now,
 		},
@@ -220,6 +219,12 @@ class OAuth42CallbackView(APIView):
 		if not login:
 			return _redirect_with_error('Missing login in 42 payload')
 
+		campuses = user_42.get('campus', [])
+		madrid_campus = next((c for c in campuses if c.get('id') == 22), None)
+
+		if not madrid_campus:
+			return _redirect_with_error('not_in_madrid_campus')
+
 		user, _created = User.objects.get_or_create(
             username=login,
             defaults={"email": email},
@@ -247,7 +252,7 @@ class UserProfileView(APIView):
 		if campus_user is None:
 			return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
 
-		campus_rank, coalition_user_rank = _get_sync_user_ranks(campus_user)
+		campus_rank = _get_sync_user_ranks(campus_user)
 		coalition_summary = _serialize_simple_coalitions(campus_user.coalition_slug) if campus_user.coalition_slug else None
 
 		data = {
@@ -263,9 +268,8 @@ class UserProfileView(APIView):
 			'avatar_url': campus_user.avatar_url,
 			'coalition': campus_user.coalition_slug or None,
 			'coalition_points': campus_user.coalition_user_score,
-			'coalition_rank': coalition_summary['rank'] if coalition_summary else None,
-			'campus_user_rank': campus_rank,
-			'coalition_user_rank': coalition_user_rank,
+			'coalition_user_rank': campus_user.coalition_rank,
+			'campus_user_rank': campus_rank
 		}
 		return Response(data, status=status.HTTP_200_OK)
 

@@ -1,10 +1,19 @@
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "")
 const AUTH_BASE_URL = `${API_URL}/api/auth`
-const COALITIONS_BASE_URL = `${API_URL}/api/coalitions`
 
 type ApiErrorPayload = {
 	error?: string
 	detail?: string
+}
+
+export class ApiHttpError extends Error {
+	status: number
+
+	constructor(message: string, status: number) {
+		super(message)
+		this.name = "ApiHttpError"
+		this.status = status
+	}
 }
 
 const getErrorMessage = async (response: Response, fallbackMessage: string) => {
@@ -15,49 +24,79 @@ const getErrorMessage = async (response: Response, fallbackMessage: string) => {
 
 export const getLoginUrl = () => `${AUTH_BASE_URL}/42/login/`
 
-export const getProfile = async () => {
-	const response = await fetch(`${AUTH_BASE_URL}/profile/`, {
-		method: "GET",
-		credentials: "include",
-	})
+let refreshInFlight: Promise<void> | null = null
 
-	if (!response.ok) {
-		throw new Error(await getErrorMessage(response, "Failed to fetch user profile"))
+const refreshAccessToken = async () => {
+	if (refreshInFlight) {
+		return refreshInFlight
 	}
 
-	return response.json()
-}
-
-export const getCoalitionLeaderboard = async () => {
-	const response = await fetch(`${COALITIONS_BASE_URL}/leaderboard/`, {
-		method: "GET",
-		credentials: "include",
-	})
-
-	if (!response.ok) {
-		throw new Error(await getErrorMessage(response, "Failed to fetch coalition leaderboard"))
-	}
-
-	const payload = await response.json()
-	return {
-		coalitions: (payload.coalitions ?? []).map((coalition: { name: string; total_points: number }) => ({
-			name: coalition.name,
-			totalPoints: coalition.total_points,
-		})),
-	}
-}
-
-export const postTokenRefresh = async () => {
+	refreshInFlight = (async () => {
 	const response = await fetch(`${AUTH_BASE_URL}/token/refresh/`, {
 		method: "POST",
 		credentials: "include",
 	})
 
 	if (!response.ok) {
-		throw new Error(await getErrorMessage(response, "Failed to refresh token"))
+		throw new ApiHttpError(
+			await getErrorMessage(response, "Failed to refresh auth token"),
+			response.status,
+		)
+	}
+	})()
+
+	try {
+		await refreshInFlight
+	} finally {
+		refreshInFlight = null
 	}
 
 	return true
+}
+
+export const authFetch = async (
+	url: string,
+	init: RequestInit,
+	fallbackMessage: string,
+) => {
+	let response = await fetch(url, {
+		...init,
+		credentials: "include",
+	})
+
+	if (response.status === 401) {
+		await refreshAccessToken()
+		response = await fetch(url, {
+			...init,
+			credentials: "include",
+		})
+	}
+
+	if (!response.ok) {
+		throw new ApiHttpError(
+			await getErrorMessage(response, fallbackMessage),
+			response.status,
+		)
+	}
+
+	return response
+}
+
+export const authFetchJson = async <T>(
+	url: string,
+	init: RequestInit,
+	fallbackMessage: string,
+) => {
+	const response = await authFetch(url, init, fallbackMessage)
+	return response.json() as Promise<T>
+}
+
+export const getProfile = async () => {
+	const response = await authFetch(`${AUTH_BASE_URL}/profile/`, {
+		method: "GET",
+	}, "Failed to fetch user profile")
+
+	return response.json()
 }
 
 export const postLogout = async () => {
@@ -67,7 +106,10 @@ export const postLogout = async () => {
 	})
 
 	if (!response.ok) {
-		throw new Error(await getErrorMessage(response, "Failed to logout"))
+		throw new ApiHttpError(
+			await getErrorMessage(response, "Failed to logout"),
+			response.status,
+		)
 	}
 
 	return true

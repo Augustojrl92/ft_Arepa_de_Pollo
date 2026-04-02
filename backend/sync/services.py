@@ -1,15 +1,26 @@
 import os
 import time
+from django.utils import timezone
 
 import requests
 from django.utils.dateparse import parse_datetime
-from .models import CampusUser, Coalition
+from .models import CampusUser, Coalition, CoalitionScoreSnapshot, CampusUserScoreSnapshot, SyncMetadata
 
 
 _TOKEN_CACHE = {
 	'access_token': None,
 	'expires_at': 0,
 }
+
+
+SYNC_METADATA_KEY = 'campus_sync'
+
+
+def _touch_last_sync_timestamp():
+	metadata, _created = SyncMetadata.objects.get_or_create(key=SYNC_METADATA_KEY)
+	metadata.last_time_update = timezone.now()
+	metadata.save(update_fields=['last_time_update'])
+	return metadata.last_time_update
 
 def _request_42_token():
 	base_url = os.getenv('FT_API_BASE_URL', 'https://api.intra.42.fr').rstrip('/')
@@ -143,6 +154,7 @@ def _build_coalition_map(coalitions, coalitions_users):
 		coalition_data_by_user_id[user_id] = {
 			**base_data,
 			'coalition_score': coalition_user.get('score') or 0,
+			'coalition_rank': coalition_user.get('rank') or None,
 		}
 
 	return coalition_data_by_user_id
@@ -177,6 +189,53 @@ def save_coalitions_to_database(coalitions):
 
 	print(f'Saved {created_count} new coalitions, updated {updated_count} existing coalitions.')
 	return created_count, updated_count
+
+
+def save_coalition_score_snapshots(snapshot_date=None):
+	"""Upsert del snapshot diario de score total por coalición."""
+	if snapshot_date is None:
+		snapshot_date = timezone.localdate()
+
+	created_count = 0
+
+	ordered_coalitions = Coalition.objects.order_by('-total_score', 'name').only('id', 'total_score', 'name')
+
+	for campus_rank, coalition in enumerate(ordered_coalitions, start=1):
+		_, created = CoalitionScoreSnapshot.objects.get_or_create(
+			coalition=coalition,
+			snapshot_date=snapshot_date,
+			defaults={
+				'total_score': coalition.total_score,
+				'campus_rank': campus_rank,
+			},
+		)
+		if created:
+			created_count += 1
+
+	return created_count, 0
+
+
+def save_user_score_snapshots(snapshot_date=None):
+	"""Upsert del snapshot diario de puntos por usuario activo."""
+	if snapshot_date is None:
+		snapshot_date = timezone.localdate()
+
+	created_count = 0
+
+	for user in CampusUser.objects.filter(is_active=True).only('id', 'coalition_user_score', 'coalition_rank', 'general_rank'):
+		_, created = CampusUserScoreSnapshot.objects.get_or_create(
+			campus_user=user,
+			snapshot_date=snapshot_date,
+			defaults={
+				'coalition_user_score': user.coalition_user_score or 0,
+				'coalition_user_rank': user.coalition_rank,
+				'campus_user_rank': user.general_rank,
+			},
+		)
+		if created:
+			created_count += 1
+
+	return created_count, 0
 
 def filter_and_save_to_database(cursus_users, coalition_data_by_user_id):
 	"""Filter and save active users to the database."""
@@ -226,7 +285,7 @@ def filter_and_save_to_database(cursus_users, coalition_data_by_user_id):
 			'coalition_name': coalition_data.get('coalition_name', ''),
 			'coalition_slug': coalition_data.get('coalition_slug', ''),
 			'coalition_user_score': coalition_data.get('coalition_score', 0),
-			'coalition_total_score': coalition_data.get('coalition_total_score', 0),
+			'coalition_rank': coalition_data.get('coalition_rank'),
 			'created_at': parse_datetime(cursus_user.get('created_at')),
 			'updated_at': parse_datetime(cursus_user.get('updated_at')),
 		}
@@ -247,7 +306,6 @@ def filter_and_save_to_database(cursus_users, coalition_data_by_user_id):
 		f'skipped {skipped_count} users with invalid coalition.'
 	)
 	return created_count, update_count, skipped_count
-
 
 def update_general_ranks():
 	"""Persist the campus-wide ranking based on coalition score."""
@@ -350,6 +408,9 @@ def run_full_sync(request_interval=0.25, max_pages=None):
 		coalition_data_by_user_id=coalition_info['coalition_data_by_user_id'],
 	)
 	ranked_count = update_general_ranks()
+	coalition_snapshot_created, coalition_snapshot_updated = save_coalition_score_snapshots()
+	user_snapshot_created, user_snapshot_updated = save_user_score_snapshots()
+	last_time_update = _touch_last_sync_timestamp()
 
 	return {
 		'total_fetched': len(all_results),
@@ -361,6 +422,11 @@ def run_full_sync(request_interval=0.25, max_pages=None):
 		'updated_count': updated_count,
 		'skipped_count': skipped_count,
 		'ranked_count': ranked_count,
+		'coalition_snapshot_created': coalition_snapshot_created,
+		'coalition_snapshot_updated': coalition_snapshot_updated,
+		'user_snapshot_created': user_snapshot_created,
+		'user_snapshot_updated': user_snapshot_updated,
+		'last_time_update': last_time_update,
 		'campus_id': ctx['campus_id'],
 		'cursus_id': ctx['cursus_id'],
 	}
@@ -379,6 +445,8 @@ def run_users_only_sync(request_interval=0.25, max_pages=None):
 		coalition_data_by_user_id={},
 	)
 	ranked_count = update_general_ranks()
+	user_snapshot_created, user_snapshot_updated = save_user_score_snapshots()
+	last_time_update = _touch_last_sync_timestamp()
 
 	return {
 		'total_fetched': len(all_results),
@@ -390,6 +458,11 @@ def run_users_only_sync(request_interval=0.25, max_pages=None):
 		'updated_count': updated_count,
 		'skipped_count': skipped_count,
 		'ranked_count': ranked_count,
+		'coalition_snapshot_created': 0,
+		'coalition_snapshot_updated': 0,
+		'user_snapshot_created': user_snapshot_created,
+		'user_snapshot_updated': user_snapshot_updated,
+		'last_time_update': last_time_update,
 		'campus_id': ctx['campus_id'],
 		'cursus_id': ctx['cursus_id'],
 	}
@@ -400,6 +473,8 @@ def run_coalitions_only_sync(request_interval=0.25):
 		ctx=ctx,
 		request_interval=request_interval,
 	)
+	coalition_snapshot_created, coalition_snapshot_updated = save_coalition_score_snapshots()
+	last_time_update = _touch_last_sync_timestamp()
 
 	return {
 		'total_fetched': 0,
@@ -411,6 +486,11 @@ def run_coalitions_only_sync(request_interval=0.25):
 		'updated_count': 0,
 		'skipped_count': 0,
 		'ranked_count': 0,
+		'coalition_snapshot_created': coalition_snapshot_created,
+		'coalition_snapshot_updated': coalition_snapshot_updated,
+		'user_snapshot_created': 0,
+		'user_snapshot_updated': 0,
+		'last_time_update': last_time_update,
 		'campus_id': ctx['campus_id'],
 		'cursus_id': ctx['cursus_id'],
 	}
