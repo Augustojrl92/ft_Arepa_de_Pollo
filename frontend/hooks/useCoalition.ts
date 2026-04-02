@@ -2,15 +2,16 @@
 
 import { create } from "zustand"
 import { fetchCoalitions, fetchRanking, fetchCoalitionDetails } from "@/lib/coalitionApi"
-import { Coalition, RankingEntry } from "@/types"
+import { Coalition, RankingEntry, RankingPage } from "@/types"
 
 interface CoalitionState {
 	coalitions: Coalition[]
 	ranking: RankingEntry[]
+	rankingMeta: Omit<RankingPage, "users">
 	maxScore: number
 	error: string | null
 	getCoalitions: () => Promise<void>
-	getRanking: () => Promise<void>
+	getRanking: (options?: { page?: number; perPage?: number; coalition?: string }) => Promise<void>
 	getCoalitionDetails: (slug: string) => Promise<void>
 	setError: (msg: string | null) => void
 }
@@ -19,6 +20,12 @@ export const useCoalitionStore = create<CoalitionState>()(
 	(set) => ({
 		coalitions: [],
 		ranking: [],
+		rankingMeta: {
+			page: 1,
+			perPage: 30,
+			total: 0,
+			totalPages: 0,
+		},
 		maxScore: 0,
 		error: null,
 
@@ -34,11 +41,20 @@ export const useCoalitionStore = create<CoalitionState>()(
 				set({ error: message })
 			}
 		},
-		getRanking: async () => {
+		getRanking: async (options = {}) => {
 			try {
-				const ranking = await fetchRanking()
+				const rankingPage = await fetchRanking(options)
 				
-				set({ ranking, error: null })
+				set({
+					ranking: rankingPage.users,
+					rankingMeta: {
+						page: rankingPage.page,
+						perPage: rankingPage.perPage,
+						total: rankingPage.total,
+						totalPages: rankingPage.totalPages,
+					},
+					error: null,
+				})
 			} catch (error) {
 				const message = error instanceof Error ? error.message : "Failed to fetch ranking"
 				

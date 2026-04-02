@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -26,7 +27,9 @@ export default function RootLayout({
       >
         <MswProvider>
           <ThemeProvider>
-            <AuthLayout>{children}</AuthLayout>
+            <Suspense fallback={null}>
+              <AuthLayout>{children}</AuthLayout>
+            </Suspense>
           </ThemeProvider>
         </MswProvider>
       </body>

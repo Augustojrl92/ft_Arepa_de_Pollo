@@ -1,4 +1,4 @@
-import { Coalition } from "@/types"
+import { Coalition, RankingPage } from "@/types"
 import { authFetchJson } from "@/lib/authApi"
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "")
@@ -33,6 +33,10 @@ type RankingApiItem = {
 }
 
 type RankingApiResponse = {
+	page?: number
+	per_page?: number
+	total?: number
+	total_pages?: number
 	users?: RankingApiItem[]
 }
 
@@ -79,22 +83,45 @@ export const fetchCoalitions = async (): Promise<Coalition[]> => {
 	}))
 }
 
-export const fetchRanking = async () => {
-	const payload = await authFetchJson<RankingApiResponse>(`${COALITION_BASE_URL}users-ranking/`, {
+export const fetchRanking = async ({
+	page = 1,
+	perPage = 30,
+	coalition,
+}: {
+	page?: number
+	perPage?: number
+	coalition?: string
+} = {}): Promise<RankingPage> => {
+	const params = new URLSearchParams({
+		page: String(page),
+		per_page: String(perPage),
+	})
+
+	if (coalition) {
+		params.set("coalition", coalition)
+	}
+
+	const payload = await authFetchJson<RankingApiResponse>(`${COALITION_BASE_URL}users-ranking/?${params.toString()}`, {
 		method: "GET",
 	}, "Failed to fetch ranking")
 	const ranking = payload.users ?? []
 
-	return ranking.map((entry) => ({
-		rank: entry.rank,
-		coalitionRank: entry.coalition_rank,
-		login: entry.login,
-		displayName: entry.display_name,
-		avatar: entry.avatar_url,
-		coalition: entry.coalition,
-		coalitionPoints: entry.coalition_points,
-		intraLevel: entry.intra_level,
-	}))
+	return {
+		page: payload.page ?? page,
+		perPage: payload.per_page ?? perPage,
+		total: payload.total ?? ranking.length,
+		totalPages: payload.total_pages ?? (ranking.length > 0 ? 1 : 0),
+		users: ranking.map((entry) => ({
+			rank: entry.rank,
+			coalitionRank: entry.coalition_rank,
+			login: entry.login,
+			displayName: entry.display_name,
+			avatar: entry.avatar_url,
+			coalition: entry.coalition,
+			coalitionPoints: entry.coalition_points,
+			intraLevel: entry.intra_level,
+		})),
+	}
 }
 
 export const fetchCoalitionDetails = async (slug: string) => {
