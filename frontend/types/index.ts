@@ -59,3 +59,11 @@ export interface RankingEntry {
 	coalitionPoints: number
 	intraLevel: number
 }
+
+export interface RankingPage {
+	users: RankingEntry[]
+	page: number
+	perPage: number
+	total: number
+	totalPages: number
+}

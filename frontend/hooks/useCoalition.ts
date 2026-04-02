@@ -2,16 +2,19 @@
 
 import { create } from "zustand"
 import { fetchCoalitions, fetchRanking, fetchCoalitionDetails } from "@/lib/coalitionApi"
-import { Coalition, RankingEntry } from "@/types"
+import { Coalition, RankingEntry, RankingPage } from "@/types"
 
 interface CoalitionState {
 	coalitions: Coalition[]
 	ranking: RankingEntry[]
+	rankingMeta: Omit<RankingPage, "users">
+	isCoalitionsLoading: boolean
+	isRankingLoading: boolean
 	maxScore: number
 	error: string | null
 	lastUpdate: string | null
 	getCoalitions: () => Promise<void>
-	getRanking: () => Promise<void>
+	getRanking: (options?: { coalition?: string }) => Promise<void>
 	getCoalitionDetails: (slug: string) => Promise<void>
 	setError: (msg: string | null) => void
 }
@@ -39,32 +42,58 @@ export const useCoalitionStore = create<CoalitionState>()(
 	(set) => ({
 		coalitions: [],
 		ranking: [],
+		rankingMeta: {
+			page: 1,
+			perPage: 30,
+			total: 0,
+			totalPages: 0,
+		},
+		isCoalitionsLoading: false,
+		isRankingLoading: false,
 		maxScore: 0,
 		error: null,
 		lastUpdate: null,
 
 		getCoalitions: async () => {
+			set({ isCoalitionsLoading: true })
 			try {
 				const { coalitions, lastUpdate } = await fetchCoalitions()
 				const maxScore = coalitions.length > 0 ? Math.max(...coalitions.map(c => c.score)) : 0
 				const lastUpdateFormatted = formatLastUpdateDiff(lastUpdate)
 
-				set({ coalitions, maxScore, error: null, lastUpdate: lastUpdateFormatted })
+				set({
+					coalitions,
+					maxScore,
+					error: null,
+					lastUpdate: lastUpdateFormatted,
+					isCoalitionsLoading: false,
+				})
 			} catch (error) {
 				const message = error instanceof Error ? error.message : "Failed to fetch coalitions"
 
-				set({ error: message })
+				set({ error: message, isCoalitionsLoading: false })
 			}
 		},
-		getRanking: async () => {
+		getRanking: async (options = {}) => {
+			set({ isRankingLoading: true })
 			try {
-				const ranking = await fetchRanking()
-
-				set({ ranking, error: null })
+				const rankingPage = await fetchRanking(options)
+				
+				set({
+					ranking: rankingPage.users,
+					rankingMeta: {
+						page: 1,
+						perPage: rankingPage.perPage,
+						total: rankingPage.users.length,
+						totalPages: rankingPage.users.length > 0 ? 1 : 0,
+					},
+					error: null,
+					isRankingLoading: false,
+				})
 			} catch (error) {
 				const message = error instanceof Error ? error.message : "Failed to fetch ranking"
 
-				set({ error: message })
+				set({ error: message, isRankingLoading: false })
 			}
 		},
 		getCoalitionDetails: async (slug: string) => {

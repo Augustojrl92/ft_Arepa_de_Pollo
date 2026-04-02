@@ -135,7 +135,7 @@ def _serialize_simple_coalitions(coalition_slug=None):
 	coalitions = list(SyncedCoalition.objects.order_by('-total_score', 'name')[:4])
 
 	serialized = [
-		{
+		({
 			'id': coalition.id,
 			'name': coalition.name,
 			'slug': coalition.slug,
@@ -144,8 +144,13 @@ def _serialize_simple_coalitions(coalition_slug=None):
 			'color': coalition.color,
 			'score': coalition.total_score,
 			'rank': index,
-		}
+			'member_count': total_members,
+			'active_members': active_members,
+			'average_level': average_level,
+		})
 		for index, coalition in enumerate(coalitions, start=1)
+		for _, average_level in [_get_level_distribution(coalition.slug)]
+		for _, total_members, active_members in [_get_top_members(coalition.slug)]
 	]
 
 	if coalition_slug is None:
@@ -210,8 +215,12 @@ def _get_user_ranking_queryset(coalition_filter=None):
 
 	return queryset.order_by('-coalition_user_score', 'intra_id')
 
-def _serialize_user_ranking(coalition_filter=None):
-	users = list(_get_user_ranking_queryset(coalition_filter))
+def _serialize_user_ranking(coalition_filter=None, page=1, per_page=30):
+	queryset = _get_user_ranking_queryset(coalition_filter)
+	total = queryset.count()
+	offset = (page - 1) * per_page
+	limit = offset + per_page
+	users = list(queryset[offset:limit])
 	user_ids = [user.id for user in users]
 	previous_day = timezone.localdate() - timedelta(days=1)
 
@@ -225,9 +234,14 @@ def _serialize_user_ranking(coalition_filter=None):
 	)
 	previous_by_user_id = {snapshot.campus_user_id: snapshot for snapshot in previous_snapshots}
 
-	return [
-		({
-			'rank': index,
+	return {
+		'page': page,
+		'per_page': per_page,
+		'total': total,
+		'total_pages': (total + per_page - 1) // per_page if total else 0,
+		'users': [
+			({
+				'rank': offset + index,
 			'login': user.login,
 			'display_name': user.display_name,
 			'avatar_url': user.avatar_url,
@@ -239,9 +253,10 @@ def _serialize_user_ranking(coalition_filter=None):
 			'coalition_rank': user.coalition_rank,
 			'coalition_rank_change': coalition_rank_change,
 			'coalition_rank_status': coalition_rank_status,
-		})
-		for index, user in enumerate(users, start=1)
-		for previous_snapshot in [previous_by_user_id.get(user.id)]
-		for campus_rank_change, campus_rank_status in [_get_rank_change(index, previous_snapshot.campus_user_rank if previous_snapshot else None)]
-		for coalition_rank_change, coalition_rank_status in [_get_rank_change(user.coalition_rank, previous_snapshot.coalition_user_rank if previous_snapshot else None)]
-	]
+			})
+			for index, user in enumerate(users, start=1)
+			for previous_snapshot in [previous_by_user_id.get(user.id)]
+			for campus_rank_change, campus_rank_status in [_get_rank_change(offset + index, previous_snapshot.campus_user_rank if previous_snapshot else None)]
+			for coalition_rank_change, coalition_rank_status in [_get_rank_change(user.coalition_rank, previous_snapshot.coalition_user_rank if previous_snapshot else None)]
+		],
+	}

@@ -114,24 +114,29 @@ html.dark {
 
   .level-range {
     --thumb-size: 1rem;
+    --track-height: 0.375rem;
   }
 
   .level-range-input {
     position: absolute;
-    inset: 0;
+    left: 0;
+    right: 0;
+    top: 50%;
     width: 100%;
-    height: 100%;
+    height: var(--thumb-size);
     margin: 0;
     pointer-events: none;
     appearance: none;
     -webkit-appearance: none;
     background: transparent;
+    accent-color: transparent;
     border: 0;
     outline: none;
+    transform: translateY(-50%);
   }
 
   .level-range-input::-webkit-slider-runnable-track {
-    height: 0.25rem;
+    height: var(--track-height);
     background: transparent;
     border: 0;
   }
@@ -145,18 +150,19 @@ html.dark {
     border: 2px solid var(--color-accent);
     background: var(--color-card);
     cursor: pointer;
-    margin-top: -6px;
+    margin-top: calc((var(--track-height) - var(--thumb-size)) / 2);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-card) 75%, transparent);
   }
 
   .level-range-input::-moz-range-track {
-    height: 0.25rem;
+    height: var(--track-height);
     background: transparent;
     border: 0;
   }
 
   .level-range-input::-moz-range-progress {
     background: transparent;
-    height: 0.25rem;
+    height: var(--track-height);
   }
 
   .level-range-input::-moz-range-thumb {
@@ -167,6 +173,7 @@ html.dark {
     border: 2px solid var(--color-accent);
     background: var(--color-card);
     cursor: pointer;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-card) 75%, transparent);
   }
 
   .level-range-input-min {
