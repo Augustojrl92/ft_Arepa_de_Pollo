@@ -41,6 +41,9 @@ type RankingApiResponse = {
 	users?: RankingApiItem[]
 }
 
+const RANKING_FETCH_PAGE_SIZE = 200
+const RANKING_PARALLEL_REQUESTS = 4
+
 type CoalitionDetailsApiResponse = {
 	coalition: {
 		level_distribution: { range: string, count: number }[],
@@ -85,15 +88,15 @@ export const fetchCoalitions = async (): Promise<{ coalitions: Coalition[], last
 	return { coalitions: parsedCoalitions, lastUpdate }
 }
 
-export const fetchRanking = async ({
-	page = 1,
-	perPage = 30,
+const fetchRankingPage = async ({
+	page,
+	perPage,
 	coalition,
 }: {
-	page?: number
-	perPage?: number
+	page: number
+	perPage: number
 	coalition?: string
-} = {}): Promise<RankingPage> => {
+}): Promise<RankingPage> => {
 	const params = new URLSearchParams({
 		page: String(page),
 		per_page: String(perPage),
@@ -123,6 +126,53 @@ export const fetchRanking = async ({
 			coalitionPoints: entry.coalition_points,
 			intraLevel: entry.intra_level,
 		})),
+	}
+}
+
+export const fetchRanking = async ({
+	coalition,
+}: {
+	coalition?: string
+} = {}): Promise<RankingPage> => {
+	const firstPage = await fetchRankingPage({
+		page: 1,
+		perPage: RANKING_FETCH_PAGE_SIZE,
+		coalition,
+	})
+
+	if (firstPage.totalPages <= 1) {
+		return firstPage
+	}
+
+	const allUsers = [...firstPage.users]
+	const remainingPages: number[] = []
+	for (let page = 2; page <= firstPage.totalPages; page += 1) {
+		remainingPages.push(page)
+	}
+
+	for (let index = 0; index < remainingPages.length; index += RANKING_PARALLEL_REQUESTS) {
+		const pageBatch = remainingPages.slice(index, index + RANKING_PARALLEL_REQUESTS)
+		const batchResults = await Promise.all(
+			pageBatch.map((page) =>
+				fetchRankingPage({
+					page,
+					perPage: RANKING_FETCH_PAGE_SIZE,
+					coalition,
+				})
+			)
+		)
+
+		for (const result of batchResults) {
+			allUsers.push(...result.users)
+		}
+	}
+
+	return {
+		page: 1,
+		perPage: allUsers.length || RANKING_FETCH_PAGE_SIZE,
+		total: firstPage.total,
+		totalPages: 1,
+		users: allUsers,
 	}
 }
 

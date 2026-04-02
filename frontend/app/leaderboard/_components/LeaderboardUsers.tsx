@@ -11,7 +11,7 @@ type SortDirection = 'asc' | 'desc'
 const levelUpperBound = 25
 
 export const LeaderboardUsers = () => {
-	const { coalitions, ranking, rankingMeta, getRanking } = useCoalitionStore()
+	const { coalitions, ranking, rankingMeta, isRankingLoading, getRanking } = useCoalitionStore()
 	const { user } = useAuthStore()
 	const searchParams = useSearchParams()
 	const [search, setSearch] = useState('')
@@ -57,17 +57,9 @@ export const LeaderboardUsers = () => {
 
 	useEffect(() => {
 		void getRanking({
-			page,
-			perPage,
 			coalition: serverCoalitionFilter,
 		})
-	}, [getRanking, page, perPage, serverCoalitionFilter])
-
-	useEffect(() => {
-		if (rankingMeta.totalPages > 0 && page > rankingMeta.totalPages) {
-			setPage(rankingMeta.totalPages)
-		}
-	}, [page, rankingMeta.totalPages])
+	}, [getRanking, serverCoalitionFilter])
 
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
@@ -86,10 +78,6 @@ export const LeaderboardUsers = () => {
 			document.removeEventListener('mousedown', handleClickOutside)
 		}
 	}, [])
-
-	if (!ranking || ranking.length === 0) {
-		return <div className="text-text-secondary mt-6">No hay usuarios para mostrar.</div>
-	}
 
 	const handleCoalitionToggle = (slug: string) => {
 		setPage(1)
@@ -149,21 +137,45 @@ export const LeaderboardUsers = () => {
 			: (valueB as number) - (valueA as number)
 	})
 
-	const safePage = Math.min(page, Math.max(rankingMeta.totalPages, 1))
-	const paginated = sorted
+	const localTotalPages = Math.max(Math.ceil(sorted.length / perPage), 1)
+	const safePage = Math.min(page, localTotalPages)
+	const paginated = sorted.slice((safePage - 1) * perPage, safePage * perPage)
 	const hasLocalFilters =
 		search.trim().length > 0 ||
 		selectedCoalitions.length > 1 ||
 		levelMin > 0 ||
 		levelMax < levelUpperBound
-	const usersRangeStart = filtered.length === 0 ? 0 : ((safePage - 1) * perPage) + 1
-	const usersRangeEnd = filtered.length === 0 ? 0 : usersRangeStart + filtered.length - 1
+	const usersRangeStart = sorted.length === 0 ? 0 : ((safePage - 1) * perPage) + 1
+	const usersRangeEnd = sorted.length === 0 ? 0 : Math.min(safePage * perPage, sorted.length)
 
-	const totalPoints = filtered.reduce((sum, user) => sum + user.coalitionPoints, 0)
+	const totalPoints = sorted.reduce((sum, user) => sum + user.coalitionPoints, 0)
 	const avgLevel =
-		filtered.length > 0
-			? filtered.reduce((sum, user) => sum + user.intraLevel, 0) / filtered.length
+		sorted.length > 0
+			? sorted.reduce((sum, user) => sum + user.intraLevel, 0) / sorted.length
 			: 0
+
+	useEffect(() => {
+		if (page > localTotalPages) {
+			setPage(localTotalPages)
+		}
+	}, [localTotalPages, page])
+
+	// Mostrar skeleton mientras se cargan los datos iniciales
+	if (isRankingLoading && ranking.length === 0) {
+		return (
+			<div className="w-full mx-auto max-w-400 px-4 md:px-6 py-4">
+				<div className="animate-pulse space-y-6">
+					<div className="h-10 bg-surface-elevated rounded w-1/3"></div>
+					<div className="h-32 bg-surface-elevated rounded"></div>
+					<div className="h-96 bg-surface-elevated rounded"></div>
+				</div>
+			</div>
+		)
+	}
+
+	if (!ranking || ranking.length === 0) {
+		return <div className="text-text-secondary mt-6">No hay usuarios para mostrar.</div>
+	}
 
 	const userCoalition = coalitions.find((c) => c.slug === user?.coalition)
 	const minPercent = (levelMin / levelUpperBound) * 100
@@ -239,10 +251,10 @@ export const LeaderboardUsers = () => {
 							<label className="block text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-2">
 								Rango de nivel
 							</label>
-							<div className="level-range relative mt-3 h-8 mb-2">
-								<div className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-border"></div>
+							<div className="level-range relative mt-3 h-10 mb-2">
+								<div className="absolute left-0 right-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-border"></div>
 								<div
-									className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-accent/80"
+									className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-accent/80"
 									style={{ left: `${minPercent}%`, right: `${100 - maxPercent}%` }}
 								></div>
 								<input
@@ -302,7 +314,7 @@ export const LeaderboardUsers = () => {
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
 						<div className="bg-card p-4 rounded-xl border border-border relative overflow-hidden">
 							<span className="text-[10px] font-bold text-text-secondary uppercase">Total Usuarios</span>
-							<div className="text-2xl font-black text-text">{filtered.length.toLocaleString('es-ES')}</div>
+							<div className="text-2xl font-black text-text">{sorted.length.toLocaleString('es-ES')}</div>
 						</div>
 						<div className="bg-card p-4 rounded-xl border border-border relative overflow-hidden">
 							<span className="text-[10px] font-bold text-text-secondary uppercase">Puntos Totales</span>
@@ -448,7 +460,7 @@ export const LeaderboardUsers = () => {
 						<div className="bg-background/50 px-6 py-4 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-3">
 							<span className="text-[10px] font-mono text-text-secondary uppercase tracking-widest">
 								{hasLocalFilters
-									? `Mostrando ${filtered.length} usuarios filtrados en esta pagina`
+									? `Mostrando ${usersRangeStart}-${usersRangeEnd} de ${sorted.length} usuarios filtrados`
 									: `Mostrando ${usersRangeStart}-${usersRangeEnd} de ${rankingMeta.total} usuarios`}
 							</span>
 							<div className="flex items-center gap-2">
@@ -473,10 +485,10 @@ export const LeaderboardUsers = () => {
 								>
 									Anterior
 								</button>
-								<span className="text-xs font-bold text-text-secondary">{safePage}/{Math.max(rankingMeta.totalPages, 1)}</span>
+								<span className="text-xs font-bold text-text-secondary">{safePage}/{localTotalPages}</span>
 								<button
-									disabled={safePage >= Math.max(rankingMeta.totalPages, 1)}
-									onClick={() => setPage((current) => Math.min(Math.max(rankingMeta.totalPages, 1), current + 1))}
+									disabled={safePage >= localTotalPages}
+									onClick={() => setPage((current) => Math.min(localTotalPages, current + 1))}
 									className="px-3 py-1 text-xs font-bold rounded-md hover:bg-card-hover text-text-secondary disabled:opacity-50"
 								>
 									Siguiente
