@@ -43,10 +43,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
+    'django_crontab',
     'corsheaders',
     'authentication',
     'sync',
     'coalitions',
+    'cron_scheduler',
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -170,3 +172,8 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': False,
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
+# Cron Jobs configuration
+CRONJOBS = [
+    ('*/30 * * * *', 'django.core.management.call_command', ['sync_campus_users', '--mode=full']),
+]
