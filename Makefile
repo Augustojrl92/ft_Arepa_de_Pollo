@@ -116,7 +116,7 @@ full-re: full-down full-up
 full-logs:
 	$(DOCKER_COMPOSE) logs -f
 
-# ─── Limpieza total ────────────────────────────────────────────────────────────
+# ─── Total wipe ────────────────────────────────────────────────────────────
 fclean:
 	$(DOCKER_COMPOSE) down --volumes --rmi all --remove-orphans
 

@@ -43,10 +43,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
+    'django_crontab',
     'corsheaders',
     'authentication',
     'sync',
     'coalitions',
+    'cron_scheduler',
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -170,3 +172,14 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': False,
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
+# Cron Jobs configuration
+CRONJOBS = [
+    ('*/15 * * * *', 'django.core.management.call_command', ['sync_campus_users', '--mode=full']),
+]
+
+# Cron runs with a minimal environment; load .env variables explicitly for each job.
+CRONTAB_COMMAND_PREFIX = '[ -f /app/.env ] && set -a && . /app/.env && set +a; PYTHONUNBUFFERED=1'
+
+# Pipe cron job output to the container stdout/stderr so `make back-logs` can display it.
+CRONTAB_COMMAND_SUFFIX = '>> /proc/1/fd/1 2>> /proc/1/fd/2'
