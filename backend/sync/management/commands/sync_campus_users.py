@@ -1,6 +1,19 @@
-from django.core.management.base import BaseCommand, CommandError
+import logging
+import time
 
-from sync.services import run_coalitions_only_sync, run_full_sync, run_users_only_sync
+from django.core.management.base import BaseCommand, CommandError
+from django.utils import timezone
+
+from sync.services import (
+	get_request_count,
+	reset_request_count,
+	run_coalitions_only_sync,
+	run_full_sync,
+	run_users_only_sync,
+)
+
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -30,6 +43,19 @@ class Command(BaseCommand):
 		mode = options['mode']
 		request_interval = options['request_interval']
 		max_pages = options['max_pages']
+		start = time.perf_counter()
+		started_at = timezone.now().isoformat()
+
+		reset_request_count()
+		self.stdout.write(
+			f"[SYNC-CRON][START] at={started_at} mode={mode} request_interval={request_interval:.2f} max_pages={max_pages}"
+		)
+		logger.info(
+			'Sync cron started | mode=%s | request_interval=%.2f | max_pages=%s',
+			mode,
+			request_interval,
+			max_pages,
+		)
 
 		try:
 			if mode == 'users':
@@ -47,9 +73,37 @@ class Command(BaseCommand):
 					max_pages=max_pages,
 				)
 		except Exception as exc:
+			elapsed_seconds = time.perf_counter() - start
+			logger.exception(
+				'Sync cron failed | mode=%s | elapsed=%.2fs | requests=%s',
+				mode,
+				elapsed_seconds,
+				get_request_count(),
+			)
 			raise CommandError(str(exc)) from exc
 
+		elapsed_seconds = time.perf_counter() - start
+		result['requests_count'] = get_request_count()
+		result['elapsed_seconds'] = elapsed_seconds
+		finished_at = timezone.now().isoformat()
+		self.stdout.write(
+			f"[SYNC-CRON][END] at={finished_at} mode={mode} elapsed={elapsed_seconds:.2f}s requests={result['requests_count']}"
+		)
+
+		logger.info(
+			'Sync cron finished | mode=%s | elapsed=%.2fs | requests=%s | fetched=%s | created=%s | updated=%s | skipped=%s',
+			mode,
+			elapsed_seconds,
+			result['requests_count'],
+			result['total_fetched'],
+			result['created_count'],
+			result['updated_count'],
+			result['skipped_count'],
+		)
+
 		self.stdout.write(self.style.SUCCESS('Sincronizacion completada'))
+		self.stdout.write(f"Duracion (s): {result['elapsed_seconds']:.2f}")
+		self.stdout.write(f"Peticiones HTTP realizadas: {result['requests_count']}")
 		self.stdout.write(f"Campus: {result['campus_id']}")
 		self.stdout.write(f"Total traidos: {result['total_fetched']}")
 		self.stdout.write(f"Coaliciones: {result['total_coalitions']}")

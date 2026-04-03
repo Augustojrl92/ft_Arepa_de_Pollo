@@ -175,5 +175,11 @@ SIMPLE_JWT = {
 
 # Cron Jobs configuration
 CRONJOBS = [
-    ('*/30 * * * *', 'django.core.management.call_command', ['sync_campus_users', '--mode=full']),
+    ('*/15 * * * *', 'django.core.management.call_command', ['sync_campus_users', '--mode=full']),
 ]
+
+# Cron runs with a minimal environment; load .env variables explicitly for each job.
+CRONTAB_COMMAND_PREFIX = '[ -f /app/.env ] && set -a && . /app/.env && set +a; PYTHONUNBUFFERED=1'
+
+# Pipe cron job output to the container stdout/stderr so `make back-logs` can display it.
+CRONTAB_COMMAND_SUFFIX = '>> /proc/1/fd/1 2>> /proc/1/fd/2'
