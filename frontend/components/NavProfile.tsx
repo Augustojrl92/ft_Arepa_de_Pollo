@@ -1,9 +1,12 @@
 'use client'
 
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/hooks';
 import { Bell } from 'lucide-react'
 
 export default function NavProfile() {
+	const isActive = usePathname() === '/profile';
 	const user = useAuthStore((s) => s.user)
 	const logout = useAuthStore((s) => s.logout)
 
@@ -15,8 +18,9 @@ export default function NavProfile() {
 			</div>
 			<div className="w-px h-8 bg-border"></div>
 			<Bell />
-			<img className="w-10 h-10 rounded-full bg-border object-cover" src={user?.avatar} alt={`Avatar of ${user?.username}`}/>
-			<button onClick={() => void logout()}>Cerrar sesión</button>
+			<Link href="/profile">
+				<img className={`w-10 h-10 rounded-full bg-border object-cover ${isActive ? 'border-2 border-card-hover ring ring-accent' : ''}`} src={user?.avatar} alt={`Avatar of ${user?.username}`}/>
+			</Link>
 		</div>
 	);
 }
