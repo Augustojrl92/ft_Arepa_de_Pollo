@@ -10,6 +10,7 @@ interface LeaderboardFiltersProps {
 	levelMax: number
 	levelMin: number
 	levelUpperBound: number
+	minPointsLvl: number
 	maxPointsLvl: number
 	pointsMax: number
 	pointsMin: number
@@ -43,6 +44,7 @@ export const LeaderboardFilters = ({
 	levelMax,
 	levelMin,
 	levelUpperBound,
+	minPointsLvl,
 	maxPointsLvl,
 	pointsMin,
 	pointsMax,
@@ -74,9 +76,9 @@ export const LeaderboardFilters = ({
 	const minPercentLvl = (levelMin / levelUpperBound) * 100
 	const maxPercentLvl = (levelMax / levelUpperBound) * 100
 
-	const safeMaxPointsLvl = Math.max(maxPointsLvl, 1)
-	const minPercentPts = (pointsMin / safeMaxPointsLvl) * 100
-	const maxPercentPts = (pointsMax / safeMaxPointsLvl) * 100
+	const pointsRange = Math.max(maxPointsLvl - minPointsLvl, 1)
+	const minPercentPts = ((pointsMin - minPointsLvl) / pointsRange) * 100
+	const maxPercentPts = ((pointsMax - minPointsLvl) / pointsRange) * 100
 
 	return (
 		<aside className="w-full lg:w-72 bg-card border border-border rounded-xl p-5 h-fit lg:sticky top-10 self-start">
@@ -265,7 +267,7 @@ export const LeaderboardFilters = ({
 						></div>
 						<input
 							type="range"
-							min={0}
+							min={minPointsLvl}
 							max={maxPointsLvl}
 							step={1}
 							value={pointsMin}
@@ -274,14 +276,14 @@ export const LeaderboardFilters = ({
 							onChange={(event) => {
 								const parsed = Number(event.target.value)
 								const nextMin = Number.isNaN(parsed)
-									? 0
-									: Math.max(0, Math.min(parsed, pointsMax))
+									? minPointsLvl
+									: Math.max(minPointsLvl, Math.min(parsed, pointsMax))
 								onPointsMinChange(nextMin)
 							}}
 						/>
 						<input
 							type="range"
-							min={0}
+							min={minPointsLvl}
 							max={maxPointsLvl}
 							step={1}
 							value={pointsMax}
@@ -291,13 +293,13 @@ export const LeaderboardFilters = ({
 								const parsed = Number(event.target.value)
 								const nextMax = Number.isNaN(parsed)
 									? maxPointsLvl
-									: Math.min(maxPointsLvl, Math.max(parsed, pointsMin))
+									: Math.min(maxPointsLvl, Math.max(parsed, pointsMin, minPointsLvl))
 								onPointsMaxChange(nextMax)
 							}}
 						/>
 					</div>
 					<div className="flex justify-between mt-2 text-[10px] font-mono text-text-secondary">
-						<span>{formatLeaderboardNumber(pointsMin)} puntos</span>
+						<span>{formatLeaderboardNumber(minPointsLvl)} puntos</span>
 						<span className="text-accent">Hasta {formatLeaderboardNumber(pointsMax)} puntos</span>
 						<span>{formatLeaderboardNumber(maxPointsLvl)} puntos</span>
 					</div>

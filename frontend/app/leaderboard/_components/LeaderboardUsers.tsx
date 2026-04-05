@@ -33,6 +33,7 @@ export const LeaderboardUsers = () => {
 		levelMin,
 		levelUpperBound,
 		localTotalPages,
+		minPointsLvl,
 		maxPointsLvl,
 		paginated,
 		perPage,
@@ -104,6 +105,7 @@ export const LeaderboardUsers = () => {
 					levelMax={levelMax}
 					levelMin={levelMin}
 					levelUpperBound={levelUpperBound}
+					minPointsLvl={minPointsLvl}
 					maxPointsLvl={maxPointsLvl}
 					pointsMax={pointsMax}
 					pointsMin={pointsMin}

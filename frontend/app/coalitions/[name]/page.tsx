@@ -113,7 +113,7 @@ export default function CoalitionDetailPage({
 	}
 
 	return (
-		<section className="py-8 space-y-8">
+		<section className="py-8 space-y-8" style={{ '--coalition-color': coalition.color } as React.CSSProperties}>
 			<div className="flex items-center justify-between">
 				<Link href="/coalitions" className="flex items-center gap-2 text-text-secondary hover:text-text transition-colors">
 					<ArrowLeft size={20} />
@@ -202,10 +202,10 @@ export default function CoalitionDetailPage({
 
 			<div className="grid grid-cols-2 gap-6">
 				<CardContainer className="p-6">
-					<p className="text-text-secondary text-sm uppercase font-semibold mb-6">Distribución de Niveles</p>
+					<p className="text-text-secondary text-sm uppercase font-semibold mb-6">Distribución de Niveles (Activos)</p>
 					<div className="flex flex-col gap-4">
 						{coalition.details?.levelDistribution.map((dist, i) => {
-							const totalMembers = coalition.details?.totalMembers ?? 0
+							const totalMembers = coalition.details?.activeMembers ?? 0
 							const widthPercent = totalMembers > 0 ? (dist.count / totalMembers) * 100 : 0
 							const { levelMin, levelMax } = getLevelRangeFromDistribution(dist.range)
 
@@ -253,15 +253,15 @@ export default function CoalitionDetailPage({
 					<p className="text-text-secondary text-sm uppercase font-semibold mb-6">Top Miembros</p>
 					<div className="space-y-3">
 						{coalition.details?.topMembers.map((member, i) => (
-							<div key={i} className="flex items-center justify-between p-4 bg-surface rounded-lg">
+							<Link href={`https://profile.intra.42.fr/users/${member.login}`} target="_blank" key={i} className="flex items-center justify-between p-4 bg-surface rounded-lg group">
 								<div className="flex items-center gap-3">
 									<img
 										src={member.avatar}
 										alt={member.displayName}
-										className="w-12 h-12 rounded-full bg-card p-1 object-cover"
+										className="w-12 h-12 rounded-full bg-card p-1 object-cover group-hover:ring group-hover:ring-(--coalition-color) transition-all"
 									/>
 									<div>
-										<p className="font-semibold">{member.login}</p>
+										<p className="font-semibold group-hover:text-(--coalition-color)">{member.login}</p>
 										<p className="text-xs text-text-secondary">Nivel {member.level}</p>
 									</div>
 								</div>
@@ -269,17 +269,13 @@ export default function CoalitionDetailPage({
 									<p className="font-bold">{(member.points / 1000).toFixed(1)}k pts</p>
 									<p className="text-xs text-text-secondary">{Math.round((member.points / coalition.score) * 100)}% del total</p>
 								</div>
-							</div>
+							</Link>
 						))}
 					</div>
 					<div className="flex items-center justify-center mt-8">
 						<Link
 							href={`/leaderboard?coalition=${encodeURIComponent(coalition.slug)}`}
-							className="rounded-lg border px-4 py-2 text-sm font-semibold text-text hover:text-accent transition-colors"
-							style={{
-								borderColor: withOpacity(coalition.color, 0.45),
-								backgroundColor: withOpacity(coalition.color, 0.12)
-							}}
+							className="rounded-lg border px-4 py-2 text-sm font-semibold bg-(--coalition-color)/12 border-(--coalition-color) text-text hover:bg-(--coalition-color)/75 transition-colors"
 						>
 							Ver ranking de {coalition.name}
 						</Link>

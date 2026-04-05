@@ -27,7 +27,6 @@ class CoalitionSimpleView(APIView):
 			status=status.HTTP_200_OK,
 		)
 
-
 class UserRankingView(APIView):
 	permission_classes = [IsAuthenticated]
 

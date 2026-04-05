@@ -20,6 +20,7 @@ from django.urls import path, include
 from .views import api_root, health_check, server_message
 from authentication import urls as auth_urls
 from coalitions import urls as coalition_urls
+from users import urls as user_urls
 
 urlpatterns = [
     path('', api_root, name='api-root'),
@@ -28,4 +29,5 @@ urlpatterns = [
     path('api/message/', server_message, name='server-message'),
     path('api/auth/', include(auth_urls)),
     path('api/coalitions/', include(coalition_urls)),
+    path('api/users/', include(user_urls)),
 ]
