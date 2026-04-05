@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'authentication',
     'sync',
     'coalitions',
+    'users',
     'cron_scheduler',
 ]
 
