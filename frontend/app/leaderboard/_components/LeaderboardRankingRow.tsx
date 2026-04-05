@@ -29,14 +29,13 @@ export const LeaderboardRankingRow = ({ coalition, formattedPoints, isCurrentUse
 							className="w-full h-full object-cover"
 						/>
 					</div>
-					<a
-						href={`https://profile.intra.42.fr/users/${user.login}`}
-						target="_blank"
+					<Link
+						href={`/users/${user.login}`}
 						rel="noreferrer"
 						className="font-semibold text-text group-hover:text-accent transition-colors"
 					>
 						{user.login}
-					</a>
+					</Link>
 				</div>
 			</td>
 			<td className="px-6 py-4">

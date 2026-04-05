@@ -6,9 +6,10 @@ import { useAuthStore } from '@/hooks';
 import { Bell } from 'lucide-react'
 
 export default function NavProfile() {
-	const isActive = usePathname() === '/profile';
+	const pathname = usePathname();
 	const user = useAuthStore((s) => s.user)
-	const logout = useAuthStore((s) => s.logout)
+	const userProfilePath = user?.login ? `/users/${encodeURIComponent(user.login)}` : '/users'
+	const isActive = pathname === userProfilePath || pathname.startsWith('/users/')
 
 	return (
 		<div className="flex items-center gap-5">
@@ -18,7 +19,7 @@ export default function NavProfile() {
 			</div>
 			<div className="w-px h-8 bg-border"></div>
 			<Bell />
-			<Link href="/profile">
+			<Link href={userProfilePath}>
 				<img className={`w-10 h-10 rounded-full bg-border object-cover ${isActive ? 'border-2 border-card-hover ring ring-accent' : ''}`} src={user?.avatar} alt={`Avatar of ${user?.username}`}/>
 			</Link>
 		</div>
