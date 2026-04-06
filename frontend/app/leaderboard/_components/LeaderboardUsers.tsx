@@ -5,7 +5,14 @@ import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Info } from 'lucide-react'
 
-type SortField = 'rank' | 'coalition' | 'login' | 'intraLevel' | 'coalitionPoints'
+type SortField =
+	| 'rank'
+	| 'coalition'
+	| 'login'
+	| 'intraLevel'
+	| 'coalitionPoints'
+	| 'evaluationsDoneCurrentSeason'
+	| 'evaluationsDoneTotal'
 type SortDirection = 'asc' | 'desc'
 
 const levelUpperBound = 25
@@ -24,6 +31,8 @@ export const LeaderboardUsers = () => {
 	const [perPage, setPerPage] = useState(25)
 	const [isRankInfoOpen, setIsRankInfoOpen] = useState(false)
 	const rankInfoRef = useRef<HTMLDivElement | null>(null)
+	const rankingView = searchParams.get('view') ?? 'coalition-points'
+	const isCorrectionsView = rankingView === 'corrections'
 
 	const coalitionBySlug = useMemo(
 		() => new Map(coalitions.map((coalition) => [coalition.slug, coalition])),
@@ -79,6 +88,13 @@ export const LeaderboardUsers = () => {
 		}
 	}, [])
 
+	useEffect(() => {
+		if (!isCorrectionsView && (sortBy === 'evaluationsDoneCurrentSeason' || sortBy === 'evaluationsDoneTotal')) {
+			setSortBy('rank')
+			setSortDir('asc')
+		}
+	}, [isCorrectionsView, sortBy])
+
 	const handleCoalitionToggle = (slug: string) => {
 		setPage(1)
 		setSelectedCoalitions((current) =>
@@ -108,7 +124,7 @@ export const LeaderboardUsers = () => {
 		setSortDir('asc')
 	}
 
-	const filtered = ranking.filter((user) => {
+	const coalitionFiltered = ranking.filter((user) => {
 		const passSearch =
 			search.trim().length === 0 ||
 			user.login.toLowerCase().includes(search.toLowerCase()) ||
@@ -122,9 +138,9 @@ export const LeaderboardUsers = () => {
 		return passSearch && passCoalition && passLevel
 	})
 
-	const sorted = [...filtered].sort((a, b) => {
-		const valueA = a[sortBy]
-		const valueB = b[sortBy]
+	const coalitionViewSorted = [...coalitionFiltered].sort((a, b) => {
+		const valueA = a[sortBy as 'rank' | 'coalition' | 'login' | 'intraLevel' | 'coalitionPoints']
+		const valueB = b[sortBy as 'rank' | 'coalition' | 'login' | 'intraLevel' | 'coalitionPoints']
 
 		if (typeof valueA === 'string' && typeof valueB === 'string') {
 			return sortDir === 'asc'
@@ -137,22 +153,86 @@ export const LeaderboardUsers = () => {
 			: (valueB as number) - (valueA as number)
 	})
 
-	const localTotalPages = Math.max(Math.ceil(sorted.length / perPage), 1)
+	const rankingWithCorrectionRanks = useMemo(() => {
+		const sortedByCorrections = [...ranking].sort((a, b) => {
+			if (b.evaluationsDoneCurrentSeason !== a.evaluationsDoneCurrentSeason) {
+				return b.evaluationsDoneCurrentSeason - a.evaluationsDoneCurrentSeason
+			}
+			if (b.evaluationsDoneTotal !== a.evaluationsDoneTotal) {
+				return b.evaluationsDoneTotal - a.evaluationsDoneTotal
+			}
+			return a.login.localeCompare(b.login)
+		})
+
+		const globalRankByLogin = new Map<string, number>()
+		const coalitionRankByLogin = new Map<string, number>()
+		const coalitionCounters = new Map<string, number>()
+
+		sortedByCorrections.forEach((entry, index) => {
+			globalRankByLogin.set(entry.login, index + 1)
+			const nextCoalitionRank = (coalitionCounters.get(entry.coalition) ?? 0) + 1
+			coalitionCounters.set(entry.coalition, nextCoalitionRank)
+			coalitionRankByLogin.set(entry.login, nextCoalitionRank)
+		})
+
+		return ranking.map((entry) => ({
+			...entry,
+			correctionRank: globalRankByLogin.get(entry.login) ?? entry.rank,
+			correctionCoalitionRank: coalitionRankByLogin.get(entry.login) ?? entry.coalitionRank,
+		}))
+	}, [ranking])
+
+	const correctionsFiltered = rankingWithCorrectionRanks.filter((user) => {
+		const passSearch =
+			search.trim().length === 0 ||
+			user.login.toLowerCase().includes(search.toLowerCase()) ||
+			user.displayName.toLowerCase().includes(search.toLowerCase())
+
+		const passCoalition =
+			selectedCoalitions.length === 0 || selectedCoalitions.includes(user.coalition)
+
+		const passLevel = user.intraLevel >= levelMin && user.intraLevel <= levelMax
+
+		return passSearch && passCoalition && passLevel
+	})
+
+	const correctionsSorted = [...correctionsFiltered].sort((a, b) => {
+		const valueA = sortBy === 'rank' ? a.correctionRank : a[sortBy]
+		const valueB = sortBy === 'rank' ? b.correctionRank : b[sortBy]
+
+		if (typeof valueA === 'string' && typeof valueB === 'string') {
+			return sortDir === 'asc'
+				? valueA.localeCompare(valueB)
+				: valueB.localeCompare(valueA)
+		}
+
+		return sortDir === 'asc'
+			? (valueA as number) - (valueB as number)
+			: (valueB as number) - (valueA as number)
+	})
+
+	const displayedUsers = isCorrectionsView ? correctionsSorted : coalitionViewSorted
+
+	const localTotalPages = Math.max(Math.ceil(displayedUsers.length / perPage), 1)
 	const safePage = Math.min(page, localTotalPages)
-	const paginated = sorted.slice((safePage - 1) * perPage, safePage * perPage)
+	const paginated = displayedUsers.slice((safePage - 1) * perPage, safePage * perPage)
 	const hasLocalFilters =
 		search.trim().length > 0 ||
 		selectedCoalitions.length > 1 ||
 		levelMin > 0 ||
 		levelMax < levelUpperBound
-	const usersRangeStart = sorted.length === 0 ? 0 : ((safePage - 1) * perPage) + 1
-	const usersRangeEnd = sorted.length === 0 ? 0 : Math.min(safePage * perPage, sorted.length)
+	const usersRangeStart = displayedUsers.length === 0 ? 0 : ((safePage - 1) * perPage) + 1
+	const usersRangeEnd = displayedUsers.length === 0 ? 0 : Math.min(safePage * perPage, displayedUsers.length)
 
-	const totalPoints = sorted.reduce((sum, user) => sum + user.coalitionPoints, 0)
+	const totalPoints = displayedUsers.reduce((sum, user) => sum + user.coalitionPoints, 0)
+	const totalCurrentSeasonCorrections = displayedUsers.reduce((sum, user) => sum + user.evaluationsDoneCurrentSeason, 0)
+	const totalLifetimeCorrections = displayedUsers.reduce((sum, user) => sum + user.evaluationsDoneTotal, 0)
 	const avgLevel =
-		sorted.length > 0
-			? sorted.reduce((sum, user) => sum + user.intraLevel, 0) / sorted.length
+		displayedUsers.length > 0
+			? displayedUsers.reduce((sum, user) => sum + user.intraLevel, 0) / displayedUsers.length
 			: 0
+
+	const currentUserCorrectionEntry = rankingWithCorrectionRanks.find((entry) => entry.login === user?.login)
 
 	useEffect(() => {
 		if (page > localTotalPages) {
@@ -188,14 +268,44 @@ export const LeaderboardUsers = () => {
 					<h1 className="text-3xl font-extrabold text-text tracking-tight">Clasificacion Global</h1>
 					<p className="text-text-secondary mt-1">Temporada actual de coaliciones</p>
 				</div>
-				<div className="flex gap-2">
+				<div className="flex flex-wrap gap-2">
+					<Link
+						href="/leaderboard?view=coalition-points"
+						className={`px-4 py-2 bg-card border rounded-lg flex items-center gap-3 transition-colors ${
+							rankingView === 'coalition-points'
+								? 'border-accent bg-accent/14 text-accent shadow-[0_0_0_1px_rgba(255,255,255,0.04)]'
+								: 'border-border text-text-secondary hover:text-text hover:bg-card-hover/70'
+						}`}
+					>
+						<span className="text-xs font-bold uppercase">Puntos de coaliciones</span>
+					</Link>
+					<Link
+						href="/leaderboard?view=corrections"
+						className={`px-4 py-2 bg-card border rounded-lg flex items-center gap-3 transition-colors ${
+							rankingView === 'corrections'
+								? 'border-accent bg-accent/14 text-accent shadow-[0_0_0_1px_rgba(255,255,255,0.04)]'
+								: 'border-border text-text-secondary hover:text-text hover:bg-card-hover/70'
+						}`}
+					>
+						<span className="text-xs font-bold uppercase">Numero de correcciones</span>
+					</Link>
 					<div className="px-4 py-2 bg-card border border-border rounded-lg flex items-center gap-3">
-						<span className="text-xs font-bold text-text-secondary uppercase">Mi Ranking en {user?.coalition}</span>
-						<span className="font-mono font-bold" style={{ color: userCoalition?.color }}>#{user?.coalitionUserRank ?? '-'}</span>
+						<span className="text-xs font-bold text-text-secondary uppercase">
+							{isCorrectionsView ? 'Mi Ranking en correcciones' : `Mi Ranking en ${user?.coalition}`}
+						</span>
+						<span className="font-mono font-bold" style={{ color: userCoalition?.color }}>
+							#{isCorrectionsView ? (currentUserCorrectionEntry?.correctionCoalitionRank ?? '-') : (user?.coalitionUserRank ?? '-')}
+						</span>
 					</div>
 					<div className="px-4 py-2 bg-card border border-border rounded-lg flex items-center gap-3">
-						<span className="text-xs font-bold text-text-secondary uppercase">Mi Ranking en Madrid</span>
-						<span className="text-accent font-mono font-bold">#{user?.campusUserRank ?? '-'}</span>
+						<span className="text-xs font-bold text-text-secondary uppercase">
+							{isCorrectionsView ? 'Mi Ranking en Madrid' : 'Mi Ranking en Madrid'}
+						</span>
+						<span className="text-accent font-mono font-bold">
+							{isCorrectionsView
+								? `#${currentUserCorrectionEntry?.correctionRank ?? '-'}`
+								: `#${user?.campusUserRank ?? '-'}`}
+						</span>
 					</div>
 				</div>
 			</div>
@@ -314,15 +424,27 @@ export const LeaderboardUsers = () => {
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
 						<div className="bg-card p-4 rounded-xl border border-border relative overflow-hidden">
 							<span className="text-[10px] font-bold text-text-secondary uppercase">Total Usuarios</span>
-							<div className="text-2xl font-black text-text">{sorted.length.toLocaleString('es-ES')}</div>
+							<div className="text-2xl font-black text-text">{displayedUsers.length.toLocaleString('es-ES')}</div>
 						</div>
 						<div className="bg-card p-4 rounded-xl border border-border relative overflow-hidden">
-							<span className="text-[10px] font-bold text-text-secondary uppercase">Puntos Totales</span>
-							<div className="text-2xl font-black text-accent">{Math.round(totalPoints).toLocaleString('es-ES')}</div>
+							<span className="text-[10px] font-bold text-text-secondary uppercase">
+								{isCorrectionsView ? 'Correcciones temporada' : 'Puntos Totales'}
+							</span>
+							<div className="text-2xl font-black text-accent">
+								{isCorrectionsView
+									? totalCurrentSeasonCorrections.toLocaleString('es-ES')
+									: Math.round(totalPoints).toLocaleString('es-ES')}
+							</div>
 						</div>
 						<div className="bg-card p-4 rounded-xl border border-border relative overflow-hidden">
-							<span className="text-[10px] font-bold text-text-secondary uppercase">Nivel Promedio</span>
-							<div className="text-2xl font-black text-text">{avgLevel.toFixed(2)}</div>
+							<span className="text-[10px] font-bold text-text-secondary uppercase">
+								{isCorrectionsView ? 'Correcciones totales' : 'Nivel Promedio'}
+							</span>
+							<div className="text-2xl font-black text-text">
+								{isCorrectionsView
+									? totalLifetimeCorrections.toLocaleString('es-ES')
+									: avgLevel.toFixed(2)}
+							</div>
 						</div>
 					</div>
 
@@ -347,7 +469,7 @@ export const LeaderboardUsers = () => {
 													onClick={() => handleSort('rank')}
 													className="inline-flex items-center gap-1 hover:text-text transition-colors"
 												>
-													<span>Ranking (M/C)</span>
+													<span>{isCorrectionsView ? 'Ranking Correcciones (M/C)' : 'Ranking (M/C)'}</span>
 													<span className="text-[9px]">{sortBy === 'rank' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span>
 												</button>
 												<span
@@ -388,16 +510,40 @@ export const LeaderboardUsers = () => {
 												<span className="text-[9px]">{sortBy === 'intraLevel' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span>
 											</button>
 										</th>
-										<th className="px-6 py-4 text-right">
-											<button
-												type="button"
-												onClick={() => handleSort('coalitionPoints')}
-												className="inline-flex items-center gap-1 hover:text-text transition-colors"
-											>
-												<span>Puntos</span>
-												<span className="text-[9px]">{sortBy === 'coalitionPoints' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span>
-											</button>
-										</th>
+										{isCorrectionsView ? (
+											<th className="px-6 py-4 text-right">
+												<div className="inline-flex items-center gap-2">
+													<button
+														type="button"
+														onClick={() => handleSort('evaluationsDoneCurrentSeason')}
+														className="inline-flex items-center gap-1 hover:text-text transition-colors"
+													>
+														<span>Temporada</span>
+														<span className="text-[9px]">{sortBy === 'evaluationsDoneCurrentSeason' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span>
+													</button>
+													<span>|</span>
+													<button
+														type="button"
+														onClick={() => handleSort('evaluationsDoneTotal')}
+														className="inline-flex items-center gap-1 hover:text-text transition-colors"
+													>
+														<span>Totales</span>
+														<span className="text-[9px]">{sortBy === 'evaluationsDoneTotal' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span>
+													</button>
+												</div>
+											</th>
+										) : (
+											<th className="px-6 py-4 text-right">
+												<button
+													type="button"
+													onClick={() => handleSort('coalitionPoints')}
+													className="inline-flex items-center gap-1 hover:text-text transition-colors"
+												>
+													<span>Puntos</span>
+													<span className="text-[9px]">{sortBy === 'coalitionPoints' ? (sortDir === 'asc' ? '▲' : '▼') : '↕'}</span>
+												</button>
+											</th>
+										)}
 									</tr>
 								</thead>
 								<tbody className="divide-y divide-border text-sm">
@@ -405,7 +551,7 @@ export const LeaderboardUsers = () => {
 										const coalition = coalitionBySlug.get(user.coalition)
 										return (
 											<tr key={user.login} className="hover:bg-card-hover/70 transition-colors group">
-												<td className="px-6 py-4 font-mono font-regular"><span className="text-accent">{String(user.rank).padStart(2, '0')}</span> | <span style={{ color: coalition?.color || 'var(--color-text-secondary)' }}>{String(user.coalitionRank).padStart(2, '0')}</span></td>
+												<td className="px-6 py-4 font-mono font-regular"><span className="text-accent">{String(isCorrectionsView ? user.correctionRank : user.rank).padStart(2, '0')}</span> | <span style={{ color: coalition?.color || 'var(--color-text-secondary)' }}>{String(isCorrectionsView ? user.correctionCoalitionRank : user.coalitionRank).padStart(2, '0')}</span></td>
 												<td className="px-6 py-4">
 													<div className="flex items-center gap-3">
 														<div className="w-8 h-8 rounded-full bg-background shrink-0 overflow-hidden border border-border">
@@ -441,7 +587,9 @@ export const LeaderboardUsers = () => {
 												</td>
 												<td className="px-6 py-4 text-center font-mono">{user.intraLevel.toFixed(2)}</td>
 												<td className="px-6 py-4 text-right font-mono font-medium text-text">
-													{user.coalitionPoints.toLocaleString('es-ES')}
+													{isCorrectionsView
+														? `${user.evaluationsDoneCurrentSeason.toLocaleString('es-ES')} | ${user.evaluationsDoneTotal.toLocaleString('es-ES')}`
+														: user.coalitionPoints.toLocaleString('es-ES')}
 												</td>
 											</tr>
 										)
@@ -460,7 +608,7 @@ export const LeaderboardUsers = () => {
 						<div className="bg-background/50 px-6 py-4 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-3">
 							<span className="text-[10px] font-mono text-text-secondary uppercase tracking-widest">
 								{hasLocalFilters
-									? `Mostrando ${usersRangeStart}-${usersRangeEnd} de ${sorted.length} usuarios filtrados`
+									? `Mostrando ${usersRangeStart}-${usersRangeEnd} de ${displayedUsers.length} usuarios filtrados`
 									: `Mostrando ${usersRangeStart}-${usersRangeEnd} de ${rankingMeta.total} usuarios`}
 							</span>
 							<div className="flex items-center gap-2">

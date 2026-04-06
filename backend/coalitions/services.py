@@ -248,6 +248,8 @@ def _serialize_user_ranking(coalition_filter=None, page=1, per_page=30):
 			'coalition': user.coalition_slug or user.coalition_name or None,
 			'coalition_points': user.coalition_user_score,
 			'intra_level': user.level,
+			'evaluations_done_total': user.evaluations_done_total,
+			'evaluations_done_current_season': user.evaluations_done_current_season,
 			'campus_rank_change': campus_rank_change,
 			'campus_rank_status': campus_rank_status,
 			'coalition_rank': user.coalition_rank,

@@ -31,6 +31,8 @@ type RankingApiItem = {
 	coalition_points: number
 	intra_level: number
 	coalition_rank: number
+	evaluations_done_total?: number
+	evaluations_done_current_season?: number
 }
 
 type RankingApiResponse = {
@@ -125,6 +127,8 @@ const fetchRankingPage = async ({
 			coalition: entry.coalition,
 			coalitionPoints: entry.coalition_points,
 			intraLevel: entry.intra_level,
+			evaluationsDoneTotal: entry.evaluations_done_total ?? 0,
+			evaluationsDoneCurrentSeason: entry.evaluations_done_current_season ?? 0,
 		})),
 	}
 }

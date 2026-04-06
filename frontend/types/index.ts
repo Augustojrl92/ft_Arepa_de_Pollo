@@ -58,6 +58,8 @@ export interface RankingEntry {
 	coalition: string
 	coalitionPoints: number
 	intraLevel: number
+	evaluationsDoneTotal: number
+	evaluationsDoneCurrentSeason: number
 }
 
 export interface RankingPage {
