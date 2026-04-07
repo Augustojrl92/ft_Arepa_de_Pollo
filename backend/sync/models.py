@@ -58,6 +58,7 @@ class CampusUser(models.Model):
 
 	# Coalicion
 	coalition_id = models.PositiveIntegerField(null=True, blank=True)
+	coalitions_user_id = models.PositiveBigIntegerField(null=True, blank=True, db_index=True)
 	coalition_name = models.CharField(max_length=255, blank=True)
 	coalition_slug = models.CharField(max_length=255, blank=True)
 	coalition_user_score = models.IntegerField(default=0)
@@ -65,6 +66,7 @@ class CampusUser(models.Model):
 	general_rank = models.PositiveIntegerField(null=True, blank=True)
 	evaluations_done_total = models.PositiveIntegerField(default=0)
 	evaluations_done_current_season = models.PositiveIntegerField(default=0)
+	evaluations_synced_at = models.DateTimeField(null=True, blank=True)
 
 	# Timestamps del registro de cursus_users
 	created_at = models.DateTimeField()
@@ -75,6 +77,16 @@ class CampusUser(models.Model):
 
 	def __str__(self):
 		return f'{self.login} - {self.coalition_name or "Sin coalición"}'
+
+
+class CoalitionEvaluationCursor(models.Model):
+	coalition = models.OneToOneField(Coalition, on_delete=models.CASCADE, related_name='evaluation_cursor')
+	last_score_id = models.PositiveBigIntegerField(null=True, blank=True)
+	last_score_created_at = models.DateTimeField(null=True, blank=True)
+	last_synced_at = models.DateTimeField(auto_now=True)
+
+	def __str__(self):
+		return f'{self.coalition.name}: {self.last_score_id or "empty"}'
 
 
 class CampusUserScoreSnapshot(models.Model):

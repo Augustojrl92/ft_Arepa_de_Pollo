@@ -1,4 +1,8 @@
+from datetime import timedelta
+
 from django.core.management.base import BaseCommand
+from django.db.models import Q
+from django.utils import timezone
 
 from sync.evaluations import (
 	sync_users_evaluations_done_total,
@@ -28,6 +32,8 @@ class Command(BaseCommand):
 		parser.add_argument('--offset', type=int, default=0)
 		parser.add_argument('--auto-batch', action='store_true')
 		parser.add_argument('--max-batches', type=int, default=None)
+		parser.add_argument('--stale-hours', type=float, default=None)
+		parser.add_argument('--only-unsynced', action='store_true')
 
 	# Objective:
 	# Execute the evaluation sync for one slice or for the whole dataset in automatic batches.
@@ -41,8 +47,17 @@ class Command(BaseCommand):
 		offset = options['offset']
 		auto_batch = options['auto_batch']
 		max_batches = options['max_batches']
+		stale_hours = options['stale_hours']
+		only_unsynced = options['only_unsynced']
 
 		base_queryset = CampusUser.objects.exclude(login='').order_by('id')
+		if only_unsynced:
+			base_queryset = base_queryset.filter(evaluations_synced_at__isnull=True)
+		elif stale_hours is not None:
+			stale_before = timezone.now() - timedelta(hours=stale_hours)
+			base_queryset = base_queryset.filter(
+				Q(evaluations_synced_at__isnull=True) | Q(evaluations_synced_at__lt=stale_before)
+			)
 
 		if auto_batch:
 			batches_run = 0
