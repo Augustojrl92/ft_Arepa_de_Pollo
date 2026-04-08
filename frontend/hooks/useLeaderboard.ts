@@ -8,6 +8,8 @@ type SortDirection = 'asc' | 'desc'
 type FilterSnapshot = Omit<LeaderboardFilterPreset, 'id' | 'name'>
 
 const levelUpperBound = 25
+const defaultPerPage = 25
+const allowedPerPageValues = new Set([10, 25, 50, 100])
 
 
 
@@ -51,17 +53,17 @@ const getInitialLevelBounds = (searchParams: { get: (name: string) => string | n
 
 const getInitialPointsBounds = (
 	searchParams: { get: (name: string) => string | null },
-	defaultMin: number = 0,
+	defaultMin: number = Number.MIN_SAFE_INTEGER,
 	defaultMax: number = Number.MAX_SAFE_INTEGER
 ) => {
 	const minFromQuery = Number.parseInt(searchParams.get('pointsMin') ?? '', 10)
 	const maxFromQuery = Number.parseInt(searchParams.get('pointsMax') ?? '', 10)
 	const safeMin = Number.isNaN(minFromQuery)
 		? defaultMin
-		: Math.max(0, Math.min(minFromQuery, defaultMax))
+		: Math.max(defaultMin, Math.min(minFromQuery, defaultMax))
 	const safeMax = Number.isNaN(maxFromQuery)
 		? defaultMax
-		: Math.max(0, Math.min(maxFromQuery, defaultMax))
+		: Math.max(defaultMin, Math.min(maxFromQuery, defaultMax))
 
 	return {
 		pointsMin: Math.min(safeMin, safeMax),
@@ -86,6 +88,21 @@ const formatLeaderboardNumber = (value: number) => {
 	return value.toLocaleString('es-ES')
 }
 
+const getInitialPerPage = () => {
+	if (typeof window === 'undefined') {
+		return defaultPerPage
+	}
+
+	const raw = window.localStorage.getItem('leaderboard.defaultPerPage')
+	const parsed = Number.parseInt(raw ?? '', 10)
+
+	if (!Number.isNaN(parsed) && allowedPerPageValues.has(parsed)) {
+		return parsed
+	}
+
+	return defaultPerPage
+}
+
 export const useLeaderboard = () => {
 	const { coalitions, ranking, rankingMeta, isRankingLoading, getRanking } = useCoalitionStore()
 	const { user } = useAuthStore()
@@ -107,7 +124,7 @@ export const useLeaderboard = () => {
 	const [sortBy, setSortBy] = useState<SortField>('rank')
 	const [sortDir, setSortDir] = useState<SortDirection>('asc')
 	const [page, setPage] = useState(1)
-	const [perPage, setPerPage] = useState(25)
+	const [perPage, setPerPage] = useState(getInitialPerPage)
 	const [isRankInfoOpen, setIsRankInfoOpen] = useState(false)
 	const rankInfoRef = useRef<HTMLDivElement | null>(null)
 
@@ -115,13 +132,19 @@ export const useLeaderboard = () => {
 		() => new Map(coalitions.map((coalition) => [coalition.slug, coalition])),
 		[coalitions]
 	)
-	const liveMaxPointsLvl = useMemo(
-		() => ranking.reduce((max, currentUser) => Math.max(max, currentUser.coalitionPoints), 0),
+	const liveMinPointsLvl = useMemo(
+		() => ranking.reduce((min, currentUser) => Math.min(min, currentUser.coalitionPoints), Number.MAX_SAFE_INTEGER),
 		[ranking]
 	)
+	const liveMaxPointsLvl = useMemo(
+		() => ranking.reduce((max, currentUser) => Math.max(max, currentUser.coalitionPoints), Number.MIN_SAFE_INTEGER),
+		[ranking]
+	)
+	const [frozenMinPointsLvl, setFrozenMinPointsLvl] = useState<number | null>(null)
 	const [frozenMaxPointsLvl, setFrozenMaxPointsLvl] = useState<number | null>(null)
-	const maxPointsLvl = frozenMaxPointsLvl ?? liveMaxPointsLvl
-	const safePointsMin = Math.min(pointsMin, maxPointsLvl)
+	const minPointsLvl = frozenMinPointsLvl ?? (ranking.length > 0 ? liveMinPointsLvl : 0)
+	const maxPointsLvl = frozenMaxPointsLvl ?? (ranking.length > 0 ? liveMaxPointsLvl : 0)
+	const safePointsMin = Math.max(minPointsLvl, Math.min(pointsMin, maxPointsLvl))
 	const safePointsMax = Math.max(safePointsMin, Math.min(pointsMax, maxPointsLvl))
 
 	const serverCoalitionFilter = selectedCoalitions.length === 1 ? selectedCoalitions[0] : undefined
@@ -133,7 +156,7 @@ export const useLeaderboard = () => {
 	}, [getRanking, serverCoalitionFilter])
 
 	useEffect(() => {
-		if (frozenMaxPointsLvl !== null) {
+		if (frozenMinPointsLvl !== null && frozenMaxPointsLvl !== null) {
 			return
 		}
 
@@ -141,8 +164,9 @@ export const useLeaderboard = () => {
 			return
 		}
 
+		setFrozenMinPointsLvl(liveMinPointsLvl)
 		setFrozenMaxPointsLvl(liveMaxPointsLvl)
-	}, [frozenMaxPointsLvl, liveMaxPointsLvl, ranking.length])
+	}, [frozenMaxPointsLvl, frozenMinPointsLvl, liveMaxPointsLvl, liveMinPointsLvl, ranking.length])
 
 	useEffect(() => {
 		if (!editingPresetId) {
@@ -172,6 +196,14 @@ export const useLeaderboard = () => {
 		}
 	}, [])
 
+	useEffect(() => {
+		if (typeof window === 'undefined') {
+			return
+		}
+
+		window.localStorage.setItem('leaderboard.defaultPerPage', String(perPage))
+	}, [perPage])
+
 	const handleCoalitionToggle = (slug: string) => {
 		setPage(1)
 		setSelectedCoalitions((current) =>
@@ -186,7 +218,7 @@ export const useLeaderboard = () => {
 		setSelectedCoalitions([])
 		setLevelMin(0)
 		setLevelMax(levelUpperBound)
-		setPointsMin(0)
+		setPointsMin(minPointsLvl)
 		setPointsMax(maxPointsLvl)
 		setActivePresetId(null)
 		setEditingPresetId(null)
@@ -208,7 +240,7 @@ export const useLeaderboard = () => {
 	const getPresetSnapshot = (preset: LeaderboardFilterPreset): FilterSnapshot => {
 		const clampedLevelMin = Math.max(0, Math.min(preset.levelMin, levelUpperBound))
 		const clampedLevelMax = Math.max(clampedLevelMin, Math.min(preset.levelMax, levelUpperBound))
-		const clampedPointsMin = Math.max(0, Math.min(preset.pointsMin, maxPointsLvl))
+		const clampedPointsMin = Math.max(minPointsLvl, Math.min(preset.pointsMin, maxPointsLvl))
 		const clampedPointsMax = Math.max(clampedPointsMin, Math.min(preset.pointsMax, maxPointsLvl))
 
 		return {
@@ -224,7 +256,7 @@ export const useLeaderboard = () => {
 	const applyPreset = (preset: LeaderboardFilterPreset) => {
 		const clampedLevelMin = Math.max(0, Math.min(preset.levelMin, levelUpperBound))
 		const clampedLevelMax = Math.max(clampedLevelMin, Math.min(preset.levelMax, levelUpperBound))
-		const clampedPointsMin = Math.max(0, Math.min(preset.pointsMin, maxPointsLvl))
+		const clampedPointsMin = Math.max(minPointsLvl, Math.min(preset.pointsMin, maxPointsLvl))
 		const clampedPointsMax = Math.max(clampedPointsMin, Math.min(preset.pointsMax, maxPointsLvl))
 
 		setSearch(preset.search)
@@ -255,7 +287,7 @@ export const useLeaderboard = () => {
 
 		const clampedLevelMin = Math.max(0, Math.min(presetToEdit.levelMin, levelUpperBound))
 		const clampedLevelMax = Math.max(clampedLevelMin, Math.min(presetToEdit.levelMax, levelUpperBound))
-		const clampedPointsMin = Math.max(0, Math.min(presetToEdit.pointsMin, maxPointsLvl))
+		const clampedPointsMin = Math.max(minPointsLvl, Math.min(presetToEdit.pointsMin, maxPointsLvl))
 		const clampedPointsMax = Math.max(clampedPointsMin, Math.min(presetToEdit.pointsMax, maxPointsLvl))
 
 		setSearch(presetToEdit.search)
@@ -369,6 +401,7 @@ export const useLeaderboard = () => {
 	}
 
 	const filtered = ranking.filter((campusUser) => {
+		const effectiveLevelMax = levelMax >= levelUpperBound ? levelUpperBound : levelMax + 0.99
 		const passSearch =
 			search.trim().length === 0 ||
 			campusUser.login.toLowerCase().includes(search.toLowerCase()) ||
@@ -377,7 +410,7 @@ export const useLeaderboard = () => {
 		const passCoalition =
 			selectedCoalitions.length === 0 || selectedCoalitions.includes(campusUser.coalition)
 
-		const passLevel = campusUser.intraLevel >= levelMin && campusUser.intraLevel <= levelMax
+		const passLevel = campusUser.intraLevel >= levelMin && campusUser.intraLevel <= effectiveLevelMax
 		const passPoints = campusUser.coalitionPoints >= safePointsMin && campusUser.coalitionPoints <= safePointsMax
 
 		return passSearch && passCoalition && passLevel && passPoints
@@ -406,7 +439,7 @@ export const useLeaderboard = () => {
 		selectedCoalitions.length > 0 ||
 		levelMin > 0 ||
 		levelMax < levelUpperBound ||
-		safePointsMin > 0 ||
+		safePointsMin > minPointsLvl ||
 		safePointsMax < maxPointsLvl
 	const currentSnapshot = getCurrentPresetSnapshot()
 	const defaultSnapshot: FilterSnapshot = {
@@ -414,7 +447,7 @@ export const useLeaderboard = () => {
 		selectedCoalitions: [],
 		levelMin: 0,
 		levelMax: levelUpperBound,
-		pointsMin: 0,
+		pointsMin: minPointsLvl,
 		pointsMax: maxPointsLvl,
 	}
 	const isModifiedFromDefault = !areSnapshotsEqual(currentSnapshot, defaultSnapshot)
@@ -472,6 +505,7 @@ export const useLeaderboard = () => {
 		levelMin,
 		levelUpperBound,
 		localTotalPages,
+		minPointsLvl,
 		maxPointsLvl,
 		paginated,
 		perPage,

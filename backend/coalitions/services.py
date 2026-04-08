@@ -8,6 +8,13 @@ from sync.models import CampusUser, Coalition as SyncedCoalition, CoalitionScore
 SYNC_METADATA_KEY = 'campus_sync'
 
 
+def _get_scored_users_queryset(coalition_slug=None):
+	queryset = CampusUser.objects.exclude(coalition_user_score=0)
+	if coalition_slug:
+		queryset = queryset.filter(coalition_slug=coalition_slug)
+	return queryset
+
+
 def _get_last_time_update():
 	metadata = SyncMetadata.objects.filter(key=SYNC_METADATA_KEY).only('last_time_update').first()
 	if metadata is None or metadata.last_time_update is None:
@@ -34,7 +41,7 @@ def _get_current_coalition_rank(coalition):
 	return ahead_count + 1
 
 def _get_level_distribution(coalition_slug):
-	coalition_users = CampusUser.objects.filter(coalition_slug=coalition_slug)
+	coalition_users = _get_scored_users_queryset(coalition_slug=coalition_slug)
 	average_level = round(coalition_users.aggregate(average_level=Avg('level'))['average_level'] or 0, 2)
 
 	range_counts = {
@@ -114,8 +121,8 @@ def _get_score_change(coalition_slug):
 
 def _get_top_members(coalition_slug, limit=3):
 	all_users = CampusUser.objects.filter(coalition_slug=coalition_slug)
-	all_active_users = all_users.exclude(coalition_user_score=0)
-	top_users = all_users.filter(coalition_slug=coalition_slug).order_by('-coalition_user_score', 'intra_id')[:limit]
+	all_active_users = _get_scored_users_queryset(coalition_slug=coalition_slug)
+	top_users = all_active_users.order_by('-coalition_user_score', 'intra_id')[:limit]
 
 	return [
 		{
@@ -203,7 +210,7 @@ def _get_sync_user_ranks(sync_user):
 	return campus_rank
 
 def _get_user_ranking_queryset(coalition_filter=None):
-	queryset = CampusUser.objects.exclude(coalition_user_score=0)
+	queryset = _get_scored_users_queryset()
 	if coalition_filter:
 		coalition_q = (
 			Q(coalition_slug=coalition_filter)
