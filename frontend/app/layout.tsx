@@ -4,6 +4,12 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import AuthLayout from "@/components/AuthLayout";
 import "./globals.css";
 
+declare global {
+  namespace React {
+    interface ReactNode {}
+  }
+}
+
 export const metadata: Metadata = {
   title: "AEDLPH",
   description: "Plataforma AEDLPH",
