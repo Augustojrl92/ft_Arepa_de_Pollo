@@ -6,6 +6,9 @@ const iconByAchievement = {
 	rocket: Rocket,
 	shield: Shield,
 	swords: Swords,
+	'friend-request': Medal,
+	'friend-accepted': Shield,
+	'profile-complete': Rocket,
 } as const
 
 type UserAchievementsProps = {
@@ -13,29 +16,41 @@ type UserAchievementsProps = {
 }
 
 export function UserAchievements({ achievements }: UserAchievementsProps) {
+	if (achievements.length === 0) {
+		return (
+			<div className="rounded-3xl border border-border bg-card p-6">
+				<h2 className="mb-2 text-xl font-black">Logros</h2>
+				<p className="text-sm text-text-secondary">Todavía no hay logros disponibles para este perfil.</p>
+			</div>
+		)
+	}
+
+	const completedCount = achievements.filter((achievement) => achievement.status === 'completed' || achievement.completed).length
+
 	return (
 		<div className="rounded-3xl border border-border bg-card p-6">
 			<div className="mb-6 flex items-center justify-between">
 				<h2 className="text-xl font-black">Logros</h2>
 				<span className="text-xs font-semibold uppercase tracking-[0.18em] text-(--coalition-color)">
-					{achievements.filter((achievement) => achievement.completed).length}/{achievements.length}
+					{completedCount}/{achievements.length}
 				</span>
 			</div>
 
 			<div className="grid gap-4 sm:grid-cols-2">
 				{achievements.map((achievement) => {
-					const Icon = iconByAchievement[achievement.icon]
-					const statusLabel = achievement.completed ? 'Completado' : 'En progreso'
+					const Icon = iconByAchievement[achievement.icon as keyof typeof iconByAchievement] ?? Medal
+					const isCompleted = achievement.status === 'completed' || achievement.completed
+					const statusLabel = isCompleted ? 'Completado' : 'En progreso'
 					return (
 						<article
 							key={achievement.title}
-							className={`flex flex-col justify-between group rounded-2xl border p-4 ${achievement.completed ? 'border-(--coalition-color)/40 bg-(--coalition-color)/8' : 'border-border bg-surface/50'}`}
+							className={`flex flex-col justify-between group rounded-2xl border p-4 ${isCompleted ? 'border-(--coalition-color)/40 bg-(--coalition-color)/8' : 'border-border bg-surface/50'}`}
 						>
 							<div className="flex items-center justify-between gap-4 mb-3">
 								<div className="inline-flex rounded-lg border border-border bg-card p-2">
 									<Icon className="h-5 w-5 text-(--coalition-color)" />
 								</div>
-								<span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${achievement.completed ? 'bg-(--coalition-color)/20 text-text' : 'bg-card text-text-secondary'}`}>
+								<span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${isCompleted ? 'bg-(--coalition-color)/20 text-text' : 'bg-card text-text-secondary'}`}>
 									{statusLabel}
 								</span>
 							</div>

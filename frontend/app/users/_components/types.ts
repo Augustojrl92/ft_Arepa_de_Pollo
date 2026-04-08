@@ -6,14 +6,7 @@ export type Ally = {
 	online: boolean
 }
 
-export type Achievement = {
-	title: string
-	description: string
-	completed: boolean
-	completionDate?: string
-	progress: number
-	icon: 'medal' | 'rocket' | 'shield' | 'swords'
-}
+export type { Achievement } from '@/types'
 
 export type IncomingAllyRequest = {
 	id: string

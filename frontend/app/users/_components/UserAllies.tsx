@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useUserStore } from '@/hooks'
 
@@ -11,7 +11,6 @@ export function UserAllies({ currentLogin }: UserAlliesProps) {
 		friends,
 		error,
 		isFriendsLoading,
-		getMyFriends,
 		sendFriendRequest,
 		acceptFriendRequest,
 		rejectFriendRequest,
@@ -21,10 +20,6 @@ export function UserAllies({ currentLogin }: UserAlliesProps) {
 	const [allyTab, setAllyTab] = useState<'allies' | 'sent' | 'received'>('allies')
 	const [requestLoginInput, setRequestLoginInput] = useState('')
 	const [requestMessage, setRequestMessage] = useState<string | null>(null)
-
-	useEffect(() => {
-		void getMyFriends()
-	}, [getMyFriends])
 
 	const allies = useMemo(() => friends?.friends ?? [], [friends?.friends])
 	const sentRequests = useMemo(() => friends?.pendingSent ?? [], [friends?.pendingSent])

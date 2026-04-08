@@ -1,15 +1,17 @@
 'use client'
 
-import { type CSSProperties, useEffect, useMemo, useState } from 'react'
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
 
 import Link from 'next/link'
+import { useParams } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { useAuthStore, useCoalitionStore, useUserStore } from '@/hooks'
 import { UserAchievements } from '../_components/UserAchievements'
+import { UserAchievementsComparison } from '../_components/UserAchievementsComparison'
 import { UserAllies } from '../_components/UserAllies'
 import { UserConfigurationModal } from '../_components/UserConfigurationModal'
 import { UserProfile } from '../_components/UserProfile'
-import { defaultPreferences, mockAchievements } from '../_components/mockData'
+import { defaultPreferences } from '../_components/mockData'
 import type { ProfilePreferences } from '../_components/types'
 import type { UserProfileView } from '../_components/types'
 
@@ -17,16 +19,18 @@ import type { UserProfileView } from '../_components/types'
 export default function UserDetailPage({
 	params,
 }: {
-	params: Promise<{ login: string }>
+	params?: Promise<{ login: string }>
 }) {
 	const { user, logout } = useAuthStore()
 	const {
 		user: fetchedUser,
+		achievements,
 		friends,
 		isLoading,
 		isFriendsLoading,
 		error,
 		getUserDetails,
+		getMyAchievements,
 		getMyFriends,
 		getRelationshipStateByLogin,
 		sendFriendRequest,
@@ -40,12 +44,21 @@ export default function UserDetailPage({
 	const [login, setLogin] = useState<string | null>(null)
 	const [preferences, setPreferences] = useState<ProfilePreferences>(defaultPreferences)
 	const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+	const loadedFriendsLoginRef = useRef<string | null>(null)
+	const routeParams = useParams<{ login?: string }>()
 
 	useEffect(() => {
-		params.then((p) => {
-			setLogin(p.login)
-		})
-	}, [params])
+		if (typeof routeParams.login === 'string' && routeParams.login.length > 0) {
+			setLogin(routeParams.login)
+			return
+		}
+
+		if (params) {
+			params.then((p) => {
+				setLogin(p.login)
+			})
+		}
+	}, [params, routeParams.login])
 
 	const isOwnProfile = useMemo(() => {
 		if (!user || !login) return false
@@ -54,16 +67,30 @@ export default function UserDetailPage({
 	}, [login, user])
 
 	useEffect(() => {
-		if (user) {
-			void getMyFriends()
-		}
-	}, [getMyFriends, user])
-
-	useEffect(() => {
 		if (login && !isOwnProfile) {
 			void getUserDetails(login)
 		}
 	}, [getUserDetails, isOwnProfile, login])
+
+	useEffect(() => {
+		if (!user || !login) {
+			return
+		}
+
+		const normalizedLogin = login.toLowerCase()
+		if (loadedFriendsLoginRef.current === normalizedLogin) {
+			return
+		}
+
+		loadedFriendsLoginRef.current = normalizedLogin
+		void getMyFriends()
+	}, [getMyFriends, login, user])
+
+	useEffect(() => {
+		if (isOwnProfile && user) {
+			void getMyAchievements()
+		}
+	}, [getMyAchievements, isOwnProfile, user])
 
 	const friendRequestState = useMemo<'none' | 'sent' | 'received' | 'friends'>(() => {
 		if (!login || isOwnProfile || !friends) {
@@ -112,6 +139,12 @@ export default function UserDetailPage({
 
 		return null
 	}, [fetchedUser, isOwnProfile, login, user])
+
+	const currentAchievements = useMemo(() => achievements?.achievements ?? [], [achievements?.achievements])
+	const friendAchievements = useMemo(
+		() => fetchedUser?.achievements?.achievements ?? null,
+		[fetchedUser?.achievements?.achievements]
+	)
 
 	const coalitionColor = useMemo(() => {
 		if (!profile?.coalition) {
@@ -224,8 +257,16 @@ export default function UserDetailPage({
 				{isOwnProfile && (
 					<>
 						<UserAllies currentLogin={profile.login} />
-						<UserAchievements achievements={mockAchievements} />
+						<UserAchievements achievements={currentAchievements} />
 					</>
+				)}
+				{!isOwnProfile && friendRequestState === 'friends' && fetchedUser && (
+					<UserAchievementsComparison
+						currentAchievements={currentAchievements}
+						friendLogin={fetchedUser.login}
+						friendDisplayName={fetchedUser.displayName}
+						friendAchievements={friendAchievements}
+					/>
 				)}
 			</section>
 

@@ -2,6 +2,8 @@
 
 import { create } from "zustand"
 import {
+	fetchMyAchievementEvents,
+	fetchMyAchievements,
 	createFriendRequest,
 	fetchMyFriends,
 	fetchMyPendingFriendRequests,
@@ -10,17 +12,21 @@ import {
 	resolveFriendRequest,
 	withdrawFriendRequest,
 } from "@/lib/userApi"
-import { FriendsPayload, UserDetails } from "@/types"
+import { AchievementEvent, AchievementsPayload, FriendsPayload, UserDetails } from "@/types"
 
 type FriendRequestState = 'none' | 'sent' | 'received' | 'friends'
 
 interface UserState {
 	user: UserDetails | null
+	achievements: AchievementsPayload | null
+	achievementEvents: AchievementEvent[]
 	friends: FriendsPayload | null
 	isLoading: boolean
 	isFriendsLoading: boolean
 	error: string | null
 	getUserDetails: (login: string) => Promise<void>
+	getMyAchievements: () => Promise<void>
+	refreshAchievementEvents: () => Promise<AchievementEvent[]>
 	getMyFriends: () => Promise<void>
 	refreshPendingRequests: () => Promise<void>
 	sendFriendRequest: (login: string) => Promise<void>
@@ -34,6 +40,8 @@ interface UserState {
 export const useUserStore = create<UserState>()(
 	(set, get) => ({
 		user: null,
+		achievements: null,
+		achievementEvents: [],
 		friends: null,
 		isLoading: false,
 		isFriendsLoading: false,
@@ -46,6 +54,28 @@ export const useUserStore = create<UserState>()(
 				set({ user: userDetails, isLoading: false })
 			} catch (err) {
 				set({ error: 'Failed to fetch user details', isLoading: false })
+			}
+		},
+
+		getMyAchievements: async () => {
+			try {
+				const achievements = await fetchMyAchievements()
+				set({ achievements })
+			} catch (err) {
+				set({ error: 'Failed to fetch achievements' })
+			}
+		},
+
+		refreshAchievementEvents: async () => {
+			try {
+				const events = await fetchMyAchievementEvents()
+				set((state) => ({
+					achievementEvents: [...events, ...state.achievementEvents].slice(0, 50),
+				}))
+				return events
+			} catch (err) {
+				set({ error: 'Failed to fetch achievement events' })
+				return []
 			}
 		},
 

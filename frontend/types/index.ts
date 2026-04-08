@@ -24,7 +24,45 @@ export interface UserDetails {
 	coalitionPoints: number
 	coalitionRank: number | null
 	campusRank: number | null
-	achievements?: string
+	achievements?: AchievementsPayload | null
+}
+
+export interface Achievement {
+	id: number
+	slug: string
+	title: string
+	description: string
+	icon: string
+	completed: boolean
+	completionDate?: string | null
+	completion_date?: string | null
+	progress: number
+	status: 'completed' | 'in_progress'
+}
+
+export interface AchievementsPayload {
+	ownerUserId: number
+	completedCount: number
+	inProgressCount: number
+	achievementsCount: number
+	achievements: Achievement[]
+}
+
+export interface AchievementEventPayload {
+	user_id: number
+	achievement_id: number
+	achievement_slug: string
+	achievement_title: string
+	status: 'completed'
+	progress: number
+	completed_at: string
+}
+
+export interface AchievementEvent {
+	id: number
+	event_type: string
+	payload: AchievementEventPayload
+	created_at: string
 }
 
 export interface FriendEntry {
