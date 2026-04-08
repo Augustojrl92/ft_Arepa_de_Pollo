@@ -1,8 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.utils import timezone
 
 from sync.models import CampusUser
-from .models import FriendsList
+from .models import Achievement, AchievementEvent, FriendsList, UserAchievementList
 
 
 class FriendsRequestError(Exception):
@@ -10,6 +11,39 @@ class FriendsRequestError(Exception):
 		super().__init__(message)
 		self.message = message
 		self.http_status = http_status
+
+
+DEFAULT_ACHIEVEMENTS = [
+	{
+		'slug': 'primer-contacto',
+		'title': 'Primer contacto',
+		'description': 'Envía tu primera solicitud de amistad.',
+		'icon': 'friend-request',
+		'progress': 0,
+		'status': 'in_progress',
+	},
+	{
+		'slug': 'red-inicial',
+		'title': 'Red inicial',
+		'description': 'Consigue tu primer amigo confirmado.',
+		'icon': 'friend-accepted',
+		'progress': 100,
+		'status': 'completed',
+	},
+	{
+		'slug': 'colega-activo',
+		'title': 'Colega activo',
+		'description': 'Completa el perfil básico y empieza a seguir gente.',
+		'icon': 'profile-complete',
+		'progress': 30,
+		'status': 'in_progress',
+	},
+]
+
+DEFAULT_PROGRESS_BY_SLUG = {
+	achievement_data['slug']: achievement_data['progress']
+	for achievement_data in DEFAULT_ACHIEVEMENTS
+}
 
 def _serialize_user_details(user_login):
 	campus_user = CampusUser.objects.filter(login=user_login).first()
@@ -41,6 +75,165 @@ def _serialize_friend_entry(friend_list):
 		'login': campus_user.login if campus_user else owner.username,
 		'display_name': campus_user.display_name if campus_user else owner.username,
 		'avatar_url': campus_user.avatar_url if campus_user else '',
+	}
+
+
+def _serialize_achievement_state(achievement, status, completion_date=None):
+	return {
+		'id': achievement.id,
+		'slug': achievement.slug,
+		'title': achievement.title,
+		'description': achievement.description,
+		'icon': achievement.icon,
+		'completed': status == 'completed',
+		'completionDate': completion_date.isoformat() if completion_date else None,
+		'completion_date': completion_date.isoformat() if completion_date else None,
+		'progress': 100 if status == 'completed' else DEFAULT_PROGRESS_BY_SLUG.get(achievement.slug or '', 0),
+		'status': status,
+	}
+
+
+def _seed_default_achievements(user_achievement_list):
+	seeded_achievements = []
+	for achievement_data in DEFAULT_ACHIEVEMENTS:
+		achievement, _created = Achievement.objects.get_or_create(
+			slug=achievement_data['slug'],
+			defaults={
+				'title': achievement_data['title'],
+				'description': achievement_data['description'],
+				'icon': achievement_data['icon'],
+			},
+		)
+		seeded_achievements.append(achievement)
+
+	completed_slugs = {
+		achievement_data['slug']
+		for achievement_data in DEFAULT_ACHIEVEMENTS
+		if achievement_data['status'] == 'completed'
+	}
+	in_progress_slugs = {
+		achievement_data['slug']
+		for achievement_data in DEFAULT_ACHIEVEMENTS
+		if achievement_data['status'] == 'in_progress'
+	}
+
+	completed = [achievement for achievement in seeded_achievements if achievement.slug in completed_slugs]
+	in_progress = [achievement for achievement in seeded_achievements if achievement.slug in in_progress_slugs]
+
+	user_achievement_list.completed_achievements.add(*completed)
+	user_achievement_list.in_progress_achievements.add(*in_progress)
+
+	if completed:
+		user_achievement_list.in_progress_achievements.remove(*completed)
+
+
+def get_or_create_achievement_list_for_user(user):
+	achievement_list, _created = UserAchievementList.objects.get_or_create(owner=user)
+	_seed_default_achievements(achievement_list)
+	return achievement_list
+
+
+def _latest_completion_by_achievement(user):
+	completion_events = (
+		user.achievement_events
+		.filter(event_type=AchievementEvent.EVENT_COMPLETED)
+		.values('achievement_id', 'created_at')
+		.order_by('achievement_id', '-created_at')
+	)
+
+	latest_completion = {}
+	for event in completion_events:
+		achievement_id = event['achievement_id']
+		if achievement_id in latest_completion:
+			continue
+		latest_completion[achievement_id] = event
+
+	return latest_completion
+
+
+def get_achievements_payload_for_user(user):
+	achievement_list = get_or_create_achievement_list_for_user(user)
+	completed_qs = achievement_list.completed_achievements.order_by('title')
+	in_progress_qs = achievement_list.in_progress_achievements.order_by('title')
+	latest_completion = _latest_completion_by_achievement(user)
+
+	achievements_payload = []
+	for achievement in completed_qs:
+		completion_date = None
+		event_data = latest_completion.get(achievement.id)
+		if event_data:
+			completion_date = event_data.get('created_at')
+		achievements_payload.append(_serialize_achievement_state(achievement, 'completed', completion_date))
+
+	for achievement in in_progress_qs:
+		achievements_payload.append(_serialize_achievement_state(achievement, 'in_progress'))
+
+	achievements_payload.sort(key=lambda achievement_data: achievement_data['title'].lower())
+
+	return {
+		'owner_user_id': user.id,
+		'completed_count': completed_qs.count(),
+		'in_progress_count': in_progress_qs.count(),
+		'achievements_count': len(achievements_payload),
+		'achievements': achievements_payload,
+	}
+
+
+def build_achievement_completed_event_payload(user, achievement):
+	return {
+		'user_id': user.id,
+		'achievement_id': achievement.id,
+		'achievement_slug': achievement.slug,
+		'achievement_title': achievement.title,
+		'status': 'completed',
+		'progress': 100,
+		'completed_at': timezone.now().isoformat(),
+	}
+
+
+def emit_achievement_completed_event(user, achievement):
+	return AchievementEvent.objects.create(
+		owner=user,
+		achievement=achievement,
+		event_type=AchievementEvent.EVENT_COMPLETED,
+		payload=build_achievement_completed_event_payload(user, achievement),
+	)
+
+
+def complete_achievement_for_user(user, achievement_slug):
+	achievement_list = get_or_create_achievement_list_for_user(user)
+	achievement = Achievement.objects.filter(slug=achievement_slug).first()
+	if achievement is None:
+		raise ValueError('Achievement not found')
+
+	if achievement_list.completed_achievements.filter(pk=achievement.pk).exists():
+		return achievement
+
+	with transaction.atomic():
+		achievement_list.in_progress_achievements.remove(achievement)
+		achievement_list.completed_achievements.add(achievement)
+		emit_achievement_completed_event(user, achievement)
+
+	return achievement
+
+
+def get_pending_achievement_events_for_user(user):
+	events_qs = user.achievement_events.filter(delivered_at__isnull=True).select_related('achievement').order_by('created_at')
+	events = list(events_qs)
+	if events:
+		AchievementEvent.objects.filter(pk__in=[event.pk for event in events]).update(delivered_at=timezone.now())
+	return {
+		'owner_user_id': user.id,
+		'events_count': len(events),
+		'events': [
+			{
+				'id': event.id,
+				'event_type': event.event_type,
+				'payload': event.payload,
+				'created_at': event.created_at.isoformat(),
+			}
+			for event in events
+		],
 	}
 
 

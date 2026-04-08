@@ -4,9 +4,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .services import (
+	get_pending_achievement_events_for_user,
 	_serialize_user_details,
 	FriendsRequestError,
 	accept_friend_request,
+	get_achievements_payload_for_user,
 	get_or_create_friends_payload_for_user,
 	get_pending_friend_requests_payload_for_user,
 	remove_friend,
@@ -14,8 +16,6 @@ from .services import (
 	send_friend_request,
 	withdraw_friend_request,
 )
-
-# Create your views here.
 
 class UserDetailView(APIView):
 	permission_classes = [IsAuthenticated]
@@ -115,3 +115,18 @@ class FriendsRelationView(APIView):
 
 		payload = get_or_create_friends_payload_for_user(request.user)
 		return Response({'detail': 'Friend removed', 'friends': payload}, status=status.HTTP_200_OK)
+
+class AchievementsView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def get(self, request):
+		payload = get_achievements_payload_for_user(request.user)
+		return Response(payload, status=status.HTTP_200_OK)
+
+
+class AchievementEventsView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def get(self, request):
+		payload = get_pending_achievement_events_for_user(request.user)
+		return Response(payload, status=status.HTTP_200_OK)
