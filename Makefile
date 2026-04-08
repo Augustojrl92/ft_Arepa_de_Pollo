@@ -51,7 +51,7 @@ front-stop:
 	$(call stop_if_running,frontend)
 
 front-down:
-	$(DOCKER_COMPOSE) rm -sf$(FRONT_RM_VOLUMES) frontend
+	$(DOCKER_COMPOSE) rm -s -f $(FRONT_RM_VOLUMES) frontend
 
 front-re: front-down front-up
 
@@ -66,7 +66,7 @@ back-stop:
 	$(call stop_if_running,backend db)
 
 back-down:
-	$(DOCKER_COMPOSE) rm -sf$(BACK_RM_VOLUMES) backend db
+	$(DOCKER_COMPOSE) rm -s -f $(BACK_RM_VOLUMES) backend db
 
 back-re: back-down back-up
 
