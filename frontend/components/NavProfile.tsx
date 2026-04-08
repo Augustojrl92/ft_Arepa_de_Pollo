@@ -3,11 +3,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/hooks';
-import { Bell } from 'lucide-react'
+import { Bell, LogOut } from 'lucide-react'
 
 export default function NavProfile() {
 	const pathname = usePathname();
-	const user = useAuthStore((s) => s.user)
+	const { user, logout } = useAuthStore()
 	const userProfilePath = user?.login ? `/users/${encodeURIComponent(user.login)}` : '/users'
 	const isActive = pathname === userProfilePath || pathname.startsWith('/users/')
 
@@ -22,6 +22,7 @@ export default function NavProfile() {
 			<Link href={userProfilePath}>
 				<img className={`w-10 h-10 rounded-full bg-border object-cover ${isActive ? 'border-2 border-card-hover ring ring-accent' : ''}`} src={user?.avatar} alt={`Avatar of ${user?.username}`}/>
 			</Link>
+			<LogOut className="cursor-pointer hover:text-accent transition-colors" size={16} onClick={logout} />
 		</div>
 	);
 }
