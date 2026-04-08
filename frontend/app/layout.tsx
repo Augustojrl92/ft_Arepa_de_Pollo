@@ -5,6 +5,12 @@ import AuthLayout from "@/components/AuthLayout";
 import MswProvider from "@/components/MswProvider";
 import "./globals.css";
 
+declare global {
+  namespace React {
+    interface ReactNode {}
+  }
+}
+
 export const metadata: Metadata = {
   title: "AEDLPH",
   description: "Plataforma AEDLPH",
