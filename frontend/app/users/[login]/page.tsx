@@ -154,12 +154,6 @@ export default function UserDetailPage({
 
 	return (
 		<div className="flex flex-col gap-4 my-8" style={coalitionStyle}>
-			<div className="flex items-center justify-between">
-				<Link href="/leaderboard" className="flex items-center gap-2 text-text-secondary hover:text-text transition-colors">
-					<ArrowLeft size={20} />
-					Volver a Leaderboard
-				</Link>
-			</div>
 			<UserProfile
 				profile={profile}
 				coalitionColor={coalitionColor}
@@ -216,10 +210,6 @@ export default function UserDetailPage({
 						: undefined
 				}
 			/>
-			{!isOwnProfile && isFriendsLoading && (
-				<p className="px-6 text-xs text-text-secondary">Actualizando estado de amistad...</p>
-			)}
-
 			<section className="grid gap-6 px-6 lg:grid-cols-2">
 				{isOwnProfile && (
 					<>

@@ -60,7 +60,7 @@ export function UserProfile({
 				</div>
 				<p className={`coalition-badge ${profile.coalition} capitalize mb-4`}>{profile.coalition}</p>
 				<h1 className="text-4xl font-black tracking-tight md:text-5xl">{profile.name}</h1>
-				<div className="mt-5 flex items-center gap-3">
+				<div className="mt-5 flex flex-wrap items-center justify-center gap-3">
 					{isOwnProfile ? (
 						<>
 							<button
@@ -82,10 +82,9 @@ export function UserProfile({
 						<>
 							{relationshipState === 'friends' && (
 								<div className="flex flex-col items-center gap-2">
-									<p className="text-xs text-text-secondary">Este usuario es tu amigo</p>
 									<button
 										type="button"
-										className="cursor-pointer rounded-lg border border-border px-4 py-2 text-xs font-semibold text-text hover:bg-surface/70 transition-colors"
+										className="cursor-pointer rounded-lg bg-[#ff355b]/12 border border-[#ff355b] px-4 py-2 text-xs font-semibold text-text hover:bg-[#ff355b]/75 transition-colors"
 										onClick={onRemoveFriend}
 									>
 										Eliminar amigo
@@ -105,13 +104,12 @@ export function UserProfile({
 
 							{relationshipState === 'sent' && (
 								<div className="flex flex-col items-center gap-2">
-									<p className="text-xs text-text-secondary">Solicitud enviada</p>
 									<button
 										type="button"
-										className="cursor-pointer rounded-lg border border-border px-4 py-2 text-xs font-semibold text-text hover:bg-surface/70 transition-colors"
+										className="cursor-pointer rounded-lg border bg-[#ff355b]/12 border-[#ff355b] px-4 py-2 text-xs font-semibold text-text hover:bg-[#ff355b]/75 transition-colors"
 										onClick={onWithdrawFriendRequest}
 									>
-										Retirar
+										Retirar solicitud
 									</button>
 								</div>
 							)}
@@ -129,7 +127,7 @@ export function UserProfile({
 										</button>
 										<button
 											type="button"
-											className="cursor-pointer rounded-lg border border-border px-4 py-2 text-xs font-semibold text-text hover:bg-surface/70 transition-colors"
+											className="cursor-pointer rounded-lg border px-4 py-2 text-xs font-semibold bg-[#ff355b]/12 border-[#ff355b] text-text hover:bg-[#ff355b]/75 transition-colors"
 											onClick={onRejectFriendRequest}
 										>
 											Rechazar
@@ -139,6 +137,15 @@ export function UserProfile({
 							)}
 						</>
 					)}
+					<a
+						className="flex items-center rounded-lg border px-4 py-2 text-xs font-semibold bg-(--coalition-color)/12 border-(--coalition-color) text-text hover:bg-(--coalition-color)/75 transition-colors"
+						href={`https://profile.intra.42.fr/users/${profile.login}`}
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						Ver perfil
+						<img className="w-4 h-4 ml-2" src="/42_logo.svg" alt="logo 42" />
+					</a>
 				</div>
 
 				<div className="mt-8 w-full max-w-2xl rounded-2xl border border-border bg-card p-6">
@@ -163,6 +170,7 @@ export function UserProfile({
 						</div>
 						<div className="h-2 rounded-full bg-card">
 							<div className="h-full rounded-full bg-(--coalition-color)" style={{ width: `${levelProgress}%` }} />
+							
 						</div>
 					</div>
 				</div>

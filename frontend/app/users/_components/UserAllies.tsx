@@ -147,21 +147,28 @@ export function UserAllies({ currentLogin }: UserAlliesProps) {
 							<p className="rounded-lg border border-border bg-surface/40 p-3 text-sm text-text-secondary">No tienes solicitudes enviadas pendientes.</p>
 						)}
 						{sentRequests.map((request) => (
-							<Link key={request.userId} href={`/users/${request.login}`} className="rounded-lg border border-border bg-surface/40 p-3">
-								<div className="flex items-center justify-between gap-3">
-									<div>
-										<p className="text-sm font-semibold">@{request.login}</p>
-										<p className="text-xs text-text-secondary">Solicitud pendiente</p>
+							<Link
+								key={request.userId}
+								href={`/users/${request.login}`}
+								className="flex items-center justify-between rounded-lg border border-border bg-surface/40 p-3"
+							>
+								<div className="flex items-center gap-3">
+									<img src={request.avatarUrl} alt={`Avatar de ${request.login}`} className="h-15 w-15 rounded-full border border-border object-cover" />
+									<div className="flex-1 min-w-0">
+										<p className="truncate text-sm font-semibold">{request.login}</p>
+										<p className="truncate text-xs text-text-secondary">{request.displayName}</p>
 									</div>
+								</div>
+								<div className="flex flex-col gap-2">
 									<button
 										type="button"
 										onClick={(event) => {
 											event.preventDefault()
 											void onWithdrawAllyRequest(request.login)
 										}}
-										className="cursor-pointer rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-text-secondary hover:text-text hover:bg-card transition-colors"
+										className="cursor-pointer rounded-md border border-[#ff355b] bg-[#ff355b]/12 px-3 py-1.5 text-xs font-semibold text-text hover:bg-[#ff355b]/25 transition-colors"
 									>
-										Retirar
+										Retirar solicitud
 									</button>
 								</div>
 							</Link>
