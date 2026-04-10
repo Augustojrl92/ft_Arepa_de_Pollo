@@ -46,5 +46,20 @@ services:
     #   timeout: 3s
     #   retries: 10
 
+  public_api:
+    build:
+      context: ./public-api
+      dockerfile: Dockerfile.dev
+    env_file:
+      - ./public-api/.env
+    volumes:
+      - ./public-api:/app
+    ports:
+      - "8001:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+
 volumes:
   postgres_data:
