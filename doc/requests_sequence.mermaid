@@ -1,0 +1,40 @@
+sequenceDiagram
+    autonumber
+    participant U as User Browser
+    participant FE as Frontend
+    participant BE as Backend Django Auth
+    participant A42 as API 42
+
+    U->>FE: Open login page
+    FE->>BE: GET /api/auth/42/login/
+    BE-->>U: Redirect to API 42 authorize URL with state
+
+    U->>A42: Authenticate and grant consent
+    A42-->>BE: Callback with code and state
+    BE->>BE: Validate state
+    BE->>A42: Exchange code for access token
+    A42-->>BE: Return access token
+    BE->>A42: Request user profile
+    A42-->>BE: Return user profile payload
+
+    BE->>BE: Upsert local user and campus user
+    BE-->>U: Set access and refresh cookies, redirect to app
+
+    U->>FE: Load authenticated app
+    FE->>BE: GET /api/auth/profile/
+    BE-->>FE: 200 profile
+
+    Note over FE,BE: Access token eventually expires
+    FE->>BE: Call protected endpoint
+    BE-->>FE: 401 unauthorized
+    FE->>BE: POST /api/auth/token/refresh/
+
+    alt Refresh token is valid
+        BE-->>FE: 200 and new access cookie
+        FE->>BE: Retry protected request
+        BE-->>FE: 200 success
+    else Refresh token is invalid
+        BE-->>FE: 401 and clear auth cookies
+        FE->>BE: POST /api/auth/logout/
+        BE-->>FE: 200 logged out
+    end
