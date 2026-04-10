@@ -24,11 +24,11 @@ fi
 endef
 
 # Helper: stop selected services only if any of the important services are running
-# We consider frontend, backend or db as the key services for full-stop (OR)
+# We consider frontend, backend, db, or public_api as the key services for full-stop (OR)
 define stop_all_if_running
-@# Check frontend/backend/db and stop only those actually running (simple OR check)
+@# Check frontend/backend/db/public_api and stop only those actually running (simple OR check)
 @running=""; \
-for svc in frontend backend db; do \
+for svc in frontend backend db public_api; do \
   $(DOCKER) ps --filter "label=com.docker.compose.service=$$svc" -q | grep -q . && running="$$running $$svc" || true; \
 done; \
 if [ -n "$$running" ]; then \
@@ -36,7 +36,7 @@ if [ -n "$$running" ]; then \
 	$(DOCKER_COMPOSE) stop $$running; \
 	echo "Stopped selected services:$$running"; \
 else \
-	echo "no selected services running (frontend/backend/db), skipping stop"; \
+	echo "no selected services running (frontend/backend/db/public_api), skipping stop"; \
 fi
 endef
 
@@ -101,6 +101,47 @@ back-shell:
 back-syncapi:
 	$(DOCKER_COMPOSE) exec -T backend python manage.py sync_campus_users --mode=$(MODE)
 
+# ─── Public API ────────────────────────────────────────────────────────────────
+api-up: back-up
+	$(DOCKER_COMPOSE) up -d --build public_api
+
+api-stop:
+	$(call stop_if_running,public_api)
+
+api-down:
+	$(DOCKER_COMPOSE) rm -sf public_api
+
+api-re: api-down api-up
+
+api-logs:
+	$(DOCKER_COMPOSE) logs -f public_api
+
+api-alembic-init:
+	$(DOCKER_COMPOSE) run --rm public_api alembic init alembic
+
+api-migrate:
+	$(DOCKER_COMPOSE) run --rm public_api alembic upgrade head
+
+api-revision:
+	@if [ -z "$(MSG)" ]; then echo "Usage: make api-revision MSG=init_public_api_keys"; exit 1; fi
+	$(DOCKER_COMPOSE) run --rm public_api alembic revision --autogenerate -m "$(MSG)"
+
+api-history:
+	$(DOCKER_COMPOSE) run --rm public_api alembic history
+
+api-current:
+	$(DOCKER_COMPOSE) run --rm public_api alembic current
+
+api-downgrade:
+	@if [ -z "$(REV)" ]; then echo "Uso: make api-downgrade REV=-1"; exit 1; fi
+	$(DOCKER_COMPOSE) run --rm public_api alembic downgrade "$(REV)"
+
+api-syncdb: api-migrate
+
+api-create-key:
+	@if [ -z "$(NAME)" ]; then echo "Uso: make api-create-key NAME=bootstrap_key [EXPIRES_AT=2026-12-31T23:59:59+00:00] [RPM=60]"; exit 1; fi
+	@NAME="$(NAME)" EXPIRES_AT="$(EXPIRES_AT)" RPM="$(RPM)" $(DOCKER_COMPOSE) run --rm -e NAME -e EXPIRES_AT -e RPM public_api python tests/create_api_key.py
+
 # ─── Full stack ────────────────────────────────────────────────────────────────
 full-up:
 	$(DOCKER_COMPOSE) up -d --build
@@ -143,6 +184,8 @@ dev-re: front-re
 		back-migrate back-makemigrations back-makemigrations-app \
 		back-showmigrations back-showmigrations-app back-syncdb \
 		back-superuser back-shell back-test \
+		api-up api-stop api-down api-re api-logs \
+		api-alembic-init api-migrate api-revision api-history api-current api-downgrade api-syncdb \
         full-up full-stop full-down full-re full-logs \
         fclean \
 		up stop down logs migrate makemigrations superuser shell test \
