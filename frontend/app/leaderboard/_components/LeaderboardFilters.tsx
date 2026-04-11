@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react'
 import type { Coalition } from '@/types'
+import CustomButton from '@/components/CustomButton'
+import IconActionButton from '@/components/IconActionButton'
 import type { LeaderboardFilterPreset } from './leaderboardFilterPresets'
 
 interface LeaderboardFiltersProps {
@@ -136,28 +138,27 @@ export const LeaderboardFilters = ({
 												</button>
 											)}
 											<div className="flex items-center gap-2">
-												<button
+												<IconActionButton
 													type="button"
 													onClick={(event) => {
 														event.stopPropagation()
 														onStartEditPreset(preset.id)
 													}}
-													className="text-text-secondary hover:text-text transition-colors"
 													aria-label={`Editar ${preset.name}`}
 												>
 													<Pencil size={14} />
-												</button>
-												<button
+												</IconActionButton>
+												<IconActionButton
 													type="button"
+													tone="danger"
 													onClick={(event) => {
 														event.stopPropagation()
 														onDeletePreset(preset.id)
 													}}
-													className="text-red-500 hover:text-red-400 transition-colors"
 													aria-label={`Eliminar ${preset.name}`}
 												>
 													<Trash2 size={14} />
-												</button>
+												</IconActionButton>
 											</div>
 										</div>
 									</div>
@@ -306,31 +307,34 @@ export const LeaderboardFilters = ({
 				</div>
 
 				<div className="flex flex-col gap-4">
-					<button
+					<CustomButton
 						type="button"
 						onClick={onClearFilters}
 						disabled={!hasAppliedFilters}
-						className={`w-full py-2 rounded-lg text-sm font-semibold border transition-all ${hasAppliedFilters ? 'cursor-pointer bg-accent/10 border-accent/20 text-accent hover:bg-accent/20' : 'cursor-not-allowed bg-card border-border text-text-secondary opacity-60'}`}
+						variant={hasAppliedFilters ? 'accent' : 'outline'}
+						fullWidth
 					>
 						Limpiar filtros
-					</button>
+					</CustomButton>
 					{editingPresetId && showUpdatePresetButton && (
-						<button
+						<CustomButton
 							type="button"
 							onClick={() => onUpdatePreset(editingPresetId)}
-							className="cursor-pointer w-full bg-accent text-white py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-all"
+							variant="accent"
+							fullWidth
 						>
 							Confirmar guardado del filtro
-						</button>
+						</CustomButton>
 					)}
 					{showCreatePresetButton && (
-						<button
+						<CustomButton
 							type="button"
 							onClick={onCreatePreset}
-							className="cursor-pointer w-full bg-card border border-border py-2 rounded-lg text-sm font-semibold transition-all text-text hover:bg-card-hover"
+							variant="outline"
+							fullWidth
 						>
 							Guardar filtro personalizado
-						</button>
+						</CustomButton>
 					)}
 				</div>
 			</div>
