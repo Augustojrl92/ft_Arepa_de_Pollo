@@ -1,29 +1,36 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ChangeEvent } from 'react'
 import type { ProfilePreferences, RankingPerPage } from './types'
 import { X } from 'lucide-react'
 
 type UserPreferencesModalProps = {
 	isOpen: boolean
 	preferences: ProfilePreferences
+	avatarUrl?: string
+	hasCustomAvatar?: boolean
+	isAvatarLoading?: boolean
+	isPreferencesLoading?: boolean
+	avatarError?: string | null
 	onClose: () => void
-	onSave: (nextPreferences: ProfilePreferences) => void
+	onSave: (nextPreferences: ProfilePreferences) => Promise<void> | void
+	onUploadAvatar?: (file: File) => Promise<void>
+	onRemoveAvatar?: () => Promise<void>
 }
 
 export function UserConfigurationModal({
 	isOpen,
 	preferences,
+	avatarUrl,
+	hasCustomAvatar = false,
+	isAvatarLoading = false,
+	isPreferencesLoading = false,
+	avatarError = null,
 	onClose,
 	onSave,
+	onUploadAvatar,
+	onRemoveAvatar,
 }: UserPreferencesModalProps) {
 	const [draftPreferences, setDraftPreferences] = useState<ProfilePreferences>(preferences)
-
-	useEffect(() => {
-		if (!isOpen) {
-			return
-		}
-
-		setDraftPreferences(preferences)
-	}, [isOpen, preferences])
+	const [selectedFileName, setSelectedFileName] = useState<string | null>(null)
 
 	useEffect(() => {
 		if (!isOpen) {
@@ -53,6 +60,18 @@ export function UserConfigurationModal({
 		setDraftPreferences((previous) => ({ ...previous, [key]: value }))
 	}
 
+	const handleAvatarInput = async (event: ChangeEvent<HTMLInputElement>) => {
+		const file = event.target.files?.[0]
+		if (!file || !onUploadAvatar) {
+			return
+		}
+
+		setSelectedFileName(file.name)
+		await onUploadAvatar(file)
+		setSelectedFileName(null)
+		event.target.value = ''
+	}
+
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
 			<div
@@ -61,10 +80,58 @@ export function UserConfigurationModal({
 			>
 				<div className="mb-5 flex items-center justify-between">
 					<h3 className="text-xl font-black">Configuración de cuenta</h3>
-					<X size={20} className="cursor-pointer hover:text-accent" />
+					<X size={20} className="cursor-pointer hover:text-accent" onClick={onClose} />
 				</div>
 
 				<div className="space-y-4">
+					<div>
+						<span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">
+							Avatar personalizado
+						</span>
+						<div className="rounded-xl border border-border bg-surface/40 p-3">
+							<div className="flex items-center gap-4">
+								{avatarUrl && hasCustomAvatar ? (
+									<img src={avatarUrl} alt="Avatar actual" className="h-14 w-14 rounded-full object-cover" />
+								) : (
+									<div className="flex h-14 w-14 items-center justify-center rounded-full bg-card text-lg">👤</div>
+								)}
+								<div className="flex-1">
+									<p className="text-sm font-semibold">Subir nueva imagen</p>
+									<p className="mt-1 text-xs text-text-secondary">PNG, JPG, WEBP o GIF. Maximo 2MB.</p>
+									{selectedFileName && <p className="mt-1 text-xs text-text-secondary">Seleccionado: {selectedFileName}</p>}
+									{avatarError && <p className="mt-2 text-xs text-[#ff355b]">{avatarError}</p>}
+								</div>
+							</div>
+							<div className="mt-3 flex flex-wrap items-center gap-2">
+								<label className="cursor-pointer rounded-lg border border-border px-3 py-2 text-xs font-semibold text-text hover:bg-surface/70 transition-colors">
+									<input
+										type="file"
+										accept="image/png,image/jpeg,image/webp,image/gif"
+										onChange={(event) => {
+											void handleAvatarInput(event)
+										}}
+										className="hidden"
+										disabled={isAvatarLoading}
+									/>
+									{isAvatarLoading ? 'Subiendo...' : 'Seleccionar archivo'}
+								</label>
+								{hasCustomAvatar && (
+									<button
+										type="button"
+										onClick={() => {
+											if (onRemoveAvatar) {
+												void onRemoveAvatar()
+											}
+										}}
+										className="cursor-pointer rounded-lg border border-[#ff355b] px-3 py-2 text-xs font-semibold text-text hover:bg-[#ff355b]/20 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+									>
+										Eliminar imagen
+									</button>
+								)}
+							</div>
+						</div>
+					</div>
+
 					<div>
 						<label htmlFor="ranking-page-size" className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">
 							Elementos por pagina en ranking
@@ -134,10 +201,13 @@ export function UserConfigurationModal({
 					</button>
 					<button
 						type="button"
-						onClick={() => onSave(draftPreferences)}
+						onClick={() => {
+							void onSave(draftPreferences)
+						}}
+						disabled={isPreferencesLoading}
 						className="cursor-pointer rounded-lg border border-(--coalition-color) bg-(--coalition-color)/15 px-4 py-2 text-sm font-semibold text-text hover:bg-(--coalition-color)/35"
 					>
-						Guardar cambios
+						{isPreferencesLoading ? 'Guardando...' : 'Guardar cambios'}
 					</button>
 				</div>
 			</div>

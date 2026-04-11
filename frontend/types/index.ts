@@ -11,6 +11,7 @@ export interface User {
 	coalitionUserRank: number | null
 	walletAmount: number
 	evalPoints: number
+	hasCustomAvatar?: boolean
 }
 
 export interface UserDetails {
@@ -24,7 +25,7 @@ export interface UserDetails {
 	coalitionPoints: number
 	coalitionRank: number | null
 	campusRank: number | null
-	achievements?: string
+	achievements?: string | unknown
 }
 
 export interface FriendEntry {

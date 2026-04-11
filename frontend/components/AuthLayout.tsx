@@ -2,10 +2,11 @@
 
 import { useEffect, useRef } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useTheme } from "next-themes"
 
 import Header from "@/components/Header"
 import Footer from "@/components/Footer"
-import { useAuthStore, useCoalitionStore } from "@/hooks"
+import { useAuthStore, useCoalitionStore, useUserStore } from "@/hooks"
 
 const PUBLIC_ROUTES = ["/login"]
 
@@ -15,6 +16,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 	const searchParams = useSearchParams()
 	const hasInitializedRef = useRef(false)
 	const hasInitializedCoalitionsRef = useRef(false)
+	const hasInitializedPreferencesRef = useRef(false)
 
 	const initializeAuth = useAuthStore((s) => s.initializeAuth)
 	const clearSession = useAuthStore((s) => s.clearSession)
@@ -22,6 +24,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 	const status = useAuthStore((s) => s.status)
 	const user = useAuthStore((s) => s.user)
 	const getCoalitions = useCoalitionStore((s) => s.getCoalitions)
+	const getMyPreferences = useUserStore((s) => s.getMyPreferences)
+	const { setTheme } = useTheme()
 
 	const isReady = hasHydrated && status !== "idle" && status !== "loading"
 	const isAuthenticated = status === "authenticated"
@@ -78,6 +82,31 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 		hasInitializedCoalitionsRef.current = true
 		void getCoalitions()
 	}, [getCoalitions, isAuthenticated, isReady])
+
+	useEffect(() => {
+		if (!isReady || !isAuthenticated || hasInitializedPreferencesRef.current) {
+			return
+		}
+
+		hasInitializedPreferencesRef.current = true
+
+		void getMyPreferences()
+			.then((preferences) => {
+				setTheme(preferences.theme)
+				window.localStorage.setItem('leaderboard.defaultPerPage', String(preferences.rankingPerPage))
+			})
+			.catch(() => {
+				// Keep default theme/per-page when preferences endpoint is temporarily unavailable.
+			})
+	}, [getMyPreferences, isAuthenticated, isReady, setTheme])
+
+	useEffect(() => {
+		if (isAuthenticated) {
+			return
+		}
+
+		hasInitializedPreferencesRef.current = false
+	}, [isAuthenticated])
 
 	useEffect(() => {
 		if (!isReady || !isAuthenticated) {
