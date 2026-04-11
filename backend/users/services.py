@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
 
+from django.contrib.auth.models import User
 from sync.models import CampusUser
 from .models import FriendsList
 
@@ -11,69 +12,97 @@ class FriendsRequestError(Exception):
 		self.message = message
 		self.http_status = http_status
 
-def _serialize_user_details(user_login):
+def _build_avatar_url(request, custom_avatar_url):
+	if not custom_avatar_url:
+		return ''
+
+	if request is None:
+		return custom_avatar_url
+
+	return request.build_absolute_uri(custom_avatar_url)
+
+
+def _resolve_avatar_url(owner, fallback_avatar_url='', request=None):
+	if owner is None:
+		return fallback_avatar_url or ''
+
+	preferences = getattr(owner, 'preferences', None)
+	if preferences and preferences.custom_avatar:
+		return _build_avatar_url(request, preferences.custom_avatar.url)
+
+	return fallback_avatar_url or ''
+
+def _serialize_user_details(user_login, request=None):
 	campus_user = CampusUser.objects.filter(login=user_login).first()
 	
 	if campus_user is None:
 		return None
 	
+	owner = campus_user.django_user or User.objects.filter(username=user_login).first()
+	has_account = owner is not None
+	avatar_url = _resolve_avatar_url(owner, campus_user.avatar_url, request=request)
+
 	return {
 		'id': campus_user.user_id,
 		'login': campus_user.login,
 		'display_name': campus_user.display_name,
-		'avatar_url': campus_user.avatar_url,
+		'avatar_url': avatar_url,
 		'level': campus_user.level,
 		'coalition_name': campus_user.coalition_name,
 		'coalition_slug': campus_user.coalition_slug,
 		'coalition_points': campus_user.coalition_user_score,
 		'coalition_rank': campus_user.coalition_rank,
+		'has_account': has_account,
 		'general_rank': campus_user.general_rank,
 		'achievements': 'none'  # Placeholder for achievements data,
+
 	}
 
-def _serialize_friend_entry(friend_list):
+def _serialize_friend_entry(friend_list, request=None):
 	owner = friend_list.owner
 	campus_user = getattr(owner, 'campus_user_profile', None)
+	fallback_avatar_url = campus_user.avatar_url if campus_user else ''
+	avatar_url = _resolve_avatar_url(owner, fallback_avatar_url, request=request)
 
 	return {
 		'user_id': owner.id,
 		'username': owner.username,
 		'login': campus_user.login if campus_user else owner.username,
 		'display_name': campus_user.display_name if campus_user else owner.username,
-		'avatar_url': campus_user.avatar_url if campus_user else '',
+		'avatar_url': avatar_url,
 	}
 
 
-def get_or_create_friends_payload_for_user(user):
+def get_or_create_friends_payload_for_user(user, request=None):
 	friends_list, _created = FriendsList.objects.get_or_create(owner=user)
 
-	friends_qs = friends_list.friends.select_related('owner', 'owner__campus_user_profile').order_by('owner__username')
-	received_qs = friends_list.friends_requests_received.select_related('owner', 'owner__campus_user_profile').order_by('owner__username')
-	sent_qs = friends_list.friends_requests_sent.select_related('owner', 'owner__campus_user_profile').order_by('owner__username')
+	friends_qs = friends_list.friends.select_related('owner', 'owner__campus_user_profile', 'owner__preferences').order_by('owner__username')
+	received_qs = friends_list.friends_requests_received.select_related('owner', 'owner__campus_user_profile', 'owner__preferences').order_by('owner__username')
+	sent_qs = friends_list.friends_requests_sent.select_related('owner', 'owner__campus_user_profile', 'owner__preferences').order_by('owner__username')
 
 	return {
 		'owner_user_id': user.id,
 		'friends_count': friends_qs.count(),
 		'pending_received_count': received_qs.count(),
 		'pending_sent_count': sent_qs.count(),
-		'friends': [_serialize_friend_entry(friend_list) for friend_list in friends_qs],
-		'pending_received': [_serialize_friend_entry(friend_list) for friend_list in received_qs],
-		'pending_sent': [_serialize_friend_entry(friend_list) for friend_list in sent_qs],
+		'friends': [_serialize_friend_entry(friend_list, request=request) for friend_list in friends_qs],
+		'pending_received': [_serialize_friend_entry(friend_list, request=request) for friend_list in received_qs],
+		'pending_sent': [_serialize_friend_entry(friend_list, request=request) for friend_list in sent_qs],
 	}
 
 
-def get_pending_friend_requests_payload_for_user(user):
+def get_pending_friend_requests_payload_for_user(user, request=None):
 	friends_list, _created = FriendsList.objects.get_or_create(owner=user)
 
-	received_qs = friends_list.friends_requests_received.select_related('owner', 'owner__campus_user_profile').order_by('owner__username')
-	sent_qs = friends_list.friends_requests_sent.select_related('owner', 'owner__campus_user_profile').order_by('owner__username')
+	received_qs = friends_list.friends_requests_received.select_related('owner', 'owner__campus_user_profile', 'owner__preferences').order_by('owner__username')
+	sent_qs = friends_list.friends_requests_sent.select_related('owner', 'owner__campus_user_profile', 'owner__preferences').order_by('owner__username')
 
 	return {
 		'owner_user_id': user.id,
 		'pending_received_count': received_qs.count(),
 		'pending_sent_count': sent_qs.count(),
-		'pending_received': [_serialize_friend_entry(friend_list) for friend_list in received_qs],
-		'pending_sent': [_serialize_friend_entry(friend_list) for friend_list in sent_qs],
+		'pending_received': [_serialize_friend_entry(friend_list, request=request) for friend_list in received_qs],
+		'pending_sent': [_serialize_friend_entry(friend_list, request=request) for friend_list in sent_qs],
 	}
 
 

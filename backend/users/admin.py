@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import FriendsList
+from .models import FriendsList, UserPreferences
 
 # Register your models here.
 
@@ -47,3 +47,14 @@ class FriendsListAdmin(admin.ModelAdmin):
 	def friends_preview(self, obj):
 		friend_usernames = list(obj.friends.select_related('owner').values_list('owner__username', flat=True)[:3])
 		return ', '.join(friend_usernames) if friend_usernames else '-'
+
+
+@admin.register(UserPreferences)
+class UserPreferencesAdmin(admin.ModelAdmin):
+	list_display = ('user', 'theme_mode', 'items_per_page', 'receive_notifications', 'has_custom_avatar')
+	search_fields = ('user__username', 'user__email', 'custom_username')
+	list_select_related = ('user',)
+
+	@admin.display(boolean=True, description='Custom Avatar')
+	def has_custom_avatar(self, obj):
+		return bool(obj.custom_avatar)
