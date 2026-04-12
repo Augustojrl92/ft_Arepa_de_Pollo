@@ -8,8 +8,8 @@ from .models import CampusUser, Coalition, CoalitionEvaluationCursor
 from .services import _build_sync_context
 
 
-CURRENT_SEASON_START = '2025-09-30T00:00:00Z'
-CURRENT_SEASON_END = '2026-03-27T23:59:59Z'
+CURRENT_SEASON_START = '2026-04-08T15:42:00Z'
+CURRENT_SEASON_END = '2026-10-08T10:00:00Z'
 CURRENT_SEASON_START_DT = parse_datetime(CURRENT_SEASON_START)
 CURRENT_SEASON_END_DT = parse_datetime(CURRENT_SEASON_END)
 EVALUATION_SCORE_REASON = 'You evaluated someone. Well done!'
