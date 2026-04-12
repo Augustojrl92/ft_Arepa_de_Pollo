@@ -1,4 +1,4 @@
-from django.db.models import Q, Avg
+from django.db.models import Q, Avg, Sum
 from django.utils import timezone
 from datetime import timedelta
 
@@ -147,10 +147,22 @@ def _serialize_simple_coalitions(coalition_slug=None):
 			'member_count': total_members,
 			'active_members': active_members,
 			'average_level': average_level,
+			'evaluations_done_total': evaluations_done_total,
+			'evaluations_done_current_season': evaluations_done_current_season,
 		})
 		for index, coalition in enumerate(coalitions, start=1)
 		for _, average_level in [_get_level_distribution(coalition.slug)]
 		for _, total_members, active_members in [_get_top_members(coalition.slug)]
+		for evaluation_totals in [
+			CampusUser.objects.filter(coalition_slug=coalition.slug).aggregate(
+				evaluations_done_total=Sum('evaluations_done_total'),
+				evaluations_done_current_season=Sum('evaluations_done_current_season'),
+			)
+		]
+		for evaluations_done_total, evaluations_done_current_season in [(
+			evaluation_totals['evaluations_done_total'] or 0,
+			evaluation_totals['evaluations_done_current_season'] or 0,
+		)]
 	]
 
 	if coalition_slug is None:
@@ -171,6 +183,10 @@ def _serialize_coalition_details(coalition_slug):
 	level_distribution, average_level = _get_level_distribution(coalition_slug)
 	score_change_24, score_change_weekly, score_change_monthly, campus_rank, campus_rank_change, campus_rank_status = _get_score_change(coalition_slug)
 	top_members, total_members, active_members = _get_top_members(coalition_slug)
+	evaluation_totals = CampusUser.objects.filter(coalition_slug=coalition_slug).aggregate(
+		evaluations_done_total=Sum('evaluations_done_total'),
+		evaluations_done_current_season=Sum('evaluations_done_current_season'),
+	)
 
 	return {
 		'level_distribution': level_distribution,
@@ -183,7 +199,9 @@ def _serialize_coalition_details(coalition_slug):
 		'campus_rank_status': campus_rank_status,
 		'top_members': top_members,
 		'total_members': total_members,
-		'active_members': active_members
+		'active_members': active_members,
+		'evaluations_done_total': evaluation_totals['evaluations_done_total'] or 0,
+		'evaluations_done_current_season': evaluation_totals['evaluations_done_current_season'] or 0,
 	}
 
 def _get_sync_user_ranks(sync_user):
