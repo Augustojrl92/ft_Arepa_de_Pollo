@@ -8,6 +8,8 @@ class CampusUserAdmin(admin.ModelAdmin):
 		'intra_id',
 		'coalition_name',
 		'coalition_user_score',
+		'projects_delivered_current_season',
+		'projects_delivered_total',
 		'level',
 		'is_active',
 	)
