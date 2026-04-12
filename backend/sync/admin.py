@@ -11,6 +11,8 @@ class CampusUserAdmin(admin.ModelAdmin):
 		'coalition_user_score',
 		'evaluations_done_current_season',
 		'evaluations_done_total',
+		'projects_delivered_current_season',
+		'projects_delivered_total',
 		'level',
 		'is_active',
 	)
