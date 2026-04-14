@@ -3,7 +3,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
+import sys
 from dataclasses import dataclass
+from pathlib import Path
 from urllib import error, request
 
 
@@ -84,15 +87,60 @@ def assert_status(name: str, result: HttpResult, expected: int, failures: list[s
         failures.append(f"{name}: expected {expected}, got {result.status}")
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Real public_api smoke test with colored output")
-    parser.add_argument("name", help="Name to use when creating the API key")
-    parser.add_argument("--base-url", default="http://localhost:8001", help="Public API base URL")
-    parser.add_argument(
-        "--api-key",
-        default=os.getenv("PUBLIC_API_KEY", ""),
-        help="Bootstrap API key for protected endpoint tests (or set PUBLIC_API_KEY)",
+def create_bootstrap_key(name: str) -> str | None:
+    root_dir = Path(__file__).resolve().parents[1]
+    repo_root = root_dir.parent
+
+    env = os.environ.copy()
+    env["NAME"] = f"{name}_bootstrap"
+    bootstrap_code = (
+        "import os\n"
+        "from app.db.session import SessionLocal\n"
+        "from app.services.api_key_service import ApiKeyService\n"
+        "db = SessionLocal()\n"
+        "try:\n"
+        "    service = ApiKeyService(db)\n"
+        "    _, raw_key = service.create_api_key(name=os.getenv('NAME', 'bootstrap_key'), requests_per_minute=60)\n"
+        "    print('key:' + raw_key)\n"
+        "finally:\n"
+        "    db.close()\n"
     )
+
+    proc = subprocess.run(
+        [
+            "docker",
+            "compose",
+            "-f",
+            "docker-compose.dev.yml",
+            "run",
+            "--rm",
+            "-e",
+            "NAME",
+            "public_api",
+            "python",
+            "-c",
+            bootstrap_code,
+        ],
+        cwd=str(repo_root),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    if proc.returncode != 0:
+        return None
+
+    for line in proc.stdout.splitlines():
+        if line.strip().startswith("key:"):
+            return line.split(":", 1)[1].strip()
+    return None
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Automatic API key lifecycle test")
+    parser.add_argument("name", help="Name used to create API key")
+    parser.add_argument("--base-url", default="http://localhost:8001", help="Public API base URL")
     parser.add_argument("--timeout", type=float, default=8.0, help="HTTP timeout in seconds")
     args = parser.parse_args()
     key_name = args.name.strip()
@@ -102,10 +150,9 @@ def main() -> int:
         return 2
 
     base = args.base_url.rstrip("/")
-    bootstrap_key = args.api_key.strip()
     failures: list[str] = []
 
-    print(colorize("public_api real smoke test", CYAN, bold=True))
+    print(colorize("public_api api-keys lifecycle test", CYAN, bold=True))
 
     # Health
     health_res, _ = http_json("GET", f"{base}/api/v1/health", timeout=args.timeout)
@@ -121,15 +168,15 @@ def main() -> int:
     print_step("GET protected without X-API-Key", no_header_res, "auth guard")
     assert_status("missing-key-guard", no_header_res, 401, failures)
 
+    bootstrap_key = create_bootstrap_key(key_name)
     if not bootstrap_key:
-        print(colorize("Skipping protected lifecycle tests: pass --api-key or set PUBLIC_API_KEY", YELLOW, bold=True))
-        if failures:
-            print(colorize("Smoke test failed", RED, bold=True))
-            for failure in failures:
-                print(colorize(f"- {failure}", RED))
-            return 1
-        print(colorize("Smoke test passed (partial)", GREEN, bold=True))
-        return 0
+        failures.append("bootstrap-key: failed to create key via embedded bootstrap logic")
+        print(colorize("Smoke test failed", RED, bold=True))
+        for failure in failures:
+            print(colorize(f"- {failure}", RED))
+        return 1
+
+    print(colorize(f"bootstrap key: {bootstrap_key}", YELLOW, bold=True))
 
     headers = {"X-API-Key": bootstrap_key}
     # Create key
@@ -157,6 +204,8 @@ def main() -> int:
         for failure in failures:
             print(colorize(f"- {failure}", RED))
         return 1
+
+    print(colorize(f"created key: {created_raw_key}", YELLOW, bold=True))
 
     # Read key
     get_res, _ = http_json(

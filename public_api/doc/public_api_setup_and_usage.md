@@ -194,6 +194,70 @@ curl -i -X DELETE http://localhost:8001/api/v1/api-keys/<uuid> \
 	-H "X-API-Key: <bootstrap_key>"
 ```
 
+### `GET /api/v1/users`
+- Auth: required header `X-API-Key: <valid_key>`
+- Purpose: list users with filtering, sorting, and pagination
+- Query params:
+	- `page` (optional, default `1`)
+	- `per_page` (optional, default `50`, max `200`)
+	- `coalition` (optional, coalition slug)
+	- `level_min` (optional float)
+	- `level_max` (optional float)
+	- `is_active` (optional boolean)
+	- `sort_by` (optional, default `-coalition_user_score`)
+- Success response: `200`
+- Bad request: `400` (invalid sort field or `level_min > level_max`)
+
+Example:
+
+```bash
+curl -i "http://localhost:8001/api/v1/users?page=1&per_page=10&coalition=the-alliance&is_active=true&sort_by=-level" \
+	-H "X-API-Key: <bootstrap_key>"
+```
+
+### `GET /api/v1/users/{intra_id}`
+- Auth: required header `X-API-Key: <valid_key>`
+- Purpose: fetch one user by 42 intra id
+- Success response: `200`
+- Not found: `404`
+
+Example:
+
+```bash
+curl -i "http://localhost:8001/api/v1/users/12345" \
+	-H "X-API-Key: <bootstrap_key>"
+```
+
+### `GET /api/v1/coalitions`
+- Auth: required header `X-API-Key: <valid_key>`
+- Purpose: list coalitions with pagination and sorting
+- Query params:
+	- `page` (optional, default `1`)
+	- `per_page` (optional, default `50`, max `200`)
+	- `sort_by` (optional, default `-total_score`)
+- Success response: `200`
+- Bad request: `400` (invalid sort field)
+
+Example:
+
+```bash
+curl -i "http://localhost:8001/api/v1/coalitions?page=1&per_page=10&sort_by=-total_score" \
+	-H "X-API-Key: <bootstrap_key>"
+```
+
+### `GET /api/v1/coalitions/{coalition_id}`
+- Auth: required header `X-API-Key: <valid_key>`
+- Purpose: fetch coalition details including trends and top members
+- Success response: `200`
+- Not found: `404`
+
+Example:
+
+```bash
+curl -i "http://localhost:8001/api/v1/coalitions/45" \
+	-H "X-API-Key: <bootstrap_key>"
+```
+
 ### Common auth failures
 - Missing `X-API-Key` header: `401` (`Missing API key`)
 - Invalid, expired, or revoked key: `401` (`Invalid or expired API key`)
@@ -203,6 +267,12 @@ curl -i -X DELETE http://localhost:8001/api/v1/api-keys/<uuid> \
 Script path: `public_api/tests/api_test_key.py`
 
 This script runs a test against the current endpoints.
+
+Coverage includes:
+- health endpoint
+- API key lifecycle (create/read/update/revoke + revoked key guard)
+- users list/detail checks
+- coalitions list/detail checks
 
 ### CLI options
 - Positional `name` (required): name used for `POST /api/v1/api-keys`

@@ -138,9 +138,7 @@ api-downgrade:
 
 api-syncdb: api-migrate
 
-api-create-key:
-	@if [ -z "$(NAME)" ]; then echo "Uso: make api-create-key NAME=bootstrap_key [EXPIRES_AT=2026-12-31T23:59:59+00:00] [RPM=60]"; exit 1; fi
-	@NAME="$(NAME)" EXPIRES_AT="$(EXPIRES_AT)" RPM="$(RPM)" $(DOCKER_COMPOSE) run --rm -e NAME -e EXPIRES_AT -e RPM public_api python tests/create_api_key.py
+
 
 # ─── Full stack ────────────────────────────────────────────────────────────────
 full-up:
