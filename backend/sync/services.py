@@ -176,6 +176,7 @@ def _build_coalition_map(coalitions, coalitions_users):
 		})
 		coalition_data_by_user_id[user_id] = {
 			**base_data,
+			'coalitions_user_id': coalition_user.get('id'),
 			'coalition_score': coalition_user.get('score') or 0,
 			'coalition_rank': coalition_user.get('rank') or None,
 		}
@@ -305,6 +306,7 @@ def filter_and_save_to_database(cursus_users, coalition_data_by_user_id):
 			'pool_year': pool_year,
 			'is_active': bool(user_payload.get('active?', True)),
 			'coalition_id': coalition_id,
+			'coalitions_user_id': coalition_data.get('coalitions_user_id'),
 			'coalition_name': coalition_data.get('coalition_name', ''),
 			'coalition_slug': coalition_data.get('coalition_slug', ''),
 			'coalition_user_score': coalition_data.get('coalition_score', 0),

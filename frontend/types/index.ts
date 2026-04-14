@@ -66,6 +66,8 @@ interface CoalitionDetails {
 	topMembers: TopMember[]
 	totalMembers: number | 1
 	activeMembers: number | 0
+	evaluationsDoneTotal: number
+	evaluationsDoneCurrentSeason: number
 }
 
 export interface Coalition {
@@ -79,6 +81,8 @@ export interface Coalition {
 	memberCount: number
 	activeMembers: number
 	averageLevel: number
+	evaluationsDoneTotal: number
+	evaluationsDoneCurrentSeason: number
 	details?: CoalitionDetails
 }
 
@@ -91,6 +95,8 @@ export interface RankingEntry {
 	coalition: string
 	coalitionPoints: number
 	intraLevel: number
+	evaluationsDoneTotal: number
+	evaluationsDoneCurrentSeason: number
 }
 
 export interface RankingPage {

@@ -149,26 +149,36 @@ export default function CoalitionDetailPage({
 				</div>
 			</div>
 
-			<div className="grid grid-cols-4 gap-4">
-				<StatCard
-					title="Puntuación Total"
-					value={formattedPoints}
-					subtitle={rank === 1 ? 'Líder' : <>A <span className="text-text">{progression}</span> puntos del líder</>}
-				/>
-				<StatCard
-					title="Miembros Activos"
-					value={coalition.details?.activeMembers ?? 0}
-					subtitle={`${coalition.details?.totalMembers ?? 0} totales`}
-				/>
-				<StatCard
-					title="Nivel Promedio"
-					value={coalition.details?.averageLevel ?? 0}
-				/>
-				<StatCard
-					title="Cambio 24h"
-					value={`${isPositive24h ? '+' : ''}${(scoreChange24h / 1000).toFixed(0)}k`}
-					valueClassName={`text-4xl font-bold ${isPositive24h ? 'text-green-500' : 'text-red-500'}`}
-				/>
+			<div className="grid grid-cols-5 gap-4">
+				<CardContainer className="p-6 text-center">
+					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Puntuación Total</p>
+					<p className="text-4xl font-bold">{formattedPoints}</p>
+					{rank === 1 ? (
+						<p className="text-xs text-yellow-400 mt-2">Líder</p>
+					) : (
+						<p className="text-xs text-text-secondary mt-2">A <span className="text-text">{progression}</span> puntos del líder</p>
+					)}
+				</CardContainer>
+				<CardContainer className="p-6 text-center">
+					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Miembros Activos</p>
+					<p className="text-4xl font-bold">{coalition.details?.activeMembers ?? 0}</p>
+					<p className="text-xs text-text-secondary mt-2">{coalition.details?.totalMembers ?? 0} totales</p>
+				</CardContainer>
+				<CardContainer className="p-6 text-center">
+					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Correcciones</p>
+					<p className="text-4xl font-bold">{(coalition.details?.evaluationsDoneCurrentSeason ?? 0).toLocaleString()}</p>
+					<p className="text-xs text-text-secondary mt-2">total {(coalition.details?.evaluationsDoneTotal ?? 0).toLocaleString()}</p>
+				</CardContainer>
+				<CardContainer className="p-6 text-center">
+					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Nivel Promedio</p>
+					<p className="text-4xl font-bold">{coalition.details?.averageLevel ?? 0}</p>
+				</CardContainer>
+				<CardContainer className="p-6 text-center">
+					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Cambio 24h</p>
+					<p className={`text-4xl font-bold ${isPositive24h ? 'text-green-500' : 'text-red-500'}`}>
+						{isPositive24h ? '+' : ''}{(scoreChange24h / 1000).toFixed(0)}k
+					</p>
+				</CardContainer>
 			</div>
 
 			<CardContainer className="p-6">

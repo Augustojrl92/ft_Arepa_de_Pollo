@@ -15,6 +15,8 @@ type CoalitionApiItem = {
 	member_count?: number
 	active_members?: number
 	average_level?: number
+	evaluations_done_total?: number
+	evaluations_done_current_season?: number
 }
 
 type CoalitionApiResponse = {
@@ -31,6 +33,8 @@ type RankingApiItem = {
 	coalition_points: number
 	intra_level: number
 	coalition_rank: number
+	evaluations_done_total?: number
+	evaluations_done_current_season?: number
 }
 
 type RankingApiResponse = {
@@ -63,6 +67,8 @@ type CoalitionDetailsApiResponse = {
 		}[],
 		total_members: number,
 		active_members: number,
+		evaluations_done_total?: number,
+		evaluations_done_current_season?: number,
 	}
 }
 
@@ -84,6 +90,8 @@ export const fetchCoalitions = async (): Promise<{ coalitions: Coalition[], last
 		memberCount: coalition.member_count ?? 0,
 		activeMembers: coalition.active_members ?? 0,
 		averageLevel: coalition.average_level ?? 0,
+		evaluationsDoneTotal: coalition.evaluations_done_total ?? 0,
+		evaluationsDoneCurrentSeason: coalition.evaluations_done_current_season ?? 0,
 	}))
 	return { coalitions: parsedCoalitions, lastUpdate }
 }
@@ -125,6 +133,8 @@ const fetchRankingPage = async ({
 			coalition: entry.coalition,
 			coalitionPoints: entry.coalition_points,
 			intraLevel: entry.intra_level,
+			evaluationsDoneTotal: entry.evaluations_done_total ?? 0,
+			evaluationsDoneCurrentSeason: entry.evaluations_done_current_season ?? 0,
 		})),
 	}
 }
@@ -200,6 +210,8 @@ export const fetchCoalitionDetails = async (slug: string) => {
 		})),
 		totalMembers: coalition.total_members,
 		activeMembers: coalition.active_members,
+		evaluationsDoneTotal: coalition.evaluations_done_total ?? 0,
+		evaluationsDoneCurrentSeason: coalition.evaluations_done_current_season ?? 0,
 	}
 
 }

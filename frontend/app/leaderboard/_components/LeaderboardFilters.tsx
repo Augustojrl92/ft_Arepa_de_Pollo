@@ -1,34 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import type { Coalition } from '@/types'
 import CustomButton from '@/components/CustomButton'
-import IconActionButton from '@/components/IconActionButton'
-import type { LeaderboardFilterPreset } from './leaderboardFilterPresets'
 
 interface LeaderboardFiltersProps {
 	coalitions: Coalition[]
 	levelMax: number
 	levelMin: number
 	levelUpperBound: number
-	minPointsLvl: number
 	maxPointsLvl: number
-	pointsMax: number
-	pointsMin: number
-	activePresetId: string | null
-	editingPresetId: string | null
-	editingPresetName: string
-	formatLeaderboardNumber: (value: number) => string
-	hasAppliedFilters: boolean
-	showCreatePresetButton: boolean
-	showUpdatePresetButton: boolean
-	onTogglePreset: (preset: LeaderboardFilterPreset) => void
-	onCreatePreset: () => void
-	onDeletePreset: (presetId: string) => void
-	onStartEditPreset: (presetId: string) => void
-	onUpdatePreset: (presetId: string) => void
-	onEditingPresetNameChange: (value: string) => void
+	minPointsLvl: number
 	onClearFilters: () => void
 	onLevelMaxChange: (value: number) => void
 	onLevelMinChange: (value: number) => void
@@ -36,9 +19,12 @@ interface LeaderboardFiltersProps {
 	onPointsMinChange: (value: number) => void
 	onSearchChange: (value: string) => void
 	onToggleCoalition: (slug: string) => void
-	savedFilterPresets: LeaderboardFilterPreset[]
+	pointsMax: number
+	pointsMin: number
 	search: string
 	selectedCoalitions: string[]
+	hasAppliedFilters: boolean
+	showPointsRange?: boolean
 }
 
 export const LeaderboardFilters = ({
@@ -46,23 +32,14 @@ export const LeaderboardFilters = ({
 	levelMax,
 	levelMin,
 	levelUpperBound,
-	minPointsLvl,
 	maxPointsLvl,
-	pointsMin,
+	minPointsLvl,
 	pointsMax,
-	activePresetId,
-	editingPresetId,
-	editingPresetName,
-	formatLeaderboardNumber,
+	pointsMin,
+	search,
+	selectedCoalitions,
 	hasAppliedFilters,
-	showCreatePresetButton,
-	showUpdatePresetButton,
-	onTogglePreset,
-	onCreatePreset,
-	onDeletePreset,
-	onStartEditPreset,
-	onUpdatePreset,
-	onEditingPresetNameChange,
+	showPointsRange = true,
 	onClearFilters,
 	onLevelMaxChange,
 	onLevelMinChange,
@@ -70,13 +47,10 @@ export const LeaderboardFilters = ({
 	onPointsMinChange,
 	onSearchChange,
 	onToggleCoalition,
-	savedFilterPresets,
-	search,
-	selectedCoalitions,
 }: LeaderboardFiltersProps) => {
-	const [isSavedFiltersOpen, setIsSavedFiltersOpen] = useState(false)
-	const minPercentLvl = (levelMin / levelUpperBound) * 100
-	const maxPercentLvl = (levelMax / levelUpperBound) * 100
+	const [isCoalitionsOpen, setIsCoalitionsOpen] = useState(true)
+	const minPercentLvl = levelUpperBound > 0 ? (levelMin / levelUpperBound) * 100 : 0
+	const maxPercentLvl = levelUpperBound > 0 ? (levelMax / levelUpperBound) * 100 : 100
 
 	const pointsRange = Math.max(maxPointsLvl - minPointsLvl, 1)
 	const minPercentPts = ((pointsMin - minPointsLvl) / pointsRange) * 100
@@ -84,89 +58,7 @@ export const LeaderboardFilters = ({
 
 	return (
 		<aside className="w-full lg:w-72 bg-card border border-border rounded-xl p-5 h-fit lg:sticky top-10 self-start">
-
 			<div className="space-y-7">
-				<div>
-					<button
-						type="button"
-						onClick={() => setIsSavedFiltersOpen((current) => !current)}
-						className="w-full flex items-center justify-between gap-3"
-					>
-						<span className="block text-[10px] font-bold text-text-secondary uppercase tracking-widest">
-							Filtros guardados (demo)
-						</span>
-						{isSavedFiltersOpen ? (
-							<ChevronUp size={14} className="text-text-secondary" />
-						) : (
-							<ChevronDown size={14} className="text-text-secondary" />
-						)}
-					</button>
-					{isSavedFiltersOpen && (
-						<div className="mt-2 space-y-2">
-							{savedFilterPresets.map((preset) => {
-								const isActive = activePresetId === preset.id
-								const isEditing = editingPresetId === preset.id
-								return (
-									<div
-										key={preset.id}
-										className={`w-full rounded-lg border px-3 py-2 ${isActive ? 'border-accent/40 bg-accent/5' : 'border-border bg-background'}`}
-									>
-										<div className="flex items-center justify-between gap-2">
-											{isEditing ? (
-												<div className="min-w-0 text-left flex-1">
-													<input
-														type="text"
-														value={editingPresetName}
-														onChange={(event) => onEditingPresetNameChange(event.target.value)}
-														onKeyDown={(event) => {
-															if (event.key === 'Enter') {
-																event.preventDefault()
-																onUpdatePreset(preset.id)
-															}
-														}}
-														className="w-full bg-background border border-border rounded px-2 py-1 text-xs font-semibold text-text"
-													/>
-													<span className="text-[10px] font-bold uppercase tracking-wider text-accent">Editando</span>
-												</div>
-											) : (
-												<button
-													type="button"
-													onClick={() => onTogglePreset(preset)}
-													className="min-w-0 text-left flex-1"
-												>
-													<span className="text-xs font-semibold text-text truncate block">{preset.name}</span>
-												</button>
-											)}
-											<div className="flex items-center gap-2">
-												<IconActionButton
-													type="button"
-													onClick={(event) => {
-														event.stopPropagation()
-														onStartEditPreset(preset.id)
-													}}
-													aria-label={`Editar ${preset.name}`}
-												>
-													<Pencil size={14} />
-												</IconActionButton>
-												<IconActionButton
-													type="button"
-													tone="danger"
-													onClick={(event) => {
-														event.stopPropagation()
-														onDeletePreset(preset.id)
-													}}
-													aria-label={`Eliminar ${preset.name}`}
-												>
-													<Trash2 size={14} />
-												</IconActionButton>
-											</div>
-										</div>
-									</div>
-								)
-							})}
-						</div>
-					)}
-				</div>
 				<div>
 					<label className="block text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-2">
 						Busqueda rapida
@@ -181,31 +73,41 @@ export const LeaderboardFilters = ({
 				</div>
 
 				<div>
-					<label className="block text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-2">
-						Coaliciones
-					</label>
-					<div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-						{coalitions.map((coalition) => {
-							const checked = selectedCoalitions.includes(coalition.slug)
-							return (
-								<label key={coalition.slug} className="flex items-center gap-3 cursor-pointer group">
-									<input
-										className="rounded border-border bg-background text-accent focus:ring-accent/40"
-										type="checkbox"
-										checked={checked}
-										onChange={() => onToggleCoalition(coalition.slug)}
-									/>
-									<span className="text-sm text-text-secondary group-hover:text-text transition-colors">
-										{coalition.name}
-									</span>
-									<span
-										className="ml-auto w-2 h-2 rounded-full"
-										style={{ backgroundColor: coalition.color }}
-									></span>
-								</label>
-							)
-						})}
-					</div>
+					<button
+						type="button"
+						onClick={() => setIsCoalitionsOpen((current) => !current)}
+						className="w-full flex items-center justify-between gap-3"
+					>
+						<span className="block text-[10px] font-bold text-text-secondary uppercase tracking-widest">
+							Coaliciones
+						</span>
+						{isCoalitionsOpen ? (
+							<ChevronUp size={14} className="text-text-secondary" />
+						) : (
+							<ChevronDown size={14} className="text-text-secondary" />
+						)}
+					</button>
+					{isCoalitionsOpen && (
+						<div className="mt-3 space-y-2 max-h-56 overflow-y-auto pr-1">
+							{coalitions.map((coalition) => {
+								const checked = selectedCoalitions.includes(coalition.slug)
+								return (
+									<label key={coalition.slug} className="flex items-center gap-3 cursor-pointer group">
+										<input
+											className="rounded border-border bg-background text-accent focus:ring-accent/40"
+											type="checkbox"
+											checked={checked}
+											onChange={() => onToggleCoalition(coalition.slug)}
+										/>
+										<span className="text-sm text-text-secondary group-hover:text-text transition-colors">
+											{coalition.name}
+										</span>
+										<span className="ml-auto w-2 h-2 rounded-full" style={{ backgroundColor: coalition.color }} />
+									</label>
+								)
+							})}
+						</div>
+					)}
 				</div>
 
 				<div>
@@ -213,11 +115,11 @@ export const LeaderboardFilters = ({
 						Rango de nivel
 					</label>
 					<div className="level-range relative mt-3 h-10 mb-2">
-						<div className="absolute left-0 right-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-border"></div>
+						<div className="absolute left-0 right-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-border" />
 						<div
 							className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-accent/80"
 							style={{ left: `${minPercentLvl}%`, right: `${100 - maxPercentLvl}%` }}
-						></div>
+						/>
 						<input
 							type="range"
 							min={0}
@@ -256,55 +158,59 @@ export const LeaderboardFilters = ({
 						<span className="text-accent">Hasta LVL {levelMax}</span>
 						<span>LVL {levelUpperBound}</span>
 					</div>
-				</div>				<div>
-					<label className="block text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-2">
-						Rango de puntos de coalicion
-					</label>
-					<div className="level-range relative mt-3 h-10 mb-2">
-						<div className="absolute left-0 right-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-border"></div>
-						<div
-							className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-accent/80"
-							style={{ left: `${minPercentPts}%`, right: `${100 - maxPercentPts}%` }}
-						></div>
-						<input
-							type="range"
-							min={minPointsLvl}
-							max={maxPointsLvl}
-							step={1}
-							value={pointsMin}
-							className="level-range-input level-range-input-min"
-							aria-label="Puntos minimos"
-							onChange={(event) => {
-								const parsed = Number(event.target.value)
-								const nextMin = Number.isNaN(parsed)
-									? minPointsLvl
-									: Math.max(minPointsLvl, Math.min(parsed, pointsMax))
-								onPointsMinChange(nextMin)
-							}}
-						/>
-						<input
-							type="range"
-							min={minPointsLvl}
-							max={maxPointsLvl}
-							step={1}
-							value={pointsMax}
-							className="level-range-input level-range-input-max"
-							aria-label="Puntos maximos"
-							onChange={(event) => {
-								const parsed = Number(event.target.value)
-								const nextMax = Number.isNaN(parsed)
-									? maxPointsLvl
-									: Math.min(maxPointsLvl, Math.max(parsed, pointsMin, minPointsLvl))
-								onPointsMaxChange(nextMax)
-							}}
-						/>
-					</div>
-					<div className="flex justify-between mt-2 text-[10px] font-mono text-text-secondary">
-						<span>{formatLeaderboardNumber(minPointsLvl)} puntos</span>
-						<span className="text-accent">Hasta {formatLeaderboardNumber(pointsMax)} puntos</span>
-						<span>{formatLeaderboardNumber(maxPointsLvl)} puntos</span>
-					</div>
 				</div>
+
+				{showPointsRange && (
+					<div>
+						<label className="block text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-2">
+							Rango de puntos de coalicion
+						</label>
+						<div className="level-range relative mt-3 h-10 mb-2">
+							<div className="absolute left-0 right-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-border" />
+							<div
+								className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-accent/80"
+								style={{ left: `${minPercentPts}%`, right: `${100 - maxPercentPts}%` }}
+							/>
+							<input
+								type="range"
+								min={minPointsLvl}
+								max={maxPointsLvl}
+								step={1}
+								value={pointsMin}
+								className="level-range-input level-range-input-min"
+								aria-label="Puntos minimos"
+								onChange={(event) => {
+									const parsed = Number(event.target.value)
+									const nextMin = Number.isNaN(parsed)
+										? minPointsLvl
+										: Math.max(minPointsLvl, Math.min(parsed, pointsMax))
+									onPointsMinChange(nextMin)
+								}}
+							/>
+							<input
+								type="range"
+								min={minPointsLvl}
+								max={maxPointsLvl}
+								step={1}
+								value={pointsMax}
+								className="level-range-input level-range-input-max"
+								aria-label="Puntos maximos"
+								onChange={(event) => {
+									const parsed = Number(event.target.value)
+									const nextMax = Number.isNaN(parsed)
+										? maxPointsLvl
+										: Math.min(maxPointsLvl, Math.max(parsed, pointsMin, minPointsLvl))
+									onPointsMaxChange(nextMax)
+								}}
+							/>
+						</div>
+						<div className="flex justify-between mt-2 text-[10px] font-mono text-text-secondary">
+							<span>{minPointsLvl.toLocaleString('es-ES')} puntos</span>
+							<span className="text-accent">Hasta {pointsMax.toLocaleString('es-ES')} puntos</span>
+							<span>{maxPointsLvl.toLocaleString('es-ES')} puntos</span>
+						</div>
+					</div>
+				)}
 
 				<div className="flex flex-col gap-4">
 					<CustomButton
@@ -316,26 +222,6 @@ export const LeaderboardFilters = ({
 					>
 						Limpiar filtros
 					</CustomButton>
-					{editingPresetId && showUpdatePresetButton && (
-						<CustomButton
-							type="button"
-							onClick={() => onUpdatePreset(editingPresetId)}
-							variant="accent"
-							fullWidth
-						>
-							Confirmar guardado del filtro
-						</CustomButton>
-					)}
-					{showCreatePresetButton && (
-						<CustomButton
-							type="button"
-							onClick={onCreatePreset}
-							variant="outline"
-							fullWidth
-						>
-							Guardar filtro personalizado
-						</CustomButton>
-					)}
 				</div>
 			</div>
 		</aside>
