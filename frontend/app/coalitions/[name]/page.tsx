@@ -6,6 +6,8 @@ import { Crown, ArrowLeft } from "lucide-react"
 
 import { useCoalitionStore } from "@/hooks"
 import CardContainer from "@/components/CardContainer"
+import CustomButton from "@/components/CustomButton"
+import StatCard from "@/components/StatCard"
 import PointsEvolutionChart from "@/app/coalitions/_components/PointsEvolutionChart"
 
 export default function CoalitionDetailPage({
@@ -148,53 +150,48 @@ export default function CoalitionDetailPage({
 			</div>
 
 			<div className="grid grid-cols-4 gap-4">
-				<CardContainer className="p-6 text-center">
-					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Puntuación Total</p>
-					<p className="text-4xl font-bold">{formattedPoints}</p>
-					{rank === 1 ? (
-						<p className="text-xs text-yellow-400 mt-2">Líder</p>
-					) : (
-						<p className="text-xs text-text-secondary mt-2">A <span className="text-text">{progression}</span> puntos del líder</p>
-					)}
-				</CardContainer>
-				<CardContainer className="p-6 text-center">
-					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Miembros Activos</p>
-					<p className="text-4xl font-bold">{coalition.details?.activeMembers ?? 0}</p>
-					<p className="text-xs text-text-secondary mt-2">{coalition.details?.totalMembers ?? 0} totales</p>
-				</CardContainer>
-				<CardContainer className="p-6 text-center">
-					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Nivel Promedio</p>
-					<p className="text-4xl font-bold">{coalition.details?.averageLevel ?? 0}</p>
-				</CardContainer>
-				<CardContainer className="p-6 text-center">
-					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Cambio 24h</p>
-					<p className={`text-4xl font-bold ${isPositive24h ? 'text-green-500' : 'text-red-500'}`}>
-						{isPositive24h ? '+' : ''}{(scoreChange24h / 1000).toFixed(0)}k
-					</p>
-				</CardContainer>
+				<StatCard
+					title="Puntuación Total"
+					value={formattedPoints}
+					subtitle={rank === 1 ? 'Líder' : <>A <span className="text-text">{progression}</span> puntos del líder</>}
+				/>
+				<StatCard
+					title="Miembros Activos"
+					value={coalition.details?.activeMembers ?? 0}
+					subtitle={`${coalition.details?.totalMembers ?? 0} totales`}
+				/>
+				<StatCard
+					title="Nivel Promedio"
+					value={coalition.details?.averageLevel ?? 0}
+				/>
+				<StatCard
+					title="Cambio 24h"
+					value={`${isPositive24h ? '+' : ''}${(scoreChange24h / 1000).toFixed(0)}k`}
+					valueClassName={`text-4xl font-bold ${isPositive24h ? 'text-green-500' : 'text-red-500'}`}
+				/>
 			</div>
 
 			<CardContainer className="p-6">
 				<p className="text-text-secondary text-sm uppercase font-semibold mb-6">Progresión de Puntos</p>
 				<div className="grid grid-cols-3 gap-4">
-					<div className="bg-surface p-4 rounded">
-						<p className="text-xs text-text-secondary mb-2 uppercase">Últimas 24h</p>
-						<p className={`text-2xl font-bold ${scoreChange24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-							{scoreChange24h >= 0 ? '+' : ''}{(scoreChange24h / 1000).toFixed(1)}k
-						</p>
-					</div>
-					<div className="bg-surface p-4 rounded">
-						<p className="text-xs text-text-secondary mb-2 uppercase">Esta Semana</p>
-						<p className={`text-2xl font-bold ${scoreChangeWeekly >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-							{scoreChangeWeekly >= 0 ? '+' : ''}{(scoreChangeWeekly / 1000).toFixed(0)}k
-						</p>
-					</div>
-					<div className="bg-surface p-4 rounded">
-						<p className="text-xs text-text-secondary mb-2 uppercase">Este Mes</p>
-						<p className={`text-2xl font-bold ${scoreChangeMonthly >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-							{scoreChangeMonthly >= 0 ? '+' : ''}{(scoreChangeMonthly / 1000).toFixed(0)}k
-						</p>
-					</div>
+					<StatCard
+						title="Últimas 24h"
+						value={`${scoreChange24h >= 0 ? '+' : ''}${(scoreChange24h / 1000).toFixed(1)}k`}
+						valueClassName={`text-2xl font-bold ${scoreChange24h >= 0 ? 'text-green-500' : 'text-red-500'}`}
+						className="bg-surface p-4 rounded"
+					/>
+					<StatCard
+						title="Esta Semana"
+						value={`${scoreChangeWeekly >= 0 ? '+' : ''}${(scoreChangeWeekly / 1000).toFixed(0)}k`}
+						valueClassName={`text-2xl font-bold ${scoreChangeWeekly >= 0 ? 'text-green-500' : 'text-red-500'}`}
+						className="bg-surface p-4 rounded"
+					/>
+					<StatCard
+						title="Este Mes"
+						value={`${scoreChangeMonthly >= 0 ? '+' : ''}${(scoreChangeMonthly / 1000).toFixed(0)}k`}
+						valueClassName={`text-2xl font-bold ${scoreChangeMonthly >= 0 ? 'text-green-500' : 'text-red-500'}`}
+						className="bg-surface p-4 rounded"
+					/>
 				</div>
 			</CardContainer>
 
@@ -273,12 +270,12 @@ export default function CoalitionDetailPage({
 						))}
 					</div>
 					<div className="flex items-center justify-center mt-8">
-						<Link
+						<CustomButton
 							href={`/leaderboard?coalition=${encodeURIComponent(coalition.slug)}`}
-							className="rounded-lg border px-4 py-2 text-sm font-semibold bg-(--coalition-color)/12 border-(--coalition-color) text-text hover:bg-(--coalition-color)/75 transition-colors"
+							variant="coalition"
 						>
 							Ver ranking de {coalition.name}
-						</Link>
+						</CustomButton>
 					</div>
 				</CardContainer>
 			</div>

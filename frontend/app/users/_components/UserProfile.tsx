@@ -1,4 +1,5 @@
 import type { UserProfileView } from './types'
+import CustomButton from '@/components/CustomButton'
 
 type UserProfileProps = {
 	profile: UserProfileView
@@ -63,54 +64,59 @@ export function UserProfile({
 				<div className="mt-5 flex flex-wrap items-center justify-center gap-3">
 					{isOwnProfile ? (
 						<>
-							<button
+							<CustomButton
 								type="button"
-								className="cursor-pointer rounded-lg border px-4 py-2 text-xs font-semibold bg-(--coalition-color)/12 border-(--coalition-color) text-text hover:bg-(--coalition-color)/75 transition-colors"
+								variant="coalition"
+								size="sm"
 								onClick={onOpenPreferences}
 							>
 								Editar configuración
-							</button>
-							<button
+							</CustomButton>
+							<CustomButton
 								type="button"
-								className="cursor-pointer rounded-lg border border-border px-4 py-2 text-xs font-semibold text-text hover:bg-surface/70 transition-colors"
+								variant="outline"
+								size="sm"
 								onClick={onLogout}
 							>
 								Cerrar sesión
-							</button>
+							</CustomButton>
 						</>
 					) : (
 						<>
 							{relationshipState === 'friends' && (
 								<div className="flex flex-col items-center gap-2">
-									<button
+									<CustomButton
 										type="button"
-										className="cursor-pointer rounded-lg bg-[#ff355b]/12 border border-[#ff355b] px-4 py-2 text-xs font-semibold text-text hover:bg-[#ff355b]/75 transition-colors"
+										variant="danger"
+										size="sm"
 										onClick={onRemoveFriend}
 									>
 										Eliminar amigo
-									</button>
+									</CustomButton>
 								</div>
 							)}
 
 							{relationshipState === 'none' && (
-								<button
+								<CustomButton
 									type="button"
-									className="cursor-pointer rounded-lg border px-4 py-2 text-xs font-semibold bg-(--coalition-color)/12 border-(--coalition-color) text-text hover:bg-(--coalition-color)/75 transition-colors"
+									variant="coalition"
+									size="sm"
 									onClick={onSendFriendRequest}
 								>
 									Enviar solicitud
-								</button>
+								</CustomButton>
 							)}
 
 							{relationshipState === 'sent' && (
 								<div className="flex flex-col items-center gap-2">
-									<button
+									<CustomButton
 										type="button"
-										className="cursor-pointer rounded-lg border bg-[#ff355b]/12 border-[#ff355b] px-4 py-2 text-xs font-semibold text-text hover:bg-[#ff355b]/75 transition-colors"
+										variant="danger"
+										size="sm"
 										onClick={onWithdrawFriendRequest}
 									>
 										Retirar solicitud
-									</button>
+									</CustomButton>
 								</div>
 							)}
 
@@ -118,34 +124,37 @@ export function UserProfile({
 								<div className="flex flex-col items-center gap-2">
 									<p className="text-xs text-text-secondary">Solicitud recibida</p>
 									<div className="flex gap-2">
-										<button
+										<CustomButton
 											type="button"
-											className="cursor-pointer rounded-lg border px-4 py-2 text-xs font-semibold bg-(--coalition-color)/12 border-(--coalition-color) text-text hover:bg-(--coalition-color)/75 transition-colors"
+											variant="coalition"
+											size="sm"
 											onClick={onAcceptFriendRequest}
 										>
 											Aceptar
-										</button>
-										<button
+										</CustomButton>
+										<CustomButton
 											type="button"
-											className="cursor-pointer rounded-lg border px-4 py-2 text-xs font-semibold bg-[#ff355b]/12 border-[#ff355b] text-text hover:bg-[#ff355b]/75 transition-colors"
+											variant="danger"
+											size="sm"
 											onClick={onRejectFriendRequest}
 										>
 											Rechazar
-										</button>
+										</CustomButton>
 									</div>
 								</div>
 							)}
 						</>
 					)}
-					<a
-						className="flex items-center rounded-lg border px-4 py-2 text-xs font-semibold bg-(--coalition-color)/12 border-(--coalition-color) text-text hover:bg-(--coalition-color)/75 transition-colors"
+					<CustomButton
 						href={`https://profile.intra.42.fr/users/${profile.login}`}
 						target="_blank"
 						rel="noopener noreferrer"
+						variant="coalition"
+						size="sm"
 					>
 						Ver perfil
 						<img className="w-4 h-4 ml-2" src="/42_logo.svg" alt="logo 42" />
-					</a>
+					</CustomButton>
 				</div>
 
 				<div className="mt-8 w-full max-w-2xl rounded-2xl border border-border bg-card p-6">

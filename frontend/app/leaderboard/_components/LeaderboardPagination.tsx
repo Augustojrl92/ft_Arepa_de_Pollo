@@ -1,5 +1,7 @@
 'use client'
 
+import CustomButton from '@/components/CustomButton'
+
 interface LeaderboardPaginationProps {
 	currentPage: number
 	onNext: () => void
@@ -36,21 +38,25 @@ export const LeaderboardPagination = ({
 						</option>
 					))}
 				</select>
-				<button
+				<CustomButton
+					type="button"
+					variant="ghost"
+					size="sm"
 					disabled={currentPage === 1}
 					onClick={onPrevious}
-					className="px-3 py-1 text-xs font-bold rounded-md hover:bg-card-hover text-text-secondary disabled:opacity-50"
 				>
 					Anterior
-				</button>
+				</CustomButton>
 				<span className="text-xs font-bold text-text-secondary">{currentPage}/{totalPages}</span>
-				<button
+				<CustomButton
+					type="button"
+					variant="ghost"
+					size="sm"
 					disabled={currentPage >= totalPages}
 					onClick={onNext}
-					className="px-3 py-1 text-xs font-bold rounded-md hover:bg-card-hover text-text-secondary disabled:opacity-50"
 				>
 					Siguiente
-				</button>
+				</CustomButton>
 			</div>
 		</div>
 	)

@@ -15,7 +15,7 @@ type UserDetailsResponse = {
 	coalition_points: number;
 	coalition_rank: number | null;
 	general_rank: number | null;
-	achievements: any; // Placeholder for achievements data, adjust type as needed
+	achievements: unknown; // Placeholder for achievements data, adjust type as needed
 }
 
 type FriendEntryResponse = {
@@ -39,6 +39,42 @@ type FriendsPayloadResponse = {
 type FriendsActionResponse = {
 	detail: string;
 	friends: FriendsPayloadResponse;
+}
+
+type AvatarResponse = {
+	avatar_url: string;
+	has_custom_avatar: boolean;
+	detail?: string;
+}
+
+type PreferencesResponse = {
+	items_per_page: number;
+	show_sensitive_data: boolean;
+	theme_mode: 'light' | 'dark' | 'system';
+	receive_notifications: boolean;
+	custom_username: string | null;
+	avatar_url: string;
+	has_custom_avatar: boolean;
+}
+
+type UserPreferencesPayload = {
+	rankingPerPage: 10 | 25 | 50 | 100;
+	showSensitiveData: boolean;
+	notificationsEnabled: boolean;
+	theme: 'light' | 'dark' | 'system';
+}
+
+type AvatarResult = {
+	avatarUrl: string;
+	hasCustomAvatar: boolean;
+}
+
+const toRankingPerPage = (value: number): 10 | 25 | 50 | 100 => {
+	if (value === 10 || value === 25 || value === 50 || value === 100) {
+		return value;
+	}
+
+	return 25;
 }
 
 const toFriendsPayload = (payload: FriendsPayloadResponse): FriendsPayload => ({
@@ -151,4 +187,65 @@ export async function removeFriend(login: string): Promise<FriendsPayload> {
 	}, 'Failed to remove friend');
 
 	return toFriendsPayload(payload.friends);
+}
+
+export async function uploadMyAvatar(file: File): Promise<AvatarResult> {
+	const formData = new FormData();
+	formData.append('avatar', file);
+
+	const payload = await authFetchJson<AvatarResponse>(`${USER_BASE_URL}preferences/avatar/`, {
+		method: 'PUT',
+		body: formData,
+	}, 'Failed to upload avatar');
+
+	return {
+		avatarUrl: payload.avatar_url,
+		hasCustomAvatar: payload.has_custom_avatar,
+	};
+}
+
+export async function removeMyAvatar(): Promise<AvatarResult> {
+	const payload = await authFetchJson<AvatarResponse>(`${USER_BASE_URL}preferences/avatar/`, {
+		method: 'DELETE',
+	}, 'Failed to remove avatar');
+
+	return {
+		avatarUrl: payload.avatar_url,
+		hasCustomAvatar: payload.has_custom_avatar,
+	};
+}
+
+export async function fetchMyPreferences(): Promise<UserPreferencesPayload> {
+	const payload = await authFetchJson<PreferencesResponse>(`${USER_BASE_URL}preferences/`, {
+		method: 'GET',
+	}, 'Failed to fetch preferences');
+
+	return {
+		rankingPerPage: toRankingPerPage(payload.items_per_page),
+		showSensitiveData: payload.show_sensitive_data,
+		notificationsEnabled: payload.receive_notifications,
+		theme: payload.theme_mode,
+	};
+}
+
+export async function updateMyPreferences(preferences: UserPreferencesPayload): Promise<UserPreferencesPayload> {
+	const payload = await authFetchJson<PreferencesResponse>(`${USER_BASE_URL}preferences/`, {
+		method: 'PATCH',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({
+			items_per_page: preferences.rankingPerPage,
+			show_sensitive_data: preferences.showSensitiveData,
+			receive_notifications: preferences.notificationsEnabled,
+			theme_mode: preferences.theme,
+		}),
+	}, 'Failed to update preferences');
+
+	return {
+		rankingPerPage: toRankingPerPage(payload.items_per_page),
+		showSensitiveData: payload.show_sensitive_data,
+		notificationsEnabled: payload.receive_notifications,
+		theme: payload.theme_mode,
+	};
 }

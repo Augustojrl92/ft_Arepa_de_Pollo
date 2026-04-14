@@ -1,9 +1,8 @@
 'use client'
 
 import { type CSSProperties, useEffect, useMemo, useState } from 'react'
+import { useTheme } from 'next-themes'
 
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
 import { useAuthStore, useCoalitionStore, useUserStore } from '@/hooks'
 import { UserAchievements } from '../_components/UserAchievements'
 import { UserAllies } from '../_components/UserAllies'
@@ -19,23 +18,33 @@ export default function UserDetailPage({
 }: {
 	params: Promise<{ login: string }>
 }) {
-	const { user, logout } = useAuthStore()
+	const { user, logout, setSession } = useAuthStore()
 	const {
 		user: fetchedUser,
 		friends,
 		isLoading,
-		isFriendsLoading,
+		isAvatarLoading,
+		isPreferencesLoading,
 		error,
+		avatarError,
+		preferencesError,
+		hasCustomAvatar,
 		getUserDetails,
 		getMyFriends,
+		getMyPreferences,
+		updatePreferences,
+		setHasCustomAvatar,
 		getRelationshipStateByLogin,
 		sendFriendRequest,
 		acceptFriendRequest,
 		rejectFriendRequest,
 		withdrawFriendRequest,
 		removeFriend,
+		uploadAvatar,
+		removeAvatar,
 	} = useUserStore()
 	const { coalitions } = useCoalitionStore()
+	const { setTheme } = useTheme()
 
 	const [login, setLogin] = useState<string | null>(null)
 	const [preferences, setPreferences] = useState<ProfilePreferences>(defaultPreferences)
@@ -58,6 +67,22 @@ export default function UserDetailPage({
 			void getMyFriends()
 		}
 	}, [getMyFriends, user])
+
+	useEffect(() => {
+		if (user && isOwnProfile) {
+			setHasCustomAvatar(Boolean(user.hasCustomAvatar))
+		}
+	}, [isOwnProfile, setHasCustomAvatar, user])
+
+	useEffect(() => {
+		if (!isEditModalOpen || !isOwnProfile) {
+			return
+		}
+
+		void getMyPreferences().then((serverPreferences) => {
+			setPreferences(serverPreferences)
+		})
+	}, [getMyPreferences, isEditModalOpen, isOwnProfile])
 
 	useEffect(() => {
 		if (login && !isOwnProfile) {
@@ -123,7 +148,7 @@ export default function UserDetailPage({
 		)
 
 		return coalition?.color || '#00BABC'
-	}, [coalitions, profile?.coalition])
+	}, [coalitions, profile])
 
 	const coalitionStyle = {
 		'--coalition-color': coalitionColor,
@@ -221,12 +246,45 @@ export default function UserDetailPage({
 
 			{isOwnProfile && (
 				<UserConfigurationModal
+					key={`${isEditModalOpen}-${preferences.rankingPerPage}-${preferences.theme}-${preferences.notificationsEnabled}-${preferences.showSensitiveData}`}
 					isOpen={isEditModalOpen}
 					preferences={preferences}
+					avatarUrl={profile.avatar}
+					hasCustomAvatar={hasCustomAvatar}
+					isAvatarLoading={isAvatarLoading}
+					isPreferencesLoading={isPreferencesLoading}
+					avatarError={avatarError ?? preferencesError}
 					onClose={() => setIsEditModalOpen(false)}
-					onSave={(nextPreferences) => {
-						setPreferences(nextPreferences)
+					onSave={async (nextPreferences) => {
+						const savedPreferences = await updatePreferences(nextPreferences)
+						setPreferences(savedPreferences)
+						setTheme(savedPreferences.theme)
+						window.localStorage.setItem('leaderboard.defaultPerPage', String(savedPreferences.rankingPerPage))
 						setIsEditModalOpen(false)
+					}}
+					onUploadAvatar={async (file) => {
+						const avatarUrl = await uploadAvatar(file)
+						if (user) {
+							setSession({
+								user: {
+									...user,
+									avatar: avatarUrl,
+									hasCustomAvatar: true,
+								},
+							})
+						}
+					}}
+					onRemoveAvatar={async () => {
+						const avatarUrl = await removeAvatar()
+						if (user) {
+							setSession({
+								user: {
+									...user,
+									avatar: avatarUrl,
+									hasCustomAvatar: false,
+								},
+							})
+						}
 					}}
 				/>
 			)}
