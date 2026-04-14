@@ -58,7 +58,7 @@ export default function CoalitionDetailPage({
 					Back to Coalitions
 				</Link>
 				<CardContainer className="text-center py-8">
-					<p className="text-text-secondary">Coalition "{name}" not found</p>
+					<p className="text-text-secondary">Coalition &quot;{name}&quot; not found</p>
 				</CardContainer>
 			</section>
 		)
@@ -74,22 +74,7 @@ export default function CoalitionDetailPage({
 	const scoreChangeMonthly = coalition.details?.scoreChangeMonthly ?? 0
 	const isPositive24h = scoreChange24h >= 0
 	const projectsDeliveredCurrentSeason = coalition.details?.projectsDeliveredCurrentSeason ?? coalition.projectsDeliveredCurrentSeason
-
-	const withOpacity = (color: string, opacity: number): string => {
-		const hex = color.replace('#', '')
-		if (!/^[0-9a-fA-F]+$/.test(hex)) return color
-
-		const normalized = hex.length === 3
-			? hex.split('').map((char) => `${char}${char}`).join('')
-			: hex
-
-		if (normalized.length !== 6) return color
-
-		const r = Number.parseInt(normalized.slice(0, 2), 16)
-		const g = Number.parseInt(normalized.slice(2, 4), 16)
-		const b = Number.parseInt(normalized.slice(4, 6), 16)
-		return `rgba(${r}, ${g}, ${b}, ${opacity})`
-	}
+	const examsValidatedCurrentSeason = coalition.details?.examsValidatedCurrentSeason ?? coalition.examsValidatedCurrentSeason
 
 	const getLevelRangeFromDistribution = (rangeLabel: string): { levelMin: number; levelMax: number } => {
 		if (rangeLabel.startsWith('+')) {
@@ -148,7 +133,7 @@ export default function CoalitionDetailPage({
 				</div>
 			</div>
 
-			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
 				<CardContainer className="p-6 text-center">
 					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Puntuación Total</p>
 					<p className="text-4xl font-bold">{formattedPoints}</p>
@@ -161,6 +146,11 @@ export default function CoalitionDetailPage({
 				<CardContainer className="p-6 text-center">
 					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Proyectos</p>
 					<p className="text-4xl font-bold">{projectsDeliveredCurrentSeason.toLocaleString()}</p>
+					<p className="text-xs text-text-secondary mt-2">temporada actual</p>
+				</CardContainer>
+				<CardContainer className="p-6 text-center">
+					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Exámenes</p>
+					<p className="text-4xl font-bold">{examsValidatedCurrentSeason.toLocaleString()}</p>
 					<p className="text-xs text-text-secondary mt-2">temporada actual</p>
 				</CardContainer>
 				<CardContainer className="p-6 text-center">

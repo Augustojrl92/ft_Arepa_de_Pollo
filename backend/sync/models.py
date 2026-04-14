@@ -10,6 +10,7 @@ class Coalition(models.Model):
 	cover_url = models.URLField(max_length=500, blank=True)
 	color = models.CharField(max_length=20, blank=True)
 	total_score = models.IntegerField(default=0)
+	exams_validated_current_season = models.PositiveIntegerField(default=0)
 	leader_user_id = models.PositiveBigIntegerField(null=True, blank=True)
 	updated_at = models.DateTimeField(auto_now=True)
 

@@ -20,7 +20,7 @@ class CampusUserAdmin(admin.ModelAdmin):
 
 @admin.register(Coalition)
 class CoalitionAdmin(admin.ModelAdmin):
-	list_display = ('name', 'coalition_id', 'total_score', 'updated_at')
+	list_display = ('name', 'coalition_id', 'total_score', 'exams_validated_current_season', 'updated_at')
 	list_filter = ('name',)
 	search_fields = ('name', 'slug', 'coalition_id')
 	ordering = ('-total_score',)

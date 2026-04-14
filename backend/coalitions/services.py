@@ -164,6 +164,7 @@ def _serialize_simple_coalitions(coalition_slug=None):
 			'member_count': total_members,
 			'active_members': active_members,
 			'average_level': average_level,
+			'exams_validated_current_season': coalition.exams_validated_current_season,
 			**project_totals,
 		})
 		for index, coalition in enumerate(coalitions, start=1)
@@ -204,6 +205,7 @@ def _serialize_coalition_details(coalition_slug):
 		'top_members': top_members,
 		'total_members': total_members,
 		'active_members': active_members,
+		'exams_validated_current_season': coalition.exams_validated_current_season,
 		**project_totals,
 	}
 
