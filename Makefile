@@ -1,6 +1,8 @@
 DOCKER_COMPOSE = docker compose -f docker-compose.dev.yml
 MODE ?= full
 DOCKER ?= docker
+CSV_PATH ?= /app/evaluations_snapshot_round_apr_oct_2026.csv
+DRY_RUN ?=
 
 # Per-service default flags for `docker compose rm` regarding volumes.
 # Set these in the environment if you want different behavior, e.g.
@@ -101,6 +103,9 @@ back-shell:
 back-syncapi:
 	$(DOCKER_COMPOSE) exec -T backend python manage.py sync_campus_users --mode=$(MODE)
 
+back-import-evaluations:
+	$(DOCKER_COMPOSE) exec -T backend python manage.py import_evaluations_snapshot --path $(CSV_PATH) $(DRY_RUN)
+
 # ─── Full stack ────────────────────────────────────────────────────────────────
 full-up:
 	$(DOCKER_COMPOSE) up -d --build
@@ -142,7 +147,7 @@ dev-re: front-re
         back-up back-stop back-down back-re back-logs \
 		back-migrate back-makemigrations back-makemigrations-app \
 		back-showmigrations back-showmigrations-app back-syncdb \
-		back-superuser back-shell back-test \
+		back-superuser back-shell back-test back-import-evaluations \
         full-up full-stop full-down full-re full-logs \
         fclean \
 		up stop down logs migrate makemigrations superuser shell test \

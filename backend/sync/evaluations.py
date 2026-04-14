@@ -1,3 +1,4 @@
+from datetime import timezone as datetime_timezone
 import time
 
 import requests
@@ -13,6 +14,11 @@ CURRENT_SEASON_END = '2026-10-08T10:00:00Z'
 CURRENT_SEASON_START_DT = parse_datetime(CURRENT_SEASON_START)
 CURRENT_SEASON_END_DT = parse_datetime(CURRENT_SEASON_END)
 EVALUATION_SCORE_REASON = 'You evaluated someone. Well done!'
+
+def _ensure_aware_datetime(value):
+	if timezone.is_naive(value):
+		return timezone.make_aware(value, datetime_timezone.utc)
+	return value
 
 # Objective:
 # Fetch a single filled `as_corrector` page from the 42 API.
@@ -438,4 +444,76 @@ def sync_evaluations_from_coalition_scores(coalition_queryset=None, request_inte
 		'scanned_rows': total_scanned_rows,
 		'evaluation_rows': total_evaluation_rows,
 		'updated_users': total_updated_users,
+	}
+
+# Objective:
+# Find the newest coalition score row at or before a cutoff datetime.
+# Expects:
+# - coalition: local coalition model instance.
+# - cutoff: datetime used as the cursor boundary.
+# - ctx: sync context containing base_url and auth headers.
+# - request_interval: delay between requests.
+# Returns:
+# - A tuple `(score_id, created_at, exact_boundary_found)`.
+def _find_evaluation_score_cursor_at_or_before(coalition, cutoff, ctx, request_interval=0.25):
+	page = 1
+	cutoff = _ensure_aware_datetime(cutoff)
+
+	while True:
+		page_rows = _request_coalition_scores_page(
+			coalition_id=coalition.coalition_id,
+			ctx=ctx,
+			page=page,
+			request_interval=request_interval,
+		).json()
+
+		if not page_rows:
+			break
+
+		for row in page_rows:
+			created_at = parse_datetime(row.get('created_at'))
+			if created_at and _ensure_aware_datetime(created_at) <= cutoff:
+				return row.get('id'), created_at, True
+
+		page += 1
+
+	return 0, None, False
+
+# Objective:
+# Rebuild evaluation score cursors from a snapshot datetime so incremental sync can recover the gap.
+# Expects:
+# - cutoff: datetime representing the snapshot time already present in local counters.
+# - coalition_queryset: optional local coalition queryset; defaults to every synced coalition.
+# - request_interval: delay between requests.
+# Returns:
+# - A summary dict with processed and positioned cursor counts.
+def bootstrap_evaluation_score_cursors_from_datetime(cutoff, coalition_queryset=None, request_interval=0.25):
+	coalitions = coalition_queryset if coalition_queryset is not None else Coalition.objects.order_by('coalition_id')
+	ctx = _build_sync_context()
+	processed_coalitions = 0
+	positioned_coalitions = 0
+	full_scan_coalitions = 0
+
+	for coalition in coalitions:
+		score_id, created_at, exact_boundary_found = _find_evaluation_score_cursor_at_or_before(
+			coalition=coalition,
+			cutoff=cutoff,
+			ctx=ctx,
+			request_interval=request_interval,
+		)
+		processed_coalitions += 1
+
+		cursor, _created = CoalitionEvaluationCursor.objects.get_or_create(coalition=coalition)
+		cursor.last_score_id = score_id
+		cursor.last_score_created_at = created_at
+		cursor.save(update_fields=['last_score_id', 'last_score_created_at', 'last_synced_at'])
+		positioned_coalitions += 1
+		if not exact_boundary_found:
+			full_scan_coalitions += 1
+
+	return {
+		'processed_coalitions': processed_coalitions,
+		'positioned_coalitions': positioned_coalitions,
+		'full_scan_coalitions': full_scan_coalitions,
+		'cutoff': _ensure_aware_datetime(cutoff),
 	}
