@@ -1,7 +1,10 @@
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
+from django.db.models import Max
+from django.utils.dateparse import parse_datetime
 
 from sync.models import CampusUser
 from sync.projects import (
+	bootstrap_project_score_cursors_from_datetime,
 	sync_projects_from_coalition_scores,
 	sync_users_projects_delivered,
 )
@@ -29,6 +32,8 @@ class Command(BaseCommand):
 		parser.add_argument('--auto-batch', action='store_true')
 		parser.add_argument('--max-batches', type=int, default=None)
 		parser.add_argument('--incremental', action='store_true')
+		parser.add_argument('--bootstrap-cursors-from-snapshot', action='store_true')
+		parser.add_argument('--bootstrap-cursors-from-datetime', default=None)
 
 	# Objective:
 	# Execute the delivered-project sync for one slice or for the whole dataset in automatic batches.
@@ -43,8 +48,31 @@ class Command(BaseCommand):
 		auto_batch = options['auto_batch']
 		max_batches = options['max_batches']
 		incremental = options['incremental']
+		bootstrap_cursors_from_snapshot = options['bootstrap_cursors_from_snapshot']
+		bootstrap_cursors_from_datetime = options['bootstrap_cursors_from_datetime']
 
 		base_queryset = CampusUser.objects.exclude(login='').order_by('id')
+
+		if bootstrap_cursors_from_snapshot or bootstrap_cursors_from_datetime:
+			if bootstrap_cursors_from_datetime:
+				cutoff = parse_datetime(bootstrap_cursors_from_datetime)
+				if cutoff is None:
+					raise CommandError(f'Fecha invalida: {bootstrap_cursors_from_datetime}')
+			else:
+				cutoff = CampusUser.objects.aggregate(last=Max('projects_delivered_synced_at'))['last']
+				if cutoff is None:
+					raise CommandError('No hay projects_delivered_synced_at para calcular el snapshot')
+
+			result = bootstrap_project_score_cursors_from_datetime(
+				cutoff=cutoff,
+				request_interval=request_interval,
+			)
+			self.stdout.write('Cursores de proyectos recalculados desde snapshot')
+			self.stdout.write(f'Fecha snapshot: {result["cutoff"].isoformat()}')
+			self.stdout.write(f'Coaliciones procesadas: {result["processed_coalitions"]}')
+			self.stdout.write(f'Coaliciones posicionadas: {result["positioned_coalitions"]}')
+			self.stdout.write(f'Coaliciones con escaneo completo pendiente: {result["full_scan_coalitions"]}')
+			return
 
 		if incremental:
 			result = sync_projects_from_coalition_scores(request_interval=request_interval)
