@@ -34,6 +34,16 @@ class CoalitionScoreSnapshot(models.Model):
 		return f'{self.coalition.name} - {self.snapshot_date}: {self.total_score}'
 
 
+class CoalitionProjectCursor(models.Model):
+	coalition = models.OneToOneField(Coalition, on_delete=models.CASCADE, related_name='project_cursor')
+	last_score_id = models.PositiveBigIntegerField(null=True, blank=True)
+	last_score_created_at = models.DateTimeField(null=True, blank=True)
+	last_synced_at = models.DateTimeField(auto_now=True)
+
+	def __str__(self):
+		return f'{self.coalition.name}: {self.last_score_id or "sin cursor"}'
+
+
 class CampusUser(models.Model):
 	django_user = models.OneToOneField(User, on_delete=models.SET_NULL, related_name='campus_user_profile', null=True, blank=True)
 

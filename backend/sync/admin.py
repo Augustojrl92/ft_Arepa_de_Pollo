@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CampusUser, Coalition, CoalitionEvaluationCursor, CoalitionScoreSnapshot, CampusUserScoreSnapshot
+from .models import CampusUser, Coalition, CoalitionEvaluationCursor, CoalitionProjectCursor, CoalitionScoreSnapshot, CampusUserScoreSnapshot
 
 @admin.register(CampusUser)
 class CampusUserAdmin(admin.ModelAdmin):
@@ -41,6 +41,14 @@ class CoalitionScoreSnapshotAdmin(admin.ModelAdmin):
 	list_filter = ('coalition__name', 'snapshot_date')
 	search_fields = ('coalition__name',)
 	ordering = ('-snapshot_date',)
+
+
+@admin.register(CoalitionProjectCursor)
+class CoalitionProjectCursorAdmin(admin.ModelAdmin):
+	list_display = ('coalition', 'last_score_id', 'last_score_created_at', 'last_synced_at')
+	list_filter = ('coalition__name',)
+	search_fields = ('coalition__name',)
+	ordering = ('coalition__name',)
 
 @admin.register(CampusUserScoreSnapshot)
 class CampusUserScoreSnapshotAdmin(admin.ModelAdmin):

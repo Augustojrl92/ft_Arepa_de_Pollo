@@ -2,13 +2,18 @@ import time
 
 import requests
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
-from .models import CampusUser
+from .models import CampusUser, Coalition, CoalitionProjectCursor
 from .services import _build_sync_context, _http_get, _request_42_token
 
 
 CURRENT_SEASON_START = '2026-04-08T15:42:00Z'
 CURRENT_SEASON_END = '2026-10-08T10:00:00Z'
+CURRENT_SEASON_START_DT = parse_datetime(CURRENT_SEASON_START)
+CURRENT_SEASON_END_DT = parse_datetime(CURRENT_SEASON_END)
+PROJECT_SCORE_REASON = 'You validated a project. Congratulations!'
+PROJECT_SCOREABLE_TYPE = 'ProjectsUser'
 
 
 # Objective:
@@ -197,6 +202,306 @@ def sync_users_projects_delivered(queryset=None, request_interval=0.6):
 	return {
 		'processed': processed,
 		'updated': updated,
+	}
+
+
+# Objective:
+# Fetch one coalition score page ordered from newest to oldest.
+# Expects:
+# - coalition_id: coalition identifier in 42.
+# - ctx: sync context containing base_url and auth headers.
+# - page/per_page: pagination values for the API request.
+# - request_interval: delay between requests to reduce API pressure.
+# Returns:
+# - A successful `requests.Response` object for the requested page.
+def _request_coalition_scores_page(coalition_id, ctx, page=1, per_page=100, request_interval=0.25):
+	time.sleep(max(request_interval, 0))
+	last_exc = None
+	response = None
+
+	for attempt in range(5):
+		try:
+			response = _http_get(
+				f"{ctx['base_url']}/v2/coalitions/{coalition_id}/scores",
+				headers=ctx['headers'],
+				params={
+					'page': page,
+					'per_page': per_page,
+					'sort': '-created_at',
+				},
+				timeout=20,
+			)
+			if response.status_code == 401:
+				ctx['headers'] = {'Authorization': f'Bearer {_request_42_token()}'}
+				continue
+			if response.status_code == 429 or 500 <= response.status_code < 600:
+				retry_after = response.headers.get('Retry-After')
+				delay = float(retry_after) if retry_after else min(2 ** attempt, 16)
+				time.sleep(delay)
+				continue
+			break
+		except requests.RequestException as exc:
+			last_exc = exc
+			time.sleep(min(2 ** attempt, 16))
+
+	if response is None:
+		raise last_exc
+
+	response.raise_for_status()
+	return response
+
+
+# Objective:
+# Fetch a single projects_user row to validate cursus/user data before incrementing counters.
+# Expects:
+# - project_user_id: 42 ProjectsUser id from a coalition score event.
+# - ctx: sync context containing base_url and auth headers.
+# - request_interval: delay between requests to reduce API pressure.
+# Returns:
+# - Parsed JSON payload for the requested projects_user row.
+def _fetch_project_user(project_user_id, ctx, request_interval=0.25):
+	time.sleep(max(request_interval, 0))
+	last_exc = None
+	response = None
+
+	for attempt in range(5):
+		try:
+			response = _http_get(
+				f"{ctx['base_url']}/v2/projects_users/{project_user_id}",
+				headers=ctx['headers'],
+				timeout=20,
+			)
+			if response.status_code == 401:
+				ctx['headers'] = {'Authorization': f'Bearer {_request_42_token()}'}
+				continue
+			if response.status_code == 429 or 500 <= response.status_code < 600:
+				retry_after = response.headers.get('Retry-After')
+				delay = float(retry_after) if retry_after else min(2 ** attempt, 16)
+				time.sleep(delay)
+				continue
+			break
+		except requests.RequestException as exc:
+			last_exc = exc
+			time.sleep(min(2 ** attempt, 16))
+
+	if response is None:
+		raise last_exc
+
+	response.raise_for_status()
+	return response.json()
+
+
+# Objective:
+# Decide whether a coalition score row may represent one delivered project event.
+# Expects:
+# - score_event: row returned by `/v2/coalitions/:id/scores`.
+# Returns:
+# - True only for project validation score events with a ProjectsUser id.
+def _is_project_score_event(score_event):
+	return (
+		score_event.get('reason') == PROJECT_SCORE_REASON
+		and score_event.get('scoreable_type') == PROJECT_SCOREABLE_TYPE
+		and score_event.get('scoreable_id') is not None
+	)
+
+
+# Objective:
+# Collect every new project score row for one coalition since the stored cursor.
+# Expects:
+# - coalition: local coalition model instance.
+# - cursor: stored cursor row for that coalition.
+# - ctx: sync context containing base_url and auth headers.
+# - request_interval: delay between requests.
+# Returns:
+# - A dict with the newest seen score metadata, collected new rows, and whether the cursor was bootstrapped.
+def _collect_new_coalition_project_scores(coalition, cursor, ctx, request_interval=0.25):
+	first_page = _request_coalition_scores_page(
+		coalition_id=coalition.coalition_id,
+		ctx=ctx,
+		page=1,
+		request_interval=request_interval,
+	)
+	first_page_rows = first_page.json()
+
+	if not first_page_rows:
+		return {
+			'bootstrapped': False,
+			'new_rows': [],
+			'newest_score_id': None,
+			'newest_created_at': None,
+		}
+
+	newest_row = first_page_rows[0]
+	newest_score_id = newest_row.get('id')
+	newest_created_at = parse_datetime(newest_row.get('created_at'))
+
+	if cursor.last_score_id is None:
+		return {
+			'bootstrapped': True,
+			'new_rows': [],
+			'newest_score_id': newest_score_id,
+			'newest_created_at': newest_created_at,
+		}
+
+	new_rows = []
+	page = 1
+
+	while True:
+		page_rows = first_page_rows if page == 1 else _request_coalition_scores_page(
+			coalition_id=coalition.coalition_id,
+			ctx=ctx,
+			page=page,
+			request_interval=request_interval,
+		).json()
+
+		if not page_rows:
+			break
+
+		stop = False
+		for row in page_rows:
+			if row.get('id') == cursor.last_score_id:
+				stop = True
+				break
+			new_rows.append(row)
+
+		if stop:
+			break
+
+		page += 1
+
+	return {
+		'bootstrapped': False,
+		'new_rows': new_rows,
+		'newest_score_id': newest_score_id,
+		'newest_created_at': newest_created_at,
+	}
+
+
+# Objective:
+# Apply new project score events to local counters after validating each ProjectsUser payload.
+# Expects:
+# - score_rows: new coalition score rows ordered from newest to oldest.
+# - ctx: sync context containing base_url and auth headers.
+# - request_interval: delay between requests.
+# Returns:
+# - A summary dict with scanned rows, project rows, and updated users.
+def _apply_project_score_rows(score_rows, ctx, request_interval=0.25):
+	increments_by_intra_id = {}
+	seen_project_user_ids = set()
+	project_rows = 0
+
+	for row in score_rows:
+		if not _is_project_score_event(row):
+			continue
+
+		project_user_id = row.get('scoreable_id')
+		if project_user_id in seen_project_user_ids:
+			continue
+		seen_project_user_ids.add(project_user_id)
+
+		project_user = _fetch_project_user(project_user_id, ctx=ctx, request_interval=request_interval)
+		if not _is_delivered_project(project_user, ctx['cursus_id']):
+			continue
+
+		user_payload = project_user.get('user') or {}
+		intra_id = user_payload.get('id')
+		if intra_id is None:
+			continue
+
+		marked_at = parse_datetime(project_user.get('marked_at') or row.get('created_at'))
+		counters = increments_by_intra_id.setdefault(intra_id, {'total': 0, 'season': 0})
+		counters['total'] += 1
+		project_rows += 1
+		if marked_at and CURRENT_SEASON_START_DT <= marked_at <= CURRENT_SEASON_END_DT:
+			counters['season'] += 1
+
+	if not increments_by_intra_id:
+		return {
+			'scanned_rows': len(score_rows),
+			'project_rows': project_rows,
+			'updated_users': 0,
+		}
+
+	users = list(CampusUser.objects.filter(intra_id__in=increments_by_intra_id.keys()))
+	users_by_intra_id = {user.intra_id: user for user in users}
+	now = timezone.now()
+	users_to_update = []
+
+	for intra_id, counters in increments_by_intra_id.items():
+		user = users_by_intra_id.get(intra_id)
+		if user is None:
+			continue
+
+		user.projects_delivered_total += counters['total']
+		user.projects_delivered_current_season += counters['season']
+		user.projects_delivered_synced_at = now
+		users_to_update.append(user)
+
+	if users_to_update:
+		CampusUser.objects.bulk_update(
+			users_to_update,
+			['projects_delivered_total', 'projects_delivered_current_season', 'projects_delivered_synced_at'],
+		)
+
+	return {
+		'scanned_rows': len(score_rows),
+		'project_rows': project_rows,
+		'updated_users': len(users_to_update),
+	}
+
+
+# Objective:
+# Increment local delivered-project counters by reading recent coalition score events.
+# Expects:
+# - coalition_queryset: optional local coalition queryset; defaults to every synced coalition.
+# - request_interval: delay between requests.
+# Returns:
+# - A summary dict with processed coalitions, bootstrapped cursors, scanned rows, project rows, and updated users.
+def sync_projects_from_coalition_scores(coalition_queryset=None, request_interval=0.25):
+	coalitions = coalition_queryset if coalition_queryset is not None else Coalition.objects.order_by('coalition_id')
+	ctx = _build_sync_context()
+	processed_coalitions = 0
+	bootstrapped_coalitions = 0
+	total_scanned_rows = 0
+	total_project_rows = 0
+	total_updated_users = 0
+
+	for coalition in coalitions:
+		cursor, _created = CoalitionProjectCursor.objects.get_or_create(coalition=coalition)
+		payload = _collect_new_coalition_project_scores(
+			coalition=coalition,
+			cursor=cursor,
+			ctx=ctx,
+			request_interval=request_interval,
+		)
+		processed_coalitions += 1
+
+		if payload['newest_score_id'] is None:
+			continue
+
+		cursor.last_score_id = payload['newest_score_id']
+		cursor.last_score_created_at = payload['newest_created_at']
+		cursor.save(update_fields=['last_score_id', 'last_score_created_at', 'last_synced_at'])
+
+		if payload['bootstrapped']:
+			bootstrapped_coalitions += 1
+			continue
+
+		result = _apply_project_score_rows(
+			score_rows=payload['new_rows'],
+			ctx=ctx,
+			request_interval=request_interval,
+		)
+		total_scanned_rows += result['scanned_rows']
+		total_project_rows += result['project_rows']
+		total_updated_users += result['updated_users']
+
+	return {
+		'processed_coalitions': processed_coalitions,
+		'bootstrapped_coalitions': bootstrapped_coalitions,
+		'scanned_rows': total_scanned_rows,
+		'project_rows': total_project_rows,
+		'updated_users': total_updated_users,
 	}
 
 
