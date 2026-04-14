@@ -1,7 +1,10 @@
 from django.core.management.base import BaseCommand
 
 from sync.models import CampusUser
-from sync.projects import sync_users_projects_delivered
+from sync.projects import (
+	sync_projects_from_coalition_scores,
+	sync_users_projects_delivered,
+)
 
 
 # Objective:
@@ -25,6 +28,7 @@ class Command(BaseCommand):
 		parser.add_argument('--offset', type=int, default=0)
 		parser.add_argument('--auto-batch', action='store_true')
 		parser.add_argument('--max-batches', type=int, default=None)
+		parser.add_argument('--incremental', action='store_true')
 
 	# Objective:
 	# Execute the delivered-project sync for one slice or for the whole dataset in automatic batches.
@@ -38,8 +42,19 @@ class Command(BaseCommand):
 		offset = options['offset']
 		auto_batch = options['auto_batch']
 		max_batches = options['max_batches']
+		incremental = options['incremental']
 
 		base_queryset = CampusUser.objects.exclude(login='').order_by('id')
+
+		if incremental:
+			result = sync_projects_from_coalition_scores(request_interval=request_interval)
+			self.stdout.write('Sincronizacion incremental de proyectos completada')
+			self.stdout.write(f'Coaliciones procesadas: {result["processed_coalitions"]}')
+			self.stdout.write(f'Coaliciones bootstrap: {result["bootstrapped_coalitions"]}')
+			self.stdout.write(f'Rows score revisadas: {result["scanned_rows"]}')
+			self.stdout.write(f'Rows de proyecto: {result["project_rows"]}')
+			self.stdout.write(f'Usuarios actualizados: {result["updated_users"]}')
+			return
 
 		if auto_batch:
 			batches_run = 0

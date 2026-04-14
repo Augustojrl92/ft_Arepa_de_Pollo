@@ -1,4 +1,4 @@
-from django.db.models import Q, Avg
+from django.db.models import Q, Avg, Sum
 from django.utils import timezone
 from datetime import timedelta
 
@@ -135,6 +135,16 @@ def _get_top_members(coalition_slug, limit=3):
 		for user in top_users
 	], all_users.count(), all_active_users.count()
 
+def _get_project_totals(coalition_slug):
+	totals = CampusUser.objects.filter(coalition_slug=coalition_slug).aggregate(
+		projects_delivered_total=Sum('projects_delivered_total'),
+		projects_delivered_current_season=Sum('projects_delivered_current_season'),
+	)
+	return {
+		'projects_delivered_total': totals['projects_delivered_total'] or 0,
+		'projects_delivered_current_season': totals['projects_delivered_current_season'] or 0,
+	}
+
 def get_coalitions():
 	return list(SyncedCoalition.objects.order_by('-total_score', 'name'))
 
@@ -154,10 +164,12 @@ def _serialize_simple_coalitions(coalition_slug=None):
 			'member_count': total_members,
 			'active_members': active_members,
 			'average_level': average_level,
+			**project_totals,
 		})
 		for index, coalition in enumerate(coalitions, start=1)
 		for _, average_level in [_get_level_distribution(coalition.slug)]
 		for _, total_members, active_members in [_get_top_members(coalition.slug)]
+		for project_totals in [_get_project_totals(coalition.slug)]
 	]
 
 	if coalition_slug is None:
@@ -178,6 +190,7 @@ def _serialize_coalition_details(coalition_slug):
 	level_distribution, average_level = _get_level_distribution(coalition_slug)
 	score_change_24, score_change_weekly, score_change_monthly, campus_rank, campus_rank_change, campus_rank_status = _get_score_change(coalition_slug)
 	top_members, total_members, active_members = _get_top_members(coalition_slug)
+	project_totals = _get_project_totals(coalition_slug)
 
 	return {
 		'level_distribution': level_distribution,
@@ -190,7 +203,8 @@ def _serialize_coalition_details(coalition_slug):
 		'campus_rank_status': campus_rank_status,
 		'top_members': top_members,
 		'total_members': total_members,
-		'active_members': active_members
+		'active_members': active_members,
+		**project_totals,
 	}
 
 def _get_sync_user_ranks(sync_user):

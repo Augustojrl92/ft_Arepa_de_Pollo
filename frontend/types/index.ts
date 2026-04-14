@@ -65,6 +65,8 @@ interface CoalitionDetails {
 	topMembers: TopMember[]
 	totalMembers: number | 1
 	activeMembers: number | 0
+	projectsDeliveredTotal: number
+	projectsDeliveredCurrentSeason: number
 }
 
 export interface Coalition {
@@ -78,6 +80,8 @@ export interface Coalition {
 	memberCount: number
 	activeMembers: number
 	averageLevel: number
+	projectsDeliveredTotal: number
+	projectsDeliveredCurrentSeason: number
 	details?: CoalitionDetails
 }
 

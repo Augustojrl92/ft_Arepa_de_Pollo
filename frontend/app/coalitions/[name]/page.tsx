@@ -73,6 +73,7 @@ export default function CoalitionDetailPage({
 	const scoreChangeWeekly = coalition.details?.scoreChangeWeekly ?? 0
 	const scoreChangeMonthly = coalition.details?.scoreChangeMonthly ?? 0
 	const isPositive24h = scoreChange24h >= 0
+	const projectsDeliveredCurrentSeason = coalition.details?.projectsDeliveredCurrentSeason ?? coalition.projectsDeliveredCurrentSeason
 
 	const withOpacity = (color: string, opacity: number): string => {
 		const hex = color.replace('#', '')
@@ -147,7 +148,7 @@ export default function CoalitionDetailPage({
 				</div>
 			</div>
 
-			<div className="grid grid-cols-4 gap-4">
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
 				<CardContainer className="p-6 text-center">
 					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Puntuación Total</p>
 					<p className="text-4xl font-bold">{formattedPoints}</p>
@@ -156,6 +157,11 @@ export default function CoalitionDetailPage({
 					) : (
 						<p className="text-xs text-text-secondary mt-2">A <span className="text-text">{progression}</span> puntos del líder</p>
 					)}
+				</CardContainer>
+				<CardContainer className="p-6 text-center">
+					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Proyectos</p>
+					<p className="text-4xl font-bold">{projectsDeliveredCurrentSeason.toLocaleString()}</p>
+					<p className="text-xs text-text-secondary mt-2">temporada actual</p>
 				</CardContainer>
 				<CardContainer className="p-6 text-center">
 					<p className="text-text-secondary text-sm mb-2 uppercase font-semibold">Miembros Activos</p>
