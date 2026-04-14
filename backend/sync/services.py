@@ -12,8 +12,31 @@ _TOKEN_CACHE = {
 	'expires_at': 0,
 }
 
+_REQUEST_COUNT = 0
+
 
 SYNC_METADATA_KEY = 'campus_sync'
+
+
+def reset_request_count():
+	global _REQUEST_COUNT
+	_REQUEST_COUNT = 0
+
+
+def get_request_count():
+	return _REQUEST_COUNT
+
+
+def _http_post(*args, **kwargs):
+	global _REQUEST_COUNT
+	_REQUEST_COUNT += 1
+	return requests.post(*args, **kwargs)
+
+
+def _http_get(*args, **kwargs):
+	global _REQUEST_COUNT
+	_REQUEST_COUNT += 1
+	return requests.get(*args, **kwargs)
 
 
 def _touch_last_sync_timestamp():
@@ -30,7 +53,7 @@ def _request_42_token():
 	if not client_id or not client_secret:
 		raise ValueError('Faltan FT_CLIENT_ID o FT_CLIENT_SECRET en variables de entorno')
 
-	response = requests.post(
+	response = _http_post(
 		f'{base_url}/oauth/token',
 		data={
 			'grant_type': 'client_credentials',
@@ -79,7 +102,7 @@ def _paged_get(endpoint, headers, params, request_interval=0.25, max_pages=None)
 		response = None
 		for attempt in range(3):
 			try:
-				response = requests.get(
+				response = _http_get(
 					endpoint,
 					headers=headers,
 					params={**params, 'page': page},
@@ -103,7 +126,7 @@ def _paged_get(endpoint, headers, params, request_interval=0.25, max_pages=None)
 			break
 
 		results.extend(page_data)
-		print(f'Fetched page {page} with {len(page_data)} rows. Total: {len(results)}')
+		print(f'Fetched page {page} with {len(page_data)} rows. Total: {len(results)}', flush=True)
 
 		total = int(response.headers.get('x-total', 0))
 		header_per_page = int(response.headers.get('x-per-page', params.get('per_page', 100)))
@@ -188,7 +211,7 @@ def save_coalitions_to_database(coalitions):
 		else:
 			updated_count += 1
 
-	print(f'Saved {created_count} new coalitions, updated {updated_count} existing coalitions.')
+	print(f'Saved {created_count} new coalitions, updated {updated_count} existing coalitions.', flush=True)
 	return created_count, updated_count
 
 
@@ -305,7 +328,8 @@ def filter_and_save_to_database(cursus_users, coalition_data_by_user_id):
 	print(
 		f'Saved {created_count} new users, '
 		f'updated {update_count} existing users, '
-		f'skipped {skipped_count} users with invalid coalition.'
+		f'skipped {skipped_count} users with invalid coalition.',
+		flush=True,
 	)
 	return created_count, update_count, skipped_count
 
@@ -337,7 +361,7 @@ def _build_sync_context(campus_id=22, cursus_id=21, bloc_id=110, per_page=100):
 	}
 
 def fetch_campus_users_data(ctx, request_interval=0.25, max_pages=None):
-	print('1 - Obteniendo usuarios del campus')
+	print('1 - Fetching campus users', flush=True)
 	return _paged_get(
 		endpoint=f"{ctx['base_url']}/v2/cursus_users",
 		headers=ctx['headers'],
@@ -352,7 +376,7 @@ def fetch_campus_users_data(ctx, request_interval=0.25, max_pages=None):
 	)
 
 def fetch_coalitions_data(ctx, request_interval=0.25):
-	print('2 - Obteniendo datos de coaliciones')
+	print('2 - Fetching coalition data', flush=True)
 	coalitions = _paged_get(
 		endpoint=f"{ctx['base_url']}/v2/blocs/{ctx['bloc_id']}/coalitions",
 		headers=ctx['headers'],
@@ -367,7 +391,7 @@ def fetch_coalitions_data(ctx, request_interval=0.25):
 		if not coalition_id:
 			continue
 
-		print(f'Obteniendo datos de {coalition.get("name")} (ID {coalition_id})')
+		print(f'Fetching data for {coalition.get("name")} (ID {coalition_id})', flush=True)
 		coalition_users_rows = _paged_get(
 			endpoint=f"{ctx['base_url']}/v2/coalitions_users",
 			headers=ctx['headers'],
@@ -404,7 +428,7 @@ def run_full_sync(request_interval=0.25, max_pages=None):
 		request_interval=request_interval,
 	)
 
-	print('3 - Guardando en la base de datos')
+	print('3 - Saving data to database', flush=True)
 	created_count, updated_count, skipped_count = filter_and_save_to_database(
 		cursus_users=all_results,
 		coalition_data_by_user_id=coalition_info['coalition_data_by_user_id'],
@@ -441,7 +465,7 @@ def run_users_only_sync(request_interval=0.25, max_pages=None):
 		max_pages=max_pages,
 	)
 
-	print('3 - Guardando en la base de datos (sin actualizar coaliciones)')
+	print('3 - Saving data to database (without updating coalitions)', flush=True)
 	created_count, updated_count, skipped_count = filter_and_save_to_database(
 		cursus_users=all_results,
 		coalition_data_by_user_id={},

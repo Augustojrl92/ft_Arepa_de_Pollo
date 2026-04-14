@@ -11,6 +11,39 @@ export interface User {
 	coalitionUserRank: number | null
 	walletAmount: number
 	evalPoints: number
+	hasCustomAvatar?: boolean
+}
+
+export interface UserDetails {
+	id: number
+	login: string
+	displayName: string
+	avatar: string
+	level: number
+	coalitionName: string
+	coalitionSlug: string
+	coalitionPoints: number
+	coalitionRank: number | null
+	campusRank: number | null
+	achievements?: string | unknown
+}
+
+export interface FriendEntry {
+	userId: number
+	username: string
+	login: string
+	displayName: string
+	avatarUrl: string
+}
+
+export interface FriendsPayload {
+	ownerUserId: number
+	friendsCount?: number
+	pendingReceivedCount: number
+	pendingSentCount: number
+	friends?: FriendEntry[]
+	pendingReceived: FriendEntry[]
+	pendingSent: FriendEntry[]
 }
 
 export interface TopMember {

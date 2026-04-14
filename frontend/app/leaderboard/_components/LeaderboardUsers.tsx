@@ -1,8 +1,4 @@
 
-import { useEffect, useMemo, useRef, useState } from "react"
-import { useAuthStore, useCoalitionStore } from "@/hooks"
-import { useSearchParams } from "next/navigation"
-import Link from "next/link"
 import { Info } from 'lucide-react'
 
 type SortField =
@@ -257,10 +253,6 @@ export const LeaderboardUsers = () => {
 		return <div className="text-text-secondary mt-6">No hay usuarios para mostrar.</div>
 	}
 
-	const userCoalition = coalitions.find((c) => c.slug === user?.coalition)
-	const minPercent = (levelMin / levelUpperBound) * 100
-	const maxPercent = (levelMax / levelUpperBound) * 100
-
 	return (
 		<div className="w-full mx-auto max-w-400 px-4 md:px-6 py-4">
 			<div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -311,114 +303,39 @@ export const LeaderboardUsers = () => {
 			</div>
 
 			<div className="flex flex-col lg:flex-row gap-6">
-				<aside className="w-full lg:w-72 bg-card border border-border rounded-xl p-5 h-fit sticky top-10 self-start">
-					<div className="space-y-7">
-						<div>
-							<label className="block text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-2">
-								Busqueda rapida
-							</label>
-							<input
-								className="w-full bg-background border border-border rounded-lg py-2 px-3 text-sm outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all"
-								placeholder="Buscar por login o nombre"
-								type="text"
-								value={search}
-								onChange={(event) => {
-									setSearch(event.target.value)
-									setPage(1)
-								}}
-							/>
-						</div>
-
-						<div>
-							<label className="block text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-2">
-								Coaliciones
-							</label>
-							<div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-								{coalitions.map((coalition) => {
-									const checked = selectedCoalitions.includes(coalition.slug)
-									return (
-										<label key={coalition.slug} className="flex items-center gap-3 cursor-pointer group">
-											<input
-												className="rounded border-border bg-background text-accent focus:ring-accent/40"
-												type="checkbox"
-												checked={checked}
-												onChange={() => handleCoalitionToggle(coalition.slug)}
-											/>
-											<span className="text-sm text-text-secondary group-hover:text-text transition-colors">
-												{coalition.name}
-											</span>
-											<span
-												className="ml-auto w-2 h-2 rounded-full"
-												style={{ backgroundColor: coalition.color }}
-											></span>
-										</label>
-									)
-								})}
-							</div>
-						</div>
-
-						<div>
-							<label className="block text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-2">
-								Rango de nivel
-							</label>
-							<div className="level-range relative mt-3 h-10 mb-2">
-								<div className="absolute left-0 right-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-border"></div>
-								<div
-									className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-accent/80"
-									style={{ left: `${minPercent}%`, right: `${100 - maxPercent}%` }}
-								></div>
-								<input
-									type="range"
-									min={0}
-									max={levelUpperBound}
-									step={1}
-									value={levelMin}
-									className="level-range-input level-range-input-min"
-									aria-label="Nivel minimo"
-									onChange={(event) => {
-										const parsed = Number(event.target.value)
-										const nextMin = Number.isNaN(parsed)
-											? 0
-											: Math.max(0, Math.min(parsed, levelMax))
-										setLevelMin(nextMin)
-										setPage(1)
-									}}
-								/>
-								<input
-									type="range"
-									min={0}
-									max={levelUpperBound}
-									step={1}
-									value={levelMax}
-									className="level-range-input level-range-input-max"
-									aria-label="Nivel maximo"
-									onChange={(event) => {
-										const parsed = Number(event.target.value)
-										const nextMax = Number.isNaN(parsed)
-											? levelUpperBound
-											: Math.min(levelUpperBound, Math.max(parsed, levelMin))
-										setLevelMax(nextMax)
-										setPage(1)
-									}}
-								/>
-							</div>
-							<div className="flex justify-between mt-2 text-[10px] font-mono text-text-secondary">
-								<span>Desde LVL {levelMin}</span>
-								<span className="text-accent">Hasta LVL {levelMax}</span>
-								<span>LVL {levelUpperBound}</span>
-							</div>
-						</div>
-
-						<div className="flex gap-2">
-							<button
-								onClick={clearFilters}
-								className="w-full bg-accent/10 border border-accent/20 text-accent py-2 rounded-lg text-sm font-semibold hover:bg-accent/20 transition-all"
-							>
-								Limpiar filtros
-							</button>
-						</div>
-					</div>
-				</aside>
+				<LeaderboardFilters
+					coalitions={coalitions}
+					levelMax={levelMax}
+					levelMin={levelMin}
+					levelUpperBound={levelUpperBound}
+					minPointsLvl={minPointsLvl}
+					maxPointsLvl={maxPointsLvl}
+					pointsMax={pointsMax}
+					pointsMin={pointsMin}
+					activePresetId={activePresetId}
+					onTogglePreset={togglePreset}
+					onCreatePreset={createPresetFromCurrentFilters}
+					onDeletePreset={deletePreset}
+					onStartEditPreset={startEditPreset}
+					onUpdatePreset={updatePresetFromCurrentFilters}
+					onEditingPresetNameChange={setEditingPresetName}
+					onClearFilters={clearFilters}
+					onLevelMaxChange={handleLevelMaxChange}
+					onLevelMinChange={handleLevelMinChange}
+					onPointsMaxChange={handlePointsMaxChange}
+					onPointsMinChange={handlePointsMinChange}
+					onSearchChange={handleSearchChange}
+					onToggleCoalition={handleCoalitionToggle}
+					savedFilterPresets={savedFilterPresets}
+					editingPresetId={editingPresetId}
+					editingPresetName={editingPresetName}
+					formatLeaderboardNumber={formatLeaderboardNumber}
+					hasAppliedFilters={hasAppliedFilters}
+					showCreatePresetButton={showCreatePresetButton}
+					showUpdatePresetButton={showUpdatePresetButton}
+					search={search}
+					selectedCoalitions={selectedCoalitions}
+				/>
 
 				<section className="flex-1">
 					<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

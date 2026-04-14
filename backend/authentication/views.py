@@ -17,6 +17,7 @@ from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 
 from coalitions.services import _get_sync_user_ranks, _serialize_simple_coalitions
 from sync.models import CampusUser
+from users.models import UserPreferences
 
 # Create your views here.
 
@@ -254,6 +255,14 @@ class UserProfileView(APIView):
 
 		campus_rank = _get_sync_user_ranks(campus_user)
 		coalition_summary = _serialize_simple_coalitions(campus_user.coalition_slug) if campus_user.coalition_slug else None
+		preferences = UserPreferences.objects.filter(user=user).first()
+
+		if preferences and preferences.custom_avatar:
+			avatar_url = request.build_absolute_uri(preferences.custom_avatar.url)
+			has_custom_avatar = True
+		else:
+			avatar_url = campus_user.avatar_url
+			has_custom_avatar = False
 
 		data = {
 			'user_id': user.id,
@@ -265,7 +274,8 @@ class UserProfileView(APIView):
 			'login': campus_user.login,
 			'display_name': campus_user.display_name,
 			'email': campus_user.email or user.email,
-			'avatar_url': campus_user.avatar_url,
+			'avatar_url': avatar_url,
+			'has_custom_avatar': has_custom_avatar,
 			'coalition': campus_user.coalition_slug or None,
 			'coalition_points': campus_user.coalition_user_score,
 			'coalition_user_rank': campus_user.coalition_rank,

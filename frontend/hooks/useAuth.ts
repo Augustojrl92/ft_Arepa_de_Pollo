@@ -89,6 +89,7 @@ export const useAuthStore = create<AuthState>()(
               coalitionUserRank: profile.coalition_user_rank ?? null,
               walletAmount: profile.intra_wallet,
               evalPoints: profile.eval_points || 100,
+			        hasCustomAvatar: Boolean(profile.has_custom_avatar),
             },
             status: "authenticated",
             error: null,

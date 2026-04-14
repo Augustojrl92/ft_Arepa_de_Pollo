@@ -3,9 +3,17 @@ from django.utils import timezone
 from datetime import timedelta
 
 from sync.models import CampusUser, Coalition as SyncedCoalition, CoalitionScoreSnapshot, CampusUserScoreSnapshot, SyncMetadata
+from users.models import UserPreferences
 
 
 SYNC_METADATA_KEY = 'campus_sync'
+
+
+def _get_scored_users_queryset(coalition_slug=None):
+	queryset = CampusUser.objects.exclude(coalition_user_score=0)
+	if coalition_slug:
+		queryset = queryset.filter(coalition_slug=coalition_slug)
+	return queryset
 
 
 def _get_last_time_update():
@@ -26,6 +34,24 @@ def _get_rank_change(current_rank, previous_rank):
 		return delta, 'down'
 	return 0, 'same'
 
+
+def _resolve_user_avatar_url(user, request=None):
+	django_user = getattr(user, 'django_user', None)
+	if django_user is None:
+		return user.avatar_url
+
+	preferences = getattr(django_user, 'preferences', None)
+	if preferences is None:
+		preferences = UserPreferences.objects.filter(user=django_user).only('custom_avatar').first()
+
+	if preferences and preferences.custom_avatar:
+		custom_url = preferences.custom_avatar.url
+		if request is not None:
+			return request.build_absolute_uri(custom_url)
+		return custom_url
+
+	return user.avatar_url
+
 def _get_current_coalition_rank(coalition):
 	ahead_count = SyncedCoalition.objects.filter(
 		Q(total_score__gt=coalition.total_score)
@@ -34,7 +60,7 @@ def _get_current_coalition_rank(coalition):
 	return ahead_count + 1
 
 def _get_level_distribution(coalition_slug):
-	coalition_users = CampusUser.objects.filter(coalition_slug=coalition_slug)
+	coalition_users = _get_scored_users_queryset(coalition_slug=coalition_slug)
 	average_level = round(coalition_users.aggregate(average_level=Avg('level'))['average_level'] or 0, 2)
 
 	range_counts = {
@@ -112,16 +138,16 @@ def _get_score_change(coalition_slug):
 		rank_status,
 	)
 
-def _get_top_members(coalition_slug, limit=3):
+def _get_top_members(coalition_slug, limit=3, request=None):
 	all_users = CampusUser.objects.filter(coalition_slug=coalition_slug)
-	all_active_users = all_users.exclude(coalition_user_score=0)
-	top_users = all_users.filter(coalition_slug=coalition_slug).order_by('-coalition_user_score', 'intra_id')[:limit]
+	all_active_users = _get_scored_users_queryset(coalition_slug=coalition_slug)
+	top_users = all_active_users.select_related('django_user', 'django_user__preferences').order_by('-coalition_user_score', 'intra_id')[:limit]
 
 	return [
 		{
 			'login': user.login,
 			'display_name': user.display_name,
-			'avatar_url': user.avatar_url,
+			'avatar_url': _resolve_user_avatar_url(user, request=request),
 			'coalition_points': user.coalition_user_score,
 			'intra_level': user.level,
 		}
@@ -174,7 +200,7 @@ def _serialize_simple_coalitions(coalition_slug=None):
 
 	return None
 
-def _serialize_coalition_details(coalition_slug):
+def _serialize_coalition_details(coalition_slug, request=None):
 	coalition = SyncedCoalition.objects.filter(slug=coalition_slug).first()
 	
 	if coalition is None:
@@ -221,7 +247,7 @@ def _get_sync_user_ranks(sync_user):
 	return campus_rank
 
 def _get_user_ranking_queryset(coalition_filter=None):
-	queryset = CampusUser.objects.exclude(coalition_user_score=0)
+	queryset = _get_scored_users_queryset()
 	if coalition_filter:
 		coalition_q = (
 			Q(coalition_slug=coalition_filter)
@@ -233,12 +259,12 @@ def _get_user_ranking_queryset(coalition_filter=None):
 
 	return queryset.order_by('-coalition_user_score', 'intra_id')
 
-def _serialize_user_ranking(coalition_filter=None, page=1, per_page=30):
+def _serialize_user_ranking(coalition_filter=None, page=1, per_page=30, request=None):
 	queryset = _get_user_ranking_queryset(coalition_filter)
 	total = queryset.count()
 	offset = (page - 1) * per_page
 	limit = offset + per_page
-	users = list(queryset[offset:limit])
+	users = list(queryset.select_related('django_user', 'django_user__preferences')[offset:limit])
 	user_ids = [user.id for user in users]
 	previous_day = timezone.localdate() - timedelta(days=1)
 
@@ -262,7 +288,7 @@ def _serialize_user_ranking(coalition_filter=None, page=1, per_page=30):
 				'rank': offset + index,
 			'login': user.login,
 			'display_name': user.display_name,
-			'avatar_url': user.avatar_url,
+			'avatar_url': _resolve_user_avatar_url(user, request=request),
 			'coalition': user.coalition_slug or user.coalition_name or None,
 			'coalition_points': user.coalition_user_score,
 			'intra_level': user.level,

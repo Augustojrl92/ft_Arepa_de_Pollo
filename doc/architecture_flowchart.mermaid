@@ -1,0 +1,56 @@
+flowchart LR
+    U[User Browser]
+
+    subgraph FE[Frontend - Next.js :3000]
+        FEApp[App Router + UI]
+        FEStores[Zustand Stores]
+        FEApi[authApi / coalitionApi / userApi]
+    end
+
+    subgraph BE[Backend - Django DRF :8000]
+        BEAuth[Authentication App\nOAuth 42 + JWT Cookies]
+        BECoal[Coalitions App\nRanking + Coalition Details]
+        BEUsers[Users App\nProfiles + Friends]
+        BESync[Sync App\n42 Data Ingestion]
+        BECron[cron + sync_campus_users command]
+    end
+
+    subgraph DB[PostgreSQL - :5432]
+        TCoal[Coalition]
+        TUser[CampusUser]
+        TSnap1[CoalitionScoreSnapshot]
+        TSnap2[CampusUserScoreSnapshot]
+        TMeta[SyncMetadata]
+        TFriends[FriendsList]
+    end
+
+    API42[(42 Intra API)]
+
+    U -->|HTTP| FEApp
+    FEApp --> FEStores
+    FEStores --> FEApi
+
+    FEApi -->|/api/auth/*\n/api/coalitions/*\n/api/users/*| BEAuth
+    FEApi -->|ranking / coalition details| BECoal
+    FEApi -->|friends / user details| BEUsers
+
+    BEAuth -->|OAuth redirect + callback| API42
+    API42 -->|user payload + tokens| BEAuth
+
+    BESync -->|client_credentials + paged fetch| API42
+    BECron -->|scheduled sync job| BESync
+
+    BEAuth --> TUser
+    BECoal --> TCoal
+    BECoal --> TUser
+    BECoal --> TSnap1
+    BECoal --> TSnap2
+    BECoal --> TMeta
+    BEUsers --> TUser
+    BEUsers --> TFriends
+    BESync --> TCoal
+    BESync --> TUser
+    BESync --> TSnap1
+    BESync --> TSnap2
+    BESync --> TMeta
+  

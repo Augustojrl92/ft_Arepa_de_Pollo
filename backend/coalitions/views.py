@@ -27,7 +27,6 @@ class CoalitionSimpleView(APIView):
 			status=status.HTTP_200_OK,
 		)
 
-
 class UserRankingView(APIView):
 	permission_classes = [IsAuthenticated]
 
@@ -44,7 +43,7 @@ class UserRankingView(APIView):
 			per_page = 30
 
 		return Response(
-			_serialize_user_ranking(coalition_filter, page=page, per_page=per_page),
+			_serialize_user_ranking(coalition_filter, page=page, per_page=per_page, request=request),
 			status=status.HTTP_200_OK,
 		)
 
@@ -60,7 +59,7 @@ class CoalitionSingleDetailView(APIView):
 				status=status.HTTP_400_BAD_REQUEST,
 			)
 
-		coalition_details = _serialize_coalition_details(coalition_slug)
+		coalition_details = _serialize_coalition_details(coalition_slug, request=request)
 
 		if coalition_details is None:
 			return Response(

@@ -4,6 +4,7 @@ import UserCard from "./_components/UserCard"
 import TournamentCard from "./_components/TournamentCard"
 import CoalitionCard from "./_components/CoalitionCard"
 import CoalitionPointsChart from "../components/CoalitionPointsChart"
+import Chat from "../components/Chat"
 import { useCoalitionStore } from "@/hooks"
 
 export default function Home() {
@@ -35,6 +36,7 @@ export default function Home() {
 			<section>
 				<CoalitionPointsChart />
 			</section>
+			<Chat />
 		</>
 	)
 }
