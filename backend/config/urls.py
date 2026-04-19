@@ -19,7 +19,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 
-from .views import api_root, health_check, server_message
+from .views import api_root, health_check, server_message, status_check
 from authentication import urls as auth_urls
 from coalitions import urls as coalition_urls
 from users import urls as user_urls
@@ -28,6 +28,7 @@ urlpatterns = [
     path('', api_root, name='api-root'),
     path('admin/', admin.site.urls),
     path('api/health/', health_check, name='health-check'),
+    path('api/status/', status_check, name='status-check'),
     path('api/message/', server_message, name='server-message'),
     path('api/auth/', include(auth_urls)),
     path('api/coalitions/', include(coalition_urls)),
