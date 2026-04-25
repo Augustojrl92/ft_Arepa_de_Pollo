@@ -51,5 +51,9 @@ fi
 # Start cron daemon
 cron
 
+<<<<<<< HEAD
 # Serve HTTP and WebSocket traffic through the ASGI application.
+=======
+# Start Django with Daphne (ASGI) for Channels support
+>>>>>>> 60b6e62 (feat: new chat system at  #ggc45)
 exec daphne -b 0.0.0.0 -p 8000 config.asgi:application

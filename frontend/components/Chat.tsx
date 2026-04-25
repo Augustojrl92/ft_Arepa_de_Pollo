@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowLeftIcon, MessageCircleIcon, PlusIcon, XIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 
 type ChatMessage = {
 	id: number;
@@ -25,51 +25,6 @@ type ChatUser = {
 	status: string;
 };
 
-const mockUsers: ChatUser[] = [
-	{ id: 1, name: "aurodrig", status: "En linea" },
-	{ id: 2, name: "fvizcaya", status: "Ausente" },
-	{ id: 3, name: "fmorenil", status: "Desconectada" },
-];
-
-const mockConversations: ChatConversation[] = [
-	{
-		id: 1,
-		name: "aurodrig",
-		status: "En linea",
-		lastMessage: "5",
-		lastTime: "09:12",
-		messages: [
-			{ id: 1, author: "friend", text: "viva caracas", time: "09:03" },
-			{ id: 2, author: "me", text: "2 + 3", time: "09:05" },
-			{ id: 3, author: "friend", text: "5.", time: "09:12" },
-		],
-	},
-	{
-		id: 2,
-		name: "fvizcaya",
-		status: "Ausente",
-		lastMessage: "La API de coalitions ya responde bien.",
-		lastTime: "Ayer",
-		messages: [
-			{ id: 1, author: "me", text: "ggc", time: "Ayer" },
-			{ id: 2, author: "friend", text: "cd /", time: "Ayer" },
-			{ id: 3, author: "me", text: "ggc.", time: "Ayer" },
-		],
-	},
-	{
-		id: 3,
-		name: "fmorenil",
-		status: "Desconectada",
-		lastMessage: "hablamo el malte",
-		lastTime: "Lun",
-		messages: [
-			{ id: 1, author: "friend", text: "estaba jalandome el guebo", time: "Lun" },
-			{ id: 2, author: "me", text: "wao", time: "Lun" },
-			{ id: 3, author: "friend", text: "hablamo el malte", time: "Lun" },
-		],
-	},
-];
-
 type ChatWindowProps = {
 	open: boolean;
 	onClose: () => void;
@@ -80,6 +35,7 @@ type ChatWindowProps = {
 	onOpenNewChat: () => void;
 	newMessage: string;
 	onNewMessageChange: (value: string) => void;
+	onSendMessage: (to_user_id: number, message: string) => void;
 };
 
 function NewChatModal({
@@ -149,6 +105,7 @@ function ChatWindow({
 	onOpenNewChat,
 	newMessage,
 	onNewMessageChange,
+	onSendMessage,
 }: ChatWindowProps) {
 	const selectedConversation = conversations.find(
 		(conversation) => conversation.id === selectedConversationId,
@@ -201,7 +158,12 @@ function ChatWindow({
 								onChange={(event) => onNewMessageChange(event.target.value)}
 								placeholder="Escribe un mensaje..."
 							/>
-							<button type="button" className="chat-send-button" onClick={() => onNewMessageChange("")}>
+							<button type="button" className="chat-send-button" onClick={() => {
+								if (selectedConversation && newMessage.trim()) {
+									onSendMessage(selectedConversation.id, newMessage);
+									onNewMessageChange("");
+								}
+							}}>
 								Enviar
 							</button>
 						</div>
@@ -236,18 +198,96 @@ function ChatWindow({
 export default function Chat() {
 	const [open, setOpen] = useState(false);
 	const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
-	const [conversations, setConversations] = useState<ChatConversation[]>(mockConversations);
+	const [conversations, setConversations] = useState<ChatConversation[]>([]);
 	const [isNewChatOpen, setIsNewChatOpen] = useState(false);
 	const [searchTerm, setSearchTerm] = useState("");
 	const [newMessage, setNewMessage] = useState("");
+	const [friends, setFriends] = useState<ChatUser[]>([]);
+	const socketRef = useRef<WebSocket | null>(null);
+
+    useEffect(() => {
+		const token = localStorage.getItem("access_token");
+		const chatSocket = new WebSocket(
+  							`ws://localhost:8000/ws/chat/?token=${token}`
+						);
+		socketRef.current = chatSocket;
+
+		chatSocket.onopen = () => {
+			console.log('Conectado al chat WebSocket');
+		};
+
+		chatSocket.onmessage = (event) => {
+			const data = JSON.parse(event.data);
+			
+			if (data.type === 'message') {
+				console.log(`${data.from_username}: ${data.message}`);
+				// Actualizar la conversación con el mensaje recibido
+				setConversations((prev) =>
+					prev.map((conv) => {
+						if (conv.id === data.from_user_id) {
+							return {
+								...conv,
+								messages: [
+									...conv.messages,
+									{
+										id: conv.messages.length + 1,
+										author: 'friend',
+										text: data.message,
+										time: new Date(data.timestamp).toLocaleTimeString(),
+									},
+								],
+								lastMessage: data.message,
+								lastTime: new Date(data.timestamp).toLocaleTimeString(),
+							};
+						}
+						return conv;
+					})
+				);
+			} else if (data.type === 'friends_list') {
+				console.log('Amigos:', data.friends);
+				// Convertir datos de amigos a formato ChatUser
+				if (data.friends && data.friends.friends) {
+					const friendUsers: ChatUser[] = data.friends.friends.map((friend: any) => ({
+						id: friend.user_id || friend.id,
+						name: friend.login || friend.name,
+						status: friend.status || 'Offline',
+					}));
+					setFriends(friendUsers);
+				}
+			} else if (data.type === 'status_update') {
+				// Actualizar estado de un amigo
+				setFriends((prev) =>
+					prev.map((friend) => {
+						if (friend.id === data.user_id) {
+							return { ...friend, status: data.status };
+						}
+						return friend;
+					})
+				);
+			}
+		};
+
+		chatSocket.onerror = (error) => {
+			console.error('Error WebSocket:', error);
+		};
+
+		chatSocket.onclose = () => {
+			console.log('Desconectado del chat');
+		};
+
+		// Cleanup: desconectar al desmontar
+		return () => {
+			chatSocket.close();
+		};
+	}, []);
 
 	const filteredUsers = useMemo(
 		() =>
-			mockUsers.filter((user) =>
+			friends.filter((user) =>
 				user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
 				user.status.toLowerCase().includes(searchTerm.toLowerCase()),
 			),
-		[searchTerm],
+		[searchTerm, friends],
 	);
 
 	const handleClose = () => {
@@ -278,6 +318,41 @@ export default function Chat() {
 		setSearchTerm("");
 	};
 
+	const handleSendMessage = (to_user_id: number, message: string) => {
+		if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+			socketRef.current.send(JSON.stringify({
+				type: 'chat_message',
+				to_user_id: to_user_id,
+				message: message,
+				timestamp: new Date().toISOString()
+			}));
+
+			// Agregar el mensaje a la conversación local
+			setConversations((prev) =>
+				prev.map((conv) => {
+					if (conv.id === to_user_id) {
+						return {
+							...conv,
+							messages: [
+								...conv.messages,
+								{
+									id: conv.messages.length + 1,
+									author: 'me',
+									text: message,
+									time: new Date().toLocaleTimeString(),
+								},
+							],
+							lastMessage: message,
+							lastTime: new Date().toLocaleTimeString(),
+						};
+					}
+					return conv;
+				})
+			);
+		} else {
+			console.error('WebSocket no está conectado');
+		}
+	};
 	return (
 		<>
 			<button
@@ -298,6 +373,7 @@ export default function Chat() {
 				onOpenNewChat={() => setIsNewChatOpen(true)}
 				newMessage={newMessage}
 				onNewMessageChange={setNewMessage}
+				onSendMessage={handleSendMessage}
 			/>
 			<NewChatModal
 				open={isNewChatOpen}

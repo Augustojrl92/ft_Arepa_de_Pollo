@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'daphne', 
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
@@ -52,7 +53,8 @@ INSTALLED_APPS = [
     'sync',
     'coalitions',
     'users',
-    'games',
+    'chat',
+    'channels',
     'cron_scheduler',
 ]
 
@@ -150,6 +152,15 @@ CHANNEL_LAYERS = {
 	},
 }
 
+# Channels
+ASGI_APPLICATION = 'config.asgi.application'
+
+# Channel Layers configuration
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'
+    }
+}
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
