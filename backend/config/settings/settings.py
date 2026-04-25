@@ -49,6 +49,9 @@ INSTALLED_APPS = [
     'sync',
     'coalitions',
     'users',
+    'chat',
+    'channels',
+    'daphne', 
     'cron_scheduler',
 ]
 
@@ -92,6 +95,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
+# Channels
+ASGI_APPLICATION = 'config.asgi.application'
+
+# Channel Layers configuration
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'
+    }
+}
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
