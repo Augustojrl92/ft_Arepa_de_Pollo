@@ -3,6 +3,7 @@ MODE ?= full
 DOCKER ?= docker
 CSV_PATH ?= /app/evaluations_snapshot_round_apr_oct_2026.csv
 DRY_RUN ?=
+BACKUP_FILE ?=
 
 # Per-service default flags for `docker compose rm` regarding volumes.
 # Set these in the environment if you want different behavior, e.g.
@@ -106,6 +107,16 @@ back-syncapi:
 back-import-evaluations:
 	$(DOCKER_COMPOSE) exec -T backend python manage.py import_evaluations_snapshot --path $(CSV_PATH) $(DRY_RUN)
 
+db-backup:
+	./scripts/backup_db.sh
+
+db-restore:
+	@if [ -z "$(BACKUP_FILE)" ]; then echo "Uso: make db-restore BACKUP_FILE=backups/postgres/archivo.sql.gz"; exit 1; fi
+	BACKUP_FILE="$(BACKUP_FILE)" ./scripts/restore_db.sh
+
+db-backup-ls:
+	@if ls -1 backups/postgres/*.sql.gz >/dev/null 2>&1; then ls -lh backups/postgres/*.sql.gz; else echo "No hay backups en backups/postgres/"; fi
+
 # ─── Full stack ────────────────────────────────────────────────────────────────
 full-up:
 	$(DOCKER_COMPOSE) up -d --build
@@ -145,10 +156,11 @@ dev-re: front-re
 .PHONY: all \
         front-up front-stop front-down front-re front-logs \
         back-up back-stop back-down back-re back-logs \
-		back-migrate back-makemigrations back-makemigrations-app \
-		back-showmigrations back-showmigrations-app back-syncdb \
-		back-superuser back-shell back-test back-import-evaluations \
-        full-up full-stop full-down full-re full-logs \
+			back-migrate back-makemigrations back-makemigrations-app \
+			back-showmigrations back-showmigrations-app back-syncdb \
+			back-superuser back-shell back-test back-import-evaluations \
+			db-backup db-restore db-backup-ls \
+	        full-up full-stop full-down full-re full-logs \
         fclean \
 		up stop down logs migrate makemigrations superuser shell test \
         dev-up dev-stop dev-down dev-re dev-logs

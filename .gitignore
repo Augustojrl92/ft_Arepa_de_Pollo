@@ -9,3 +9,6 @@ Thumbs.db
 
 # Docker
 *.log
+
+# Backups locales
+backups/postgres/
