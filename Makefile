@@ -107,6 +107,9 @@ back-syncapi:
 back-import-evaluations:
 	$(DOCKER_COMPOSE) exec -T backend python manage.py import_evaluations_snapshot --path $(CSV_PATH) $(DRY_RUN)
 
+front-pwa:
+	./scripts/run_frontend_pwa.sh
+
 db-backup:
 	./scripts/backup_db.sh
 
@@ -155,10 +158,10 @@ dev-re: front-re
 
 .PHONY: all \
         front-up front-stop front-down front-re front-logs \
-        back-up back-stop back-down back-re back-logs \
+			back-up back-stop back-down back-re back-logs \
 			back-migrate back-makemigrations back-makemigrations-app \
 			back-showmigrations back-showmigrations-app back-syncdb \
-			back-superuser back-shell back-test back-import-evaluations \
+			back-superuser back-shell back-test back-import-evaluations front-pwa \
 			db-backup db-restore db-backup-ls \
 	        full-up full-stop full-down full-re full-logs \
         fclean \
