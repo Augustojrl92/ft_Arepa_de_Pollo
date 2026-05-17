@@ -1,4 +1,5 @@
 from datetime import timezone as datetime_timezone
+import logging
 import time
 
 import requests
@@ -6,7 +7,9 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from .models import CampusUser, Coalition, CoalitionEvaluationCursor
-from .services import _build_sync_context
+from .services import _build_sync_context, _request_42_token
+
+logger = logging.getLogger(__name__)
 
 
 CURRENT_SEASON_START = '2026-04-08T15:42:00Z'
@@ -19,6 +22,27 @@ def _ensure_aware_datetime(value):
 	if timezone.is_naive(value):
 		return timezone.make_aware(value, datetime_timezone.utc)
 	return value
+
+
+def _is_missing_42_user_http_error(exc):
+	response = getattr(exc, 'response', None)
+	return response is not None and response.status_code == 404
+
+
+def _is_newer_than_user_sync(event_at, synced_at):
+	if event_at is None or synced_at is None:
+		return True
+	return _ensure_aware_datetime(event_at) > _ensure_aware_datetime(synced_at)
+
+
+def _retry_delay(response, attempt, fallback_cap=60):
+	retry_after = response.headers.get('Retry-After') if response is not None else None
+	if retry_after:
+		try:
+			return max(float(retry_after), 0)
+		except ValueError:
+			pass
+	return min(2 ** attempt, fallback_cap)
 
 # Objective:
 # Fetch a single filled `as_corrector` page from the 42 API.
@@ -43,7 +67,7 @@ def _request_evaluations_page(login, ctx, page=1, per_page=100, request_interval
 	last_exc = None
 	response = None
 
-	for attempt in range(4):
+	for attempt in range(8):
 		try:
 			response = requests.get(
 				f"{ctx['base_url']}/v2/users/{login}/scale_teams/as_corrector",
@@ -51,13 +75,16 @@ def _request_evaluations_page(login, ctx, page=1, per_page=100, request_interval
 				params=params,
 				timeout=20,
 			)
+			if response.status_code == 401:
+				ctx['headers'] = {'Authorization': f'Bearer {_request_42_token()}'}
+				continue
 			if response.status_code == 429 or 500 <= response.status_code < 600:
-				time.sleep(min(2 ** attempt, 8))
+				time.sleep(_retry_delay(response, attempt))
 				continue
 			break
 		except requests.RequestException as exc:
 			last_exc = exc
-			time.sleep(min(2 ** attempt, 8))
+			time.sleep(min(2 ** attempt, 60))
 
 	if response is None:
 		raise last_exc
@@ -134,15 +161,27 @@ def sync_users_evaluations_done_total(queryset=None, request_interval=0.6):
 	ctx = _build_sync_context()
 	processed = 0
 	updated = 0
+	skipped_missing = 0
 
 	for user in users:
-		total = fetch_user_evaluations_done_total(user.login, ctx=ctx, request_interval=request_interval)
-		current_season = fetch_user_evaluations_done_current_season(
-			user.login,
-			ctx=ctx,
-			request_interval=request_interval,
-		)
 		processed += 1
+		try:
+			total = fetch_user_evaluations_done_total(user.login, ctx=ctx, request_interval=request_interval)
+			current_season = fetch_user_evaluations_done_current_season(
+				user.login,
+				ctx=ctx,
+				request_interval=request_interval,
+			)
+		except requests.HTTPError as exc:
+			if not _is_missing_42_user_http_error(exc):
+				raise
+			skipped_missing += 1
+			logger.warning(
+				'Skipping evaluations sync for login=%s intra_id=%s because 42 returned 404.',
+				user.login,
+				user.intra_id,
+			)
+			continue
 		synced_at = timezone.now()
 
 		fields_to_update = []
@@ -162,6 +201,7 @@ def sync_users_evaluations_done_total(queryset=None, request_interval=0.6):
 	return {
 		'processed': processed,
 		'updated': updated,
+		'skipped_missing': skipped_missing,
 	}
 
 # Objective:
@@ -224,7 +264,7 @@ def _request_coalition_scores_page(coalition_id, ctx, page=1, per_page=100, requ
 	last_exc = None
 	response = None
 
-	for attempt in range(4):
+	for attempt in range(8):
 		try:
 			response = requests.get(
 				f"{ctx['base_url']}/v2/coalitions/{coalition_id}/scores",
@@ -236,13 +276,16 @@ def _request_coalition_scores_page(coalition_id, ctx, page=1, per_page=100, requ
 				},
 				timeout=20,
 			)
+			if response.status_code == 401:
+				ctx['headers'] = {'Authorization': f'Bearer {_request_42_token()}'}
+				continue
 			if response.status_code == 429 or 500 <= response.status_code < 600:
-				time.sleep(min(2 ** attempt, 8))
+				time.sleep(_retry_delay(response, attempt))
 				continue
 			break
 		except requests.RequestException as exc:
 			last_exc = exc
-			time.sleep(min(2 ** attempt, 8))
+			time.sleep(min(2 ** attempt, 60))
 
 	if response is None:
 		raise last_exc
@@ -340,7 +383,7 @@ def _collect_new_coalition_scores(coalition, cursor, ctx, request_interval=0.25)
 # Returns:
 # - A summary dict with scanned rows, evaluation rows, and updated users.
 def _apply_evaluation_score_rows(score_rows):
-	increments_by_coalitions_user_id = {}
+	events_by_coalitions_user_id = {}
 
 	for row in score_rows:
 		if not _is_evaluation_score_event(row):
@@ -348,15 +391,9 @@ def _apply_evaluation_score_rows(score_rows):
 
 		coalitions_user_id = row.get('coalitions_user_id')
 		created_at = parse_datetime(row.get('created_at'))
-		counters = increments_by_coalitions_user_id.setdefault(
-			coalitions_user_id,
-			{'total': 0, 'season': 0},
-		)
-		counters['total'] += 1
-		if created_at and CURRENT_SEASON_START_DT <= created_at <= CURRENT_SEASON_END_DT:
-			counters['season'] += 1
+		events_by_coalitions_user_id.setdefault(coalitions_user_id, []).append(created_at)
 
-	if not increments_by_coalitions_user_id:
+	if not events_by_coalitions_user_id:
 		return {
 			'scanned_rows': len(score_rows),
 			'evaluation_rows': 0,
@@ -365,7 +402,7 @@ def _apply_evaluation_score_rows(score_rows):
 
 	users = list(
 		CampusUser.objects.filter(
-			coalitions_user_id__in=increments_by_coalitions_user_id.keys()
+			coalitions_user_id__in=events_by_coalitions_user_id.keys()
 		)
 	)
 	users_by_coalitions_user_id = {user.coalitions_user_id: user for user in users}
@@ -373,14 +410,26 @@ def _apply_evaluation_score_rows(score_rows):
 	users_to_update = []
 	evaluation_rows = 0
 
-	for coalitions_user_id, counters in increments_by_coalitions_user_id.items():
+	for coalitions_user_id, event_times in events_by_coalitions_user_id.items():
 		user = users_by_coalitions_user_id.get(coalitions_user_id)
 		if user is None:
 			continue
 
-		evaluation_rows += counters['total']
-		user.evaluations_done_total += counters['total']
-		user.evaluations_done_current_season += counters['season']
+		total_increment = 0
+		season_increment = 0
+		for event_at in event_times:
+			if not _is_newer_than_user_sync(event_at, user.evaluations_synced_at):
+				continue
+			total_increment += 1
+			if event_at and CURRENT_SEASON_START_DT <= event_at <= CURRENT_SEASON_END_DT:
+				season_increment += 1
+
+		if total_increment == 0:
+			continue
+
+		evaluation_rows += total_increment
+		user.evaluations_done_total += total_increment
+		user.evaluations_done_current_season += season_increment
 		user.evaluations_synced_at = now
 		users_to_update.append(user)
 

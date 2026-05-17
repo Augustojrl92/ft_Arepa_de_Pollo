@@ -1,4 +1,5 @@
 from datetime import timezone as datetime_timezone
+import logging
 import time
 
 import requests
@@ -7,6 +8,8 @@ from django.utils.dateparse import parse_datetime
 
 from .models import CampusUser, Coalition, CoalitionProjectCursor
 from .services import _build_sync_context, _http_get, _request_42_token
+
+logger = logging.getLogger(__name__)
 
 
 CURRENT_SEASON_START = '2026-04-08T15:42:00Z'
@@ -21,6 +24,17 @@ def _ensure_aware_datetime(value):
 	if timezone.is_naive(value):
 		return timezone.make_aware(value, datetime_timezone.utc)
 	return value
+
+
+def _is_missing_42_user_http_error(exc):
+	response = getattr(exc, 'response', None)
+	return response is not None and response.status_code == 404
+
+
+def _is_newer_than_user_sync(event_at, synced_at):
+	if event_at is None or synced_at is None:
+		return True
+	return _ensure_aware_datetime(event_at) > _ensure_aware_datetime(synced_at)
 
 
 # Objective:
@@ -182,15 +196,27 @@ def sync_users_projects_delivered(queryset=None, request_interval=0.6):
 	ctx = _build_sync_context()
 	processed = 0
 	updated = 0
+	skipped_missing = 0
 
 	for user in users:
-		total = fetch_user_projects_delivered_total(user.login, ctx=ctx, request_interval=request_interval)
-		current_season = fetch_user_projects_delivered_current_season(
-			user.login,
-			ctx=ctx,
-			request_interval=request_interval,
-		)
 		processed += 1
+		try:
+			total = fetch_user_projects_delivered_total(user.login, ctx=ctx, request_interval=request_interval)
+			current_season = fetch_user_projects_delivered_current_season(
+				user.login,
+				ctx=ctx,
+				request_interval=request_interval,
+			)
+		except requests.HTTPError as exc:
+			if not _is_missing_42_user_http_error(exc):
+				raise
+			skipped_missing += 1
+			logger.warning(
+				'Skipping projects sync for login=%s intra_id=%s because 42 returned 404.',
+				user.login,
+				user.intra_id,
+			)
+			continue
 
 		fields_to_update = []
 		if user.projects_delivered_total != total:
@@ -209,6 +235,7 @@ def sync_users_projects_delivered(queryset=None, request_interval=0.6):
 	return {
 		'processed': processed,
 		'updated': updated,
+		'skipped_missing': skipped_missing,
 	}
 
 
@@ -393,7 +420,7 @@ def _collect_new_coalition_project_scores(coalition, cursor, ctx, request_interv
 # Returns:
 # - A summary dict with scanned rows, project rows, and updated users.
 def _apply_project_score_rows(score_rows, ctx, request_interval=0.25):
-	increments_by_intra_id = {}
+	events_by_intra_id = {}
 	seen_project_user_ids = set()
 	project_rows = 0
 
@@ -416,31 +443,40 @@ def _apply_project_score_rows(score_rows, ctx, request_interval=0.25):
 			continue
 
 		marked_at = parse_datetime(project_user.get('marked_at') or row.get('created_at'))
-		counters = increments_by_intra_id.setdefault(intra_id, {'total': 0, 'season': 0})
-		counters['total'] += 1
+		events_by_intra_id.setdefault(intra_id, []).append(marked_at)
 		project_rows += 1
-		if marked_at and CURRENT_SEASON_START_DT <= marked_at <= CURRENT_SEASON_END_DT:
-			counters['season'] += 1
 
-	if not increments_by_intra_id:
+	if not events_by_intra_id:
 		return {
 			'scanned_rows': len(score_rows),
 			'project_rows': project_rows,
 			'updated_users': 0,
 		}
 
-	users = list(CampusUser.objects.filter(intra_id__in=increments_by_intra_id.keys()))
+	users = list(CampusUser.objects.filter(intra_id__in=events_by_intra_id.keys()))
 	users_by_intra_id = {user.intra_id: user for user in users}
 	now = timezone.now()
 	users_to_update = []
 
-	for intra_id, counters in increments_by_intra_id.items():
+	for intra_id, event_times in events_by_intra_id.items():
 		user = users_by_intra_id.get(intra_id)
 		if user is None:
 			continue
 
-		user.projects_delivered_total += counters['total']
-		user.projects_delivered_current_season += counters['season']
+		total_increment = 0
+		season_increment = 0
+		for event_at in event_times:
+			if not _is_newer_than_user_sync(event_at, user.projects_delivered_synced_at):
+				continue
+			total_increment += 1
+			if event_at and CURRENT_SEASON_START_DT <= event_at <= CURRENT_SEASON_END_DT:
+				season_increment += 1
+
+		if total_increment == 0:
+			continue
+
+		user.projects_delivered_total += total_increment
+		user.projects_delivered_current_season += season_increment
 		user.projects_delivered_synced_at = now
 		users_to_update.append(user)
 

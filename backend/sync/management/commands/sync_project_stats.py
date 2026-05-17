@@ -88,6 +88,7 @@ class Command(BaseCommand):
 			batches_run = 0
 			total_processed = 0
 			total_updated = 0
+			total_skipped_missing = 0
 			executed_batches = 0
 			current_offset = offset
 
@@ -106,9 +107,10 @@ class Command(BaseCommand):
 				)
 				total_processed += result['processed']
 				total_updated += result['updated']
+				total_skipped_missing += result.get('skipped_missing', 0)
 
 				self.stdout.write(
-					f'Bloque {executed_batches} | offset {current_offset} | procesados {result["processed"]} | actualizados {result["updated"]} | acumulado {total_processed}'
+					f'Bloque {executed_batches} | offset {current_offset} | procesados {result["processed"]} | actualizados {result["updated"]} | missing-404 {result.get("skipped_missing", 0)} | acumulado {total_processed}'
 				)
 
 				current_offset += limit
@@ -117,6 +119,7 @@ class Command(BaseCommand):
 			self.stdout.write('Sincronizacion de proyectos completada')
 			self.stdout.write(f'Usuarios procesados: {total_processed}')
 			self.stdout.write(f'Usuarios actualizados: {total_updated}')
+			self.stdout.write(f'Usuarios omitidos por 404 en 42: {total_skipped_missing}')
 			self.stdout.write(f'Bloques ejecutados: {executed_batches}')
 			self.stdout.write(f'Tamano de bloque: {limit}')
 			return
@@ -130,3 +133,4 @@ class Command(BaseCommand):
 		self.stdout.write('Sincronizacion de proyectos completada')
 		self.stdout.write(f'Usuarios procesados: {result["processed"]}')
 		self.stdout.write(f'Usuarios actualizados: {result["updated"]}')
+		self.stdout.write(f'Usuarios omitidos por 404 en 42: {result.get("skipped_missing", 0)}')
