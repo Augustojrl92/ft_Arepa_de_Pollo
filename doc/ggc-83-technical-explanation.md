@@ -300,6 +300,31 @@ En otras palabras:
 - si la base está viva, añade la última sincronización registrada;
 - siempre añade un timestamp de cuándo se hizo la comprobación.
 
+### Pseudocódigo
+
+```text
+FUNCIÓN status_check():
+
+    database_status, error = comprobar_base_de_datos()
+    now = hora_actual()
+
+    SI database_status == "ok":
+        last_sync = leer_ultimo_sync()
+        status = "ok"
+    SI NO:
+        last_sync = null
+        status = "error"
+
+    devolver JSON {
+        service: "pollo-backend",
+        status: status,
+        database: database_status,
+        last_sync: last_sync,
+        timestamp: now,
+        error: error
+    }
+```
+
 #### Cómo se comprueba la base de datos
 
 ##### `_check_database`
@@ -502,6 +527,20 @@ Interpretación:
 
 - `db` se considera sana si PostgreSQL responde a `pg_isready`;
 - `backend` se considera sano si `curl` recibe respuesta correcta de `/api/health/`.
+
+### Pseudocódigo
+
+```text
+FUNCIÓN docker_healthcheck_backend():
+
+    respuesta = curl("http://localhost:8000/api/health/")
+
+    SI respuesta es 200:
+        marcar backend como healthy
+
+    SI respuesta falla repetidamente:
+        marcar backend como unhealthy
+```
 
 #### Mapa corto del bloque health/status
 
@@ -719,6 +758,40 @@ En el restore:
 
 ```bash
 gzip -t "$backup_file" || fail "El archivo no es un gzip válido: $backup_input"
+```
+
+### Pseudocódigo
+
+```text
+FUNCIÓN backup_db():
+
+    validar dependencias docker, compose y gzip
+    crear carpeta backups/postgres si hace falta
+    construir nombre timestamp.sql.gz
+
+    ejecutar pg_dump dentro del contenedor db
+    comprimir salida con gzip
+    guardar archivo
+
+    SI gzip -t falla:
+        devolver error
+
+    devolver ruta_del_backup
+```
+
+```text
+FUNCIÓN restore_db(backup_file):
+
+    SI backup_file no existe:
+        devolver error
+
+    validar backup_file con gzip -t
+    detener backend temporalmente
+    descomprimir SQL
+    ejecutar psql dentro del contenedor db
+    volver a levantar backend
+
+    devolver "restore completado"
 ```
 
 ### Explicación de sintaxis Bash usada
@@ -981,6 +1054,28 @@ Después de recuperar el sistema hay que comprobar:
 - acceso a frontend
 - coherencia visible de los datos restaurados
 
+### Pseudocódigo
+
+```text
+FUNCIÓN disaster_recovery(backup_file):
+
+    revisar estado de contenedores
+    revisar logs de backend y db
+
+    SI el problema parece de datos:
+        restore_db(backup_file)
+
+    comprobar /api/health/
+    comprobar /api/status/
+    comprobar frontend
+
+    SI todo responde:
+        declarar sistema recuperado
+
+    SI algo sigue fallando:
+        volver a logs y conservar backups antiguos
+```
+
 ```mermaid
 flowchart LR
     A["Detectar fallo"] --> B["Revisar health/status"]
@@ -1128,6 +1223,35 @@ Best effort si ya se visitaron antes:
 - `/`
 - `/coalitions`
 - `/leaderboard`
+
+### Pseudocódigo
+
+```text
+FUNCIÓN service_worker_fetch(request):
+
+    SI request es navegación HTML:
+        intentar red
+        SI red responde:
+            cachear página
+            devolver respuesta
+        SI red falla:
+            devolver página cacheada
+            SI no existe:
+                devolver /offline
+
+    SI request es /api/status/:
+        intentar red
+        SI red responde:
+            cachear JSON
+            devolver respuesta
+        SI red falla:
+            devolver último JSON cacheado
+
+    SI request es asset estático:
+        intentar caché
+        SI no existe:
+            pedir a red y cachear
+```
 
 #### Qué NO se promete offline
 
@@ -1962,6 +2086,38 @@ Lectura bloque por bloque:
 - `Network > Offline` fuerza el escenario sin red.
 - `/status o /offline` representa el comportamiento final esperado en la prueba offline.
 - Refleja por qué se añadió `make front-pwa` para poder probar installability y offline básico.
+
+## 7. Pseudocódigo global del flujo GGC-83
+
+```text
+FUNCIÓN ggc83():
+
+    implementar /api/health/ y /api/status/
+    exponer /status como página pública
+    activar healthcheck del backend en Docker
+
+    crear script de backup PostgreSQL
+    crear script de restore PostgreSQL
+    añadir comandos make para operar ambos
+
+    escribir runbook de disaster recovery
+    definir smoke checks post-restore
+
+    crear manifest PWA
+    crear service worker mínimo
+    crear página /offline
+    registrar PWA solo en producción o con flag
+
+    validar:
+        health/status
+        backup
+        restore
+        runbook
+        installability
+        offline básico
+
+    devolver "GGC-83 implementada"
+```
 
 ## Conclusión
 
