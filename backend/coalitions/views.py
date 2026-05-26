@@ -3,7 +3,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .services import _serialize_simple_coalitions, _serialize_user_ranking, _serialize_coalition_details, _get_last_time_update
+from .services import (
+	_serialize_simple_coalitions,
+	_serialize_user_ranking,
+	_serialize_coalition_details,
+	_serialize_coalition_points_history,
+	_get_last_time_update,
+)
 
 class CoalitionSimpleView(APIView):
 	permission_classes = [IsAuthenticated]
@@ -68,3 +74,25 @@ class CoalitionSingleDetailView(APIView):
 			)
 
 		return Response({'coalition': coalition_details}, status=status.HTTP_200_OK)
+
+
+class CoalitionPointsHistoryView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def get(self, request):
+		coalition_slug = request.query_params.get('coalition')
+
+		if not coalition_slug:
+			return Response(
+				{'error': 'Coalition slug is required'},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
+		payload = _serialize_coalition_points_history(coalition_slug)
+		if payload is None:
+			return Response(
+				{'error': 'Coalition not found'},
+				status=status.HTTP_404_NOT_FOUND,
+			)
+
+		return Response(payload, status=status.HTTP_200_OK)

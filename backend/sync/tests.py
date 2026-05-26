@@ -10,8 +10,9 @@ from sync.evaluations import (
 	_request_evaluations_page,
 	sync_users_evaluations_done_total,
 )
-from sync.models import CampusUser
+from sync.models import CampusUser, CampusUserScoreSnapshot, Coalition, CoalitionScoreSnapshot
 from sync.projects import _apply_project_score_rows, sync_users_projects_delivered
+from sync.score_snapshots_backfill import backfill_daily_score_snapshots
 
 
 def _http_error(status_code):
@@ -195,3 +196,123 @@ class IncrementalSyncTimestampGuardTests(TestCase):
 		self.assertEqual(result['updated_users'], 1)
 		self.assertEqual(self.user.projects_delivered_total, 6)
 		self.assertEqual(self.user.projects_delivered_current_season, 2)
+
+
+class DailyScoreSnapshotsBackfillTests(TestCase):
+	def setUp(self):
+		now = timezone.now()
+		self.alpha = Coalition.objects.create(coalition_id=1, name='Alpha', slug='alpha')
+		self.beta = Coalition.objects.create(coalition_id=2, name='Beta', slug='marventis')
+		self.user_a = CampusUser.objects.create(
+			intra_id=10,
+			user_id=10,
+			login='user-a',
+			coalition_id=self.alpha.coalition_id,
+			coalitions_user_id=101,
+			is_active=True,
+			created_at=now,
+			updated_at=now,
+		)
+		self.user_b = CampusUser.objects.create(
+			intra_id=20,
+			user_id=20,
+			login='user-b',
+			coalition_id=self.alpha.coalition_id,
+			coalitions_user_id=102,
+			is_active=True,
+			created_at=now,
+			updated_at=now,
+		)
+		self.user_c = CampusUser.objects.create(
+			intra_id=30,
+			user_id=30,
+			login='user-c',
+			coalition_id=self.beta.coalition_id,
+			coalitions_user_id=201,
+			is_active=True,
+			created_at=now,
+			updated_at=now,
+		)
+
+	@patch('sync.score_snapshots_backfill.get_request_count', return_value=2)
+	@patch('sync.score_snapshots_backfill._build_sync_context', return_value={'base_url': '', 'headers': {}})
+	@patch('sync.score_snapshots_backfill._collect_coalition_score_events')
+	def test_backfill_reconstructs_daily_snapshots_with_carry_forward_and_ranks(self, collect_mock, _ctx_mock, _request_count_mock):
+		collect_mock.side_effect = [
+			[
+				{
+					'coalition_id': self.alpha.coalition_id,
+					'coalitions_user_id': self.user_a.coalitions_user_id,
+					'value': 10,
+					'created_at': '2026-04-08T10:00:00Z',
+				},
+				{
+					'coalition_id': self.alpha.coalition_id,
+					'coalitions_user_id': self.user_b.coalitions_user_id,
+					'value': 5,
+					'created_at': '2026-04-08T16:00:00Z',
+				},
+				{
+					'coalition_id': self.alpha.coalition_id,
+					'coalitions_user_id': self.user_a.coalitions_user_id,
+					'value': 5,
+					'created_at': '2026-04-10T09:00:00Z',
+				},
+			],
+			[
+				{
+					'coalition_id': self.beta.coalition_id,
+					'coalitions_user_id': self.user_c.coalitions_user_id,
+					'value': 20,
+					'created_at': '2026-04-09T08:00:00Z',
+				},
+			],
+		]
+
+		result = backfill_daily_score_snapshots(
+			start_date=parse_datetime('2026-04-08T00:00:00Z').date(),
+			end_date=parse_datetime('2026-04-10T00:00:00Z').date(),
+			request_interval=0,
+		)
+
+		self.assertEqual(result['processed_coalitions'], 2)
+		self.assertEqual(result['processed_users'], 3)
+		self.assertEqual(result['fetched_score_rows'], 4)
+		self.assertEqual(CoalitionScoreSnapshot.objects.count(), 6)
+		self.assertEqual(CampusUserScoreSnapshot.objects.count(), 9)
+
+		alpha_day_1 = CoalitionScoreSnapshot.objects.get(coalition=self.alpha, snapshot_date='2026-04-08')
+		beta_day_1 = CoalitionScoreSnapshot.objects.get(coalition=self.beta, snapshot_date='2026-04-08')
+		alpha_day_2 = CoalitionScoreSnapshot.objects.get(coalition=self.alpha, snapshot_date='2026-04-09')
+		beta_day_2 = CoalitionScoreSnapshot.objects.get(coalition=self.beta, snapshot_date='2026-04-09')
+		alpha_day_3 = CoalitionScoreSnapshot.objects.get(coalition=self.alpha, snapshot_date='2026-04-10')
+		beta_day_3 = CoalitionScoreSnapshot.objects.get(coalition=self.beta, snapshot_date='2026-04-10')
+
+		self.assertEqual((alpha_day_1.total_score, alpha_day_1.campus_rank), (5, 2))
+		self.assertEqual((beta_day_1.total_score, beta_day_1.campus_rank), (9500, 1))
+		self.assertEqual((alpha_day_2.total_score, alpha_day_2.campus_rank), (5, 2))
+		self.assertEqual((beta_day_2.total_score, beta_day_2.campus_rank), (9520, 1))
+		self.assertEqual((alpha_day_3.total_score, alpha_day_3.campus_rank), (10, 2))
+		self.assertEqual((beta_day_3.total_score, beta_day_3.campus_rank), (9520, 1))
+
+		user_a_day_2 = CampusUserScoreSnapshot.objects.get(campus_user=self.user_a, snapshot_date='2026-04-09')
+		user_b_day_2 = CampusUserScoreSnapshot.objects.get(campus_user=self.user_b, snapshot_date='2026-04-09')
+		user_c_day_2 = CampusUserScoreSnapshot.objects.get(campus_user=self.user_c, snapshot_date='2026-04-09')
+		user_a_day_3 = CampusUserScoreSnapshot.objects.get(campus_user=self.user_a, snapshot_date='2026-04-10')
+
+		self.assertEqual(
+			(user_a_day_2.coalition_user_score, user_a_day_2.coalition_user_rank, user_a_day_2.campus_user_rank),
+			(0, 2, 3),
+		)
+		self.assertEqual(
+			(user_b_day_2.coalition_user_score, user_b_day_2.coalition_user_rank, user_b_day_2.campus_user_rank),
+			(5, 1, 2),
+		)
+		self.assertEqual(
+			(user_c_day_2.coalition_user_score, user_c_day_2.coalition_user_rank, user_c_day_2.campus_user_rank),
+			(20, 1, 1),
+		)
+		self.assertEqual(
+			(user_a_day_3.coalition_user_score, user_a_day_3.coalition_user_rank, user_a_day_3.campus_user_rank),
+			(5, 1, 2),
+		)

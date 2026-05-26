@@ -240,6 +240,35 @@ def _serialize_coalition_details(coalition_slug, request=None):
 		**project_totals,
 	}
 
+
+def _serialize_coalition_points_history(coalition_slug):
+	coalition = SyncedCoalition.objects.filter(slug=coalition_slug).first()
+	if coalition is None:
+		return None
+
+	history = list(
+		CoalitionScoreSnapshot.objects.filter(coalition=coalition)
+		.order_by('snapshot_date')
+		.values('snapshot_date', 'total_score', 'campus_rank')
+	)
+
+	return {
+		'coalition': {
+			'id': coalition.id,
+			'name': coalition.name,
+			'slug': coalition.slug,
+			'color': coalition.color,
+		},
+		'history': [
+			{
+				'date': item['snapshot_date'].isoformat(),
+				'points': item['total_score'],
+				'campus_rank': item['campus_rank'],
+			}
+			for item in history
+		],
+	}
+
 def _get_sync_user_ranks(sync_user):
 	if sync_user is None:
 		return None, None

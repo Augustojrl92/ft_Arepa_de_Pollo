@@ -58,6 +58,39 @@ def _serialize_user_details(user_login, request=None):
 
 	}
 
+
+def _serialize_user_points_history(user_login):
+	campus_user = CampusUser.objects.filter(login=user_login).first()
+	if campus_user is None:
+		return None
+
+	history = list(
+		campus_user.score_snapshots.order_by('snapshot_date').values(
+			'snapshot_date',
+			'coalition_user_score',
+			'coalition_user_rank',
+			'campus_user_rank',
+		)
+	)
+
+	return {
+		'user': {
+			'id': campus_user.id,
+			'login': campus_user.login,
+			'display_name': campus_user.display_name,
+			'coalition_slug': campus_user.coalition_slug,
+		},
+		'history': [
+			{
+				'date': item['snapshot_date'].isoformat(),
+				'points': item['coalition_user_score'],
+				'coalition_rank': item['coalition_user_rank'],
+				'campus_rank': item['campus_user_rank'],
+			}
+			for item in history
+		],
+	}
+
 def _serialize_friend_entry(friend_list, request=None):
 	owner = friend_list.owner
 	campus_user = getattr(owner, 'campus_user_profile', None)

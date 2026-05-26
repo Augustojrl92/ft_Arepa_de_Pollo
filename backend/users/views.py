@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from .models import UserPreferences
 from .services import (
 	_serialize_user_details,
+	_serialize_user_points_history,
 	FriendsRequestError,
 	accept_friend_request,
 	get_or_create_friends_payload_for_user,
@@ -40,6 +41,28 @@ class UserDetailView(APIView):
 			)
 		
 		return Response(user_details, status=status.HTTP_200_OK)
+
+
+class UserPointsHistoryView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def get(self, request):
+		user_login = request.query_params.get('login')
+
+		if not user_login:
+			return Response(
+				{'error': 'User login is required'},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
+		payload = _serialize_user_points_history(user_login)
+		if payload is None:
+			return Response(
+				{'error': 'User not found'},
+				status=status.HTTP_404_NOT_FOUND,
+			)
+
+		return Response(payload, status=status.HTTP_200_OK)
 
 
 class FriendsMeView(APIView):
