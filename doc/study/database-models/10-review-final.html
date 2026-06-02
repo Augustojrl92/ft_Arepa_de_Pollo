@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>10 Revisión final</title>
+  <style>
+:root {
+  --bg: #07101d;
+  --panel: rgba(14, 23, 41, 0.92);
+  --line: rgba(151, 168, 198, 0.18);
+  --text: #edf4ff;
+  --muted: #9caecc;
+  --brand: #7cc7ff;
+  --green: #8cf2cb;
+  --gold: #ffd37c;
+  --violet: #b8a4ff;
+  --pink: #f4a6ff;
+  --orange: #ffb37a;
+  --radius: 22px;
+  --radius-sm: 16px;
+  --shadow: 0 28px 70px rgba(0, 0, 0, .34);
+  --mono: "SFMono-Regular", Consolas, Menlo, monospace;
+  --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: var(--sans);
+  color: var(--text);
+  background:
+    radial-gradient(circle at top right, rgba(124,199,255,.12), transparent 28%),
+    radial-gradient(circle at 20% 0%, rgba(140,242,203,.08), transparent 24%),
+    linear-gradient(180deg, #06101a 0%, #09121f 48%, #08121f 100%);
+  min-height: 100vh;
+}
+a { color: inherit; text-decoration: none; }
+code { font-family: var(--mono); color: #d9f1ff; }
+.layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 24px; max-width: 1560px; margin: 0 auto; padding: 24px; }
+.sidebar { position: sticky; top: 18px; align-self: start; border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; background: rgba(7,16,29,.76); backdrop-filter: blur(14px); box-shadow: var(--shadow); }
+.side-head h2 { margin: 10px 0 8px; font-size: 1.15rem; }
+.side-head p { margin: 0 0 16px; color: var(--muted); line-height: 1.6; font-size: .93rem; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(124,199,255,.24); color: var(--brand); background: rgba(124,199,255,.08); font-size: .85rem; }
+.course-nav { display: grid; gap: 8px; }
+.step { display: grid; grid-template-columns: 42px 1fr; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 15px; border: 1px solid transparent; background: rgba(255,255,255,.02); color: var(--muted); transition: .18s ease; }
+.step span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 12px; background: rgba(255,255,255,.05); font-family: var(--mono); font-size: .8rem; color: var(--text); }
+.step:hover, .step.active { color: var(--text); border-color: rgba(124,199,255,.28); background: rgba(124,199,255,.08); transform: translateX(2px); }
+.pager { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.main { min-width: 0; }
+.hero, .section, .callout, .footer-note {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+}
+.hero { padding: 32px; position: relative; overflow: hidden; }
+.hero::after { content: ""; position: absolute; right: -50px; bottom: -50px; width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle, rgba(124,199,255,.2), transparent 68%); }
+h1 { margin: 0; font-size: clamp(2rem, 3vw, 3.15rem); line-height: 1.04; letter-spacing: -.04em; }
+.lead { margin: 16px 0 0; color: var(--muted); line-height: 1.75; max-width: 920px; }
+.badges, .cards, .grid-2, .grid-3, .chips, .legend, .timeline { display: flex; flex-wrap: wrap; gap: 10px; }
+.badge, .chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.04); }
+.badge { margin-top: 18px; }
+.chip { color: var(--muted); font-size: .84rem; }
+.section { margin-top: 24px; padding: 22px; }
+.section-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; align-items: flex-end; margin-bottom: 18px; }
+.section-head h2 { margin: 0; font-size: clamp(1.35rem, 2vw, 1.95rem); letter-spacing: -.03em; }
+.section-head p { margin: 8px 0 0; color: var(--muted); line-height: 1.65; max-width: 900px; }
+.section-head.split { align-items: center; }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card, .stat-card, .compare-card, .mini-panel, .mockup, .quiz-card, .syntax-card, .timeline-item {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,.03);
+  padding: 18px;
+}
+.card h3, .stat-card h3, .compare-card h3, .syntax-card h3, .timeline-item h3 { margin: 0 0 10px; font-size: 1.04rem; }
+.card p, .stat-card p, .compare-card p, .mini-panel p, .syntax-card p, .timeline-item p, .reference, .footer-note, .callout p, .mockup-subtitle { color: var(--muted); line-height: 1.65; }
+.tone-blue { box-shadow: inset 0 0 0 1px rgba(124,199,255,.08); }
+.tone-green { box-shadow: inset 0 0 0 1px rgba(140,242,203,.09); }
+.tone-gold { box-shadow: inset 0 0 0 1px rgba(255,211,124,.09); }
+.tone-violet { box-shadow: inset 0 0 0 1px rgba(184,164,255,.09); }
+.tone-pink { box-shadow: inset 0 0 0 1px rgba(244,166,255,.09); }
+.tone-orange { box-shadow: inset 0 0 0 1px rgba(255,179,122,.09); }
+.list, .risk-list, .field-list { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.list li, .risk-list li, .field-list li { padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.04); color: var(--muted); }
+.list strong, .risk-list strong, .field-list strong { color: var(--text); }
+.code-block, .pseudo-block { margin-top: 12px; border-radius: 16px; overflow: auto; border: 1px solid rgba(124,199,255,.18); background: linear-gradient(180deg, rgba(12,21,39,.96), rgba(8,13,24,.96)); }
+.pseudo-block { position: relative; border-color: rgba(140,242,203,.16); box-shadow: inset 0 0 0 1px rgba(140,242,203,.08); }
+.pseudo-block::before { content: attr(data-label); position: absolute; top: 10px; right: 14px; font-size: .72rem; letter-spacing: .08em; color: var(--green); text-transform: uppercase; }
+pre { margin: 0; padding: 16px 18px; font-family: var(--mono); font-size: .9rem; line-height: 1.7; color: #dff2ff; white-space: pre-wrap; word-break: break-word; }
+.reference { font-size: .88rem; margin-top: 12px; }
+.table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 16px; }
+table { width: 100%; border-collapse: collapse; min-width: 760px; }
+th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid rgba(255,255,255,.05); vertical-align: top; }
+th { background: rgba(255,255,255,.04); font-size: .88rem; color: var(--brand); letter-spacing: .04em; text-transform: uppercase; }
+td { color: var(--muted); }
+.status-covered, .status-na { padding: 4px 8px; border-radius: 999px; display: inline-flex; }
+.status-covered { color: #dffdf1; background: rgba(121,242,167,.12); border: 1px solid rgba(121,242,167,.25); }
+.status-na { color: #fff0d1; background: rgba(255,211,124,.12); border: 1px solid rgba(255,211,124,.25); }
+.diagram { border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(180deg, rgba(11,18,31,.96), rgba(12,21,39,.96)); padding: 18px; overflow: auto; }
+svg { width: 100%; height: auto; min-width: 900px; display: block; }
+.node rect { fill: #0f1a31; stroke: rgba(159,176,207,.32); stroke-width: 2; rx: 18; }
+.node text.title { fill: var(--text); font-size: 20px; font-weight: 700; }
+.node text.meta { fill: #9fb0cf; font-size: 14px; }
+.arrow { stroke: rgba(124,199,255,.72); stroke-width: 3; fill: none; }
+.arrow2 { stroke: rgba(184,164,255,.72); stroke-width: 3; fill: none; }
+.legend { margin-top: 14px; color: var(--muted); font-size: .9rem; }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.legend i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; background: currentColor; }
+.mock-grid { display: grid; grid-template-columns: 1.1fr .95fr; gap: 16px; }
+.mockup { overflow: hidden; background: linear-gradient(180deg, rgba(8,14,25,.96), rgba(12,21,39,.98)); }
+.mockup-bar { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.03); }
+.mockup-bar span { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.25); }
+.mockup-bar strong { margin-left: 8px; font-size: .95rem; }
+.mockup-body { padding: 16px; display: grid; gap: 12px; }
+.mock-row { display: grid; grid-template-columns: 54px 1fr auto; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 15px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.05); }
+.mock-avatar { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: rgba(124,199,255,.12); border: 1px solid rgba(124,199,255,.22); font-weight: 700; color: #dff1ff; }
+.mock-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.mini-panel { padding: 14px; }
+.callout { padding: 18px; background: linear-gradient(140deg, rgba(140,242,203,.06), rgba(124,199,255,.05)), var(--panel); }
+.callout strong { display: block; margin-bottom: 6px; color: var(--text); }
+.ghost-btn, .btn, .choice { border: 1px solid transparent; border-radius: 14px; cursor: pointer; font: inherit; transition: .18s ease; }
+.ghost-btn, .btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 14px; }
+.ghost-btn { background: rgba(255,255,255,.04); color: var(--muted); border-color: var(--line); }
+.btn { background: rgba(124,199,255,.12); color: var(--text); border-color: rgba(124,199,255,.28); }
+.quiz-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.score-pill { padding: 10px 14px; border-radius: 999px; border: 1px solid rgba(124,199,255,.2); background: rgba(124,199,255,.08); }
+.quiz-grid { display: grid; gap: 16px; }
+.choice-list { display: grid; gap: 10px; margin-top: 14px; }
+.choice { text-align: left; padding: 13px 14px; background: rgba(255,255,255,.04); color: var(--text); border-color: rgba(255,255,255,.06); }
+.choice.correct { background: rgba(121,242,167,.14); border-color: rgba(121,242,167,.34); color: #e8fff1; }
+.choice.wrong { background: rgba(255,138,138,.13); border-color: rgba(255,138,138,.30); color: #ffe8e8; }
+.explanation { display: none; margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.04); color: var(--muted); line-height: 1.6; }
+.explanation.show { display: block; }
+.footer-note { margin-top: 24px; padding: 18px 20px; }
+.small { font-size: .9rem; }
+@media (max-width: 1180px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; }
+  .cards, .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mock-grid, .grid-2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .layout { padding: 14px; gap: 18px; }
+  .hero, .section, .callout, .footer-note { border-radius: 18px; }
+  .cards, .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .hero { padding: 24px; }
+  .section { padding: 18px; }
+}
+</style>
+</head>
+<body>
+  <div class="layout">
+    
+<aside class="sidebar">
+  <div class="side-head">
+    <span class="eyebrow">Mini curso</span>
+    <h2>Progreso</h2>
+    <p>Curso secuencial con referencias al .md, pseudocódigo, diagramas y quizzes.</p>
+  </div>
+  <nav class="course-nav"><a class="step " href="index.html"><span>01</span>Inicio</a><a class="step " href="01-overview.html"><span>02</span>01 Overview</a><a class="step " href="02-user-vs-campususer.html"><span>03</span>02 User vs CampusUser</a><a class="step " href="03-coalition.html"><span>04</span>03 Coalition</a><a class="step " href="04-snapshots.html"><span>05</span>04 Snapshots</a><a class="step " href="05-cursors-syncmetadata.html"><span>06</span>05 Cursors + SyncMetadata</a><a class="step " href="06-friends-preferences.html"><span>07</span>06 Friends + Preferences</a><a class="step " href="07-orm-syntax.html"><span>08</span>07 ORM Syntax</a><a class="step " href="08-migrations.html"><span>09</span>08 Migrations</a><a class="step " href="09-data-flow-and-views.html"><span>10</span>09 Data Flow + Views</a><a class="step active" href="10-review-final.html"><span>11</span>10 Review Final</a></nav>
+  <div class="pager"><a class="ghost-btn" href="09-data-flow-and-views.html">← Anterior</a><a class="ghost-btn" href="index.html">Índice</a><span></span></div>
+</aside>
+    <main class="main">
+      <header class="hero">
+        <span class="eyebrow">Curso visual · Modelos de base de datos</span>
+        <h1>10. Revisión final y quiz largo</h1>
+        <p class="lead">Resumen global, frases para evaluación, checklist de comprensión y quiz final de 50 preguntas.</p>
+        <div class="badges">
+          <span class="badge">🧩 Django ORM</span>
+          <span class="badge">🐘 PostgreSQL</span>
+          <span class="badge">🌐 API 42</span>
+          <span class="badge">🔄 Sync local</span>
+          <span class="badge">📚 Referencias al repo</span>
+        </div>
+      </header>
+      
+<section class="section">
+  <div class="section-head"><div><h2>Resumen global</h2><p>Si tuvieras que defender el sistema en dos minutos, esta es la estructura mental compacta.</p></div></div>
+  <div class="cards">
+    <article class="stat-card tone-blue"><h3>Auth interna</h3><p>User maneja login, sesión y permisos. No es el centro del dominio.</p></article>
+    <article class="stat-card tone-green"><h3>Dominio sincronizado</h3><p>CampusUser y Coalition concentran el estado actual que la app consulta.</p></article>
+    <article class="stat-card tone-violet"><h3>Tiempo e incremental</h3><p>Snapshots guardan histórico; cursores guardan el punto de reanudación.</p></article>
+    <article class="stat-card tone-orange"><h3>Operación</h3><p>SyncMetadata explica frescura y observabilidad del sync.</p></article>
+    <article class="stat-card tone-gold"><h3>Producto propio</h3><p>FriendsList y UserPreferences viven al margen de 42.</p></article>
+    <article class="stat-card tone-pink"><h3>Evolución</h3><p>Migraciones crean, mueven y limpian el esquema a lo largo del tiempo.</p></article>
+  </div>
+</section>
+<section class="section">
+  <div class="section-head"><div><h2>Mapa mental final</h2><p>Versión ultra corta para memorizar.</p></div></div>
+  <div class="pseudo-block" data-label="Mapa mental"><pre>FUNCIÓN explicar_modelo_en_evaluación():
+
+    decir que User = auth interna
+    decir que CampusUser = centro del dominio sincronizado
+    decir que Coalition = estado actual local
+    decir que snapshots = histórico
+    decir que cursores = sync incremental
+    decir que SyncMetadata = last_sync
+    decir que FriendsList y UserPreferences = datos propios de la app</pre></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 10, 11 y 12, línea aproximada 1433</p>
+</section>
+<section class="section">
+  <div class="section-head"><div><h2>Frases para evaluación</h2><p>Frases cortas y defendibles que salen directamente del espíritu del .md.</p></div></div>
+  <div class="grid-3">
+    <article class="card"><h3>User</h3><p>“User es el usuario interno de Django y lo usamos para autenticación y sesión.”</p></article>
+    <article class="card"><h3>CampusUser</h3><p>“CampusUser es el modelo central del dominio: guarda la identidad y métricas sincronizadas desde la API de 42.”</p></article>
+    <article class="card"><h3>Coalition</h3><p>“Coalition representa cada coalición localmente con su score total actual y metadatos visuales.”</p></article>
+    <article class="card"><h3>Snapshots</h3><p>“Los snapshots guardan fotos diarias para calcular evolución histórica.”</p></article>
+    <article class="card"><h3>App data</h3><p>“FriendsList y UserPreferences son datos propios de la app, no vienen de 42.”</p></article>
+    <article class="card"><h3>Migraciones</h3><p>“Las migraciones son el mecanismo con el que Django crea y evoluciona el esquema SQL.”</p></article>
+  </div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 10. Qué decir en evaluación, línea aproximada 1433</p>
+</section>
+<section class="section">
+  <div class="section-head"><div><h2>Errores comunes</h2><p>Los fallos de discurso y de arquitectura que más conviene evitar.</p></div></div>
+  <ul class="risk-list">
+    <li><strong>Confusión 1:</strong> llamar a <code>User</code> “modelo central”. El central del dominio es <code>CampusUser</code>.</li>
+    <li><strong>Confusión 2:</strong> tratar <code>Coalition</code> como histórico. Es estado actual.</li>
+    <li><strong>Confusión 3:</strong> no distinguir snapshot frente a cursor.</li>
+    <li><strong>Confusión 4:</strong> olvidar que <code>FriendsList</code> y <code>UserPreferences</code> son datos propios del producto.</li>
+    <li><strong>Confusión 5:</strong> ignorar migraciones e intentar explicar solo los modelos actuales sin la historia del esquema.</li>
+  </ul>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 9. Errores comunes, línea aproximada 1372</p>
+</section>
+<section class="section">
+  <div class="section-head"><div><h2>Checklist de comprensión</h2><p>Marca mentalmente lo que ya dominas antes del quiz final.</p></div></div>
+  <ul class="list">
+    <li><strong>Checklist:</strong> sé explicar qué es <code>User</code> y por qué no sustituye a <code>CampusUser</code>.</li>
+    <li><strong>Checklist:</strong> sé explicar qué guarda <code>Coalition</code> y por qué no es histórico.</li>
+    <li><strong>Checklist:</strong> sé explicar qué es un snapshot y qué es un cursor.</li>
+    <li><strong>Checklist:</strong> sé explicar para qué sirve <code>SyncMetadata</code>.</li>
+    <li><strong>Checklist:</strong> sé distinguir datos de 42 de datos propios de la app.</li>
+    <li><strong>Checklist:</strong> sé citar migraciones clave y el flujo API 42 → sync → DB → endpoints → frontend.</li>
+  </ul>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 11. Checklist de comprensión, línea aproximada 1461</p>
+</section>
+<section class="section">
+  <div class="section-head"><div><h2>Tabla de cobertura completa</h2><p>Confirmación final de que no quedó fuera ninguna sección importante del documento fuente.</p></div></div>
+  <div class="table-wrap"><table><thead><tr><th>Sección del .md</th><th>Página HTML</th><th>Estado</th></tr></thead><tbody><tr><td>1. Resumen general</td><td><code>01-overview.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>Fuente de verdad local</td><td><code>01-overview.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>Diferencia entre las piezas principales</td><td><code>01-overview.html</code>, <code>02-user-vs-campususer.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>2. Diagrama Mermaid ERD</td><td><code>01-overview.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>3. Tabla resumen de modelos</td><td><code>index.html</code>, <code>01-overview.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>4.1 User</td><td><code>02-user-vs-campususer.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>4.2 Coalition</td><td><code>03-coalition.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>4.3 CoalitionScoreSnapshot</td><td><code>04-snapshots.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>4.4 CoalitionProjectCursor</td><td><code>05-cursors-syncmetadata.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>4.5 CampusUser</td><td><code>02-user-vs-campususer.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>4.6 CoalitionEvaluationCursor</td><td><code>05-cursors-syncmetadata.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>4.7 CampusUserScoreSnapshot</td><td><code>04-snapshots.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>4.8 SyncMetadata</td><td><code>05-cursors-syncmetadata.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>4.9 FriendsList</td><td><code>06-friends-preferences.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>4.10 UserPreferences</td><td><code>06-friends-preferences.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>4.11 authentication/models.py sin modelos activos</td><td><code>08-migrations.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>4.12 coalitions/models.py sin modelos activos</td><td><code>03-coalition.html</code>, <code>08-migrations.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>5. Sintaxis Django ORM</td><td><code>07-orm-syntax.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>6. Cómo se crean estas tablas / migraciones</td><td><code>08-migrations.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>7. Flujo de datos con Mermaid</td><td><code>01-overview.html</code>, <code>09-data-flow-and-views.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>8. Comandos útiles</td><td><code>08-migrations.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>9. Errores comunes</td><td><code>10-review-final.html</code> y páginas temáticas</td><td><span class="status-covered">cubierto</span></td></tr><tr><td>10. Qué decir en evaluación</td><td><code>10-review-final.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>11. Checklist de comprensión</td><td><code>10-review-final.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>12. Pseudocódigo global</td><td><code>01-overview.html</code> y <code>10-review-final.html</code></td><td><span class="status-covered">cubierto</span></td></tr><tr><td>Verificación extra de rutas y stores reales</td><td><code>09-data-flow-and-views.html</code></td><td><span class="status-na">no aplica</span></td></tr></tbody></table></div>
+</section>
+
+<section class="quiz-section section">
+  <div class="section-head split">
+    <div>
+      <h2>Quiz de la página</h2>
+      <p>Responde antes de avanzar. El feedback marca correcto o incorrecto y te recuerda la referencia.</p>
+    </div>
+    <div class="quiz-toolbar">
+      <span class="score-pill" id="quiz10-score">0 / 50 correctas</span>
+      <button class="ghost-btn" data-reset-quiz="quiz10">Reiniciar</button>
+    </div>
+  </div>
+  <div class="quiz-grid" data-quiz-id="quiz10">
+    
+<article class="quiz-card" data-question>
+  <h3>1. ¿Qué significa 'fuente de verdad local' en este proyecto?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto. La UI no depende de lecturas directas a 42.">Que PostgreSQL local concentra los datos consultados por backend y frontend</button><button class="choice" data-correct="false" data-explanation="Incorrecto. El flujo va por sync y base local.">Que el frontend consulta la API 42 sin pasar por Django</button><button class="choice" data-correct="false" data-explanation="User solo cubre auth.">Que User sustituye a todos los modelos</button><button class="choice" data-correct="false" data-explanation="No.">Que los snapshots son la única tabla importante</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección Fuente de verdad local, línea aproximada 14</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>2. ¿Cuál es el modelo central del dominio?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto. El .md lo presenta así.">CampusUser</button><button class="choice" data-correct="false" data-explanation="User es auth interna.">User</button><button class="choice" data-correct="false" data-explanation="Es metadato operativo.">SyncMetadata</button><button class="choice" data-correct="false" data-explanation="Es capa social.">FriendsList</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.5 CampusUser, línea aproximada 467</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>3. ¿Qué modelo representa la foto actual local de cada coalición?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto. Coalition guarda el presente.">Coalition</button><button class="choice" data-correct="false" data-explanation="Ese es el histórico diario.">CoalitionScoreSnapshot</button><button class="choice" data-correct="false" data-explanation="Ese es histórico individual.">CampusUserScoreSnapshot</button><button class="choice" data-correct="false" data-explanation="No.">UserPreferences</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.2 Coalition, línea aproximada 267</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>4. ¿Para qué sirven los snapshots?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Para guardar histórico y comparar evolución</button><button class="choice" data-correct="false" data-explanation="No.">Para autenticar usuarios</button><button class="choice" data-correct="false" data-explanation="No lo sustituyen.">Para sustituir el estado actual</button><button class="choice" data-correct="false" data-explanation="Eso es UserPreferences.">Para guardar tema y avatar</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.3 y 4.7 Snapshots, línea aproximada 340</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>5. ¿Qué problema resuelven los cursores?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Continuar el sync de forma incremental sin recontar todo</button><button class="choice" data-correct="false" data-explanation="No.">Renderizar el frontend</button><button class="choice" data-correct="false" data-explanation="No.">Guardar amistades</button><button class="choice" data-correct="false" data-explanation="No.">Aplicar migraciones</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.4 y 4.6, línea aproximada 409</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>6. ¿Qué modelo usa Django para autenticación interna?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">User</button><button class="choice" data-correct="false" data-explanation="CampusUser es dominio.">CampusUser</button><button class="choice" data-correct="false" data-explanation="No.">Coalition</button><button class="choice" data-correct="false" data-explanation="No.">FriendsList</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.1 User, línea aproximada 209</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>7. ¿Qué modelo contiene intra_id, login y level?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">CampusUser</button><button class="choice" data-correct="false" data-explanation="User no guarda eso.">User</button><button class="choice" data-correct="false" data-explanation="No.">SyncMetadata</button><button class="choice" data-correct="false" data-explanation="No.">UserPreferences</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.5 CampusUser, línea aproximada 467</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>8. ¿Qué relación une CampusUser con User?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">OneToOne opcional</button><button class="choice" data-correct="false" data-explanation="No.">ManyToMany</button><button class="choice" data-correct="false" data-explanation="No.">ForeignKey muchos-a-uno</button><button class="choice" data-correct="false" data-explanation="Sí la hay.">Ninguna</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.5 CampusUser, línea aproximada 467</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>9. ¿Qué hace SET_NULL en CampusUser.django_user?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Si borras User, el enlace queda en NULL</button><button class="choice" data-correct="false" data-explanation="Eso sería CASCADE.">Borra CampusUser en cascada</button><button class="choice" data-correct="false" data-explanation="No.">Impide borrar User</button><button class="choice" data-correct="false" data-explanation="No.">Crea otro User automáticamente</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 5. on_delete, línea aproximada 947</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>10. ¿Qué significa unique=True en intra_id?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">No puede repetirse el mismo intra_id</button><button class="choice" data-correct="false" data-explanation="Eso sería blank/null.">Se puede dejar vacío</button><button class="choice" data-correct="false" data-explanation="No.">Se ordena por intra_id</button><button class="choice" data-correct="false" data-explanation="No.">Se sincroniza solo</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 5. unique, línea aproximada 947</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>11. ¿Qué tabla representa Coalition?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">sync_coalition</button><button class="choice" data-correct="false" data-explanation="Esa etapa antigua se eliminó.">coalitions_coalition</button><button class="choice" data-correct="false" data-explanation="No.">users_coalition</button><button class="choice" data-correct="false" data-explanation="No.">auth_coalition</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.2 Coalition, línea aproximada 267</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>12. ¿Qué guarda total_score?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">La puntuación total actual de la coalición</button><button class="choice" data-correct="false" data-explanation="No.">La suma histórica de snapshots</button><button class="choice" data-correct="false" data-explanation="No.">El score del líder</button><button class="choice" data-correct="false" data-explanation="No.">Solo el número de miembros</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.2 Coalition, línea aproximada 267</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>13. ¿Qué método devuelve algo como 'name (coalition_id)'?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">__str__</button><button class="choice" data-correct="false" data-explanation="No.">Meta</button><button class="choice" data-correct="false" data-explanation="No.">related_name</button><button class="choice" data-correct="false" data-explanation="No.">Index</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.2 Coalition / __str__, línea aproximada 267</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>14. ¿Qué relación sale de Coalition hacia CoalitionScoreSnapshot?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Uno a muchos</button><button class="choice" data-correct="false" data-explanation="No.">OneToOne</button><button class="choice" data-correct="false" data-explanation="No.">ManyToMany</button><button class="choice" data-correct="false" data-explanation="Sí la hay.">Ninguna</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.3 CoalitionScoreSnapshot, línea aproximada 340</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>15. ¿Qué relación tiene Coalition con CoalitionProjectCursor?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">OneToOne</button><button class="choice" data-correct="false" data-explanation="No.">ManyToMany</button><button class="choice" data-correct="false" data-explanation="Sí existe.">Sin relación</button><button class="choice" data-correct="false" data-explanation="No.">ForeignKey inversa desde User</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.4 CoalitionProjectCursor, línea aproximada 409</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>16. ¿Qué guarda CoalitionScoreSnapshot?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">La foto diaria de score y campus_rank de una coalición</button><button class="choice" data-correct="false" data-explanation="Eso es Coalition.">La configuración visual actual</button><button class="choice" data-correct="false" data-explanation="No.">El cursor incremental</button><button class="choice" data-correct="false" data-explanation="No.">Las preferencias de usuario</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.3 CoalitionScoreSnapshot, línea aproximada 340</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>17. ¿Qué guarda CampusUserScoreSnapshot?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">La foto diaria de score y ranks de un CampusUser</button><button class="choice" data-correct="false" data-explanation="Eso es CampusUser.">El perfil actual completo</button><button class="choice" data-correct="false" data-explanation="No.">El estado del sync global</button><button class="choice" data-correct="false" data-explanation="No.">La lista de amigos</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.7 CampusUserScoreSnapshot, línea aproximada 649</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>18. ¿Qué diferencia clave hay entre ambos snapshots?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Uno resume evolución de coaliciones y otro de usuarios</button><button class="choice" data-correct="false" data-explanation="No.">Uno es real y otro mock</button><button class="choice" data-correct="false" data-explanation="No.">Uno es auth y otro sync</button><button class="choice" data-correct="false" data-explanation="Sí la hay.">No hay diferencia</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.3 y 4.7, línea aproximada 340</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>19. ¿Para qué sirve unique_together en snapshots?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Para impedir dos snapshots de la misma entidad en el mismo día</button><button class="choice" data-correct="false" data-explanation="No.">Para ordenar por fecha</button><button class="choice" data-correct="false" data-explanation="No.">Para crear relación con User</button><button class="choice" data-correct="false" data-explanation="No.">Para activar ManyToMany</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.3 / 4.7 y 5. Meta, línea aproximada 340</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>20. ¿Qué aceleran los indexes de snapshots?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Consultas por entidad y fecha</button><button class="choice" data-correct="false" data-explanation="No.">Carga de avatares</button><button class="choice" data-correct="false" data-explanation="No.">Login OAuth</button><button class="choice" data-correct="false" data-explanation="No.">__str__</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.3 / 4.7 indexes, línea aproximada 340</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>21. ¿Qué guarda CoalitionProjectCursor?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">El último score event de proyectos procesado por coalición</button><button class="choice" data-correct="false" data-explanation="No.">El histórico diario de proyectos</button><button class="choice" data-correct="false" data-explanation="No.">La sesión del usuario</button><button class="choice" data-correct="false" data-explanation="No.">El avatar custom</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.4 CoalitionProjectCursor, línea aproximada 409</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>22. ¿Qué guarda CoalitionEvaluationCursor?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">El último score event de evaluaciones procesado por coalición</button><button class="choice" data-correct="false" data-explanation="No.">La lista de amigos</button><button class="choice" data-correct="false" data-explanation="No.">El último login</button><button class="choice" data-correct="false" data-explanation="No.">La fecha del snapshot</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.6 CoalitionEvaluationCursor, línea aproximada 603</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>23. ¿Qué significa sync incremental?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Continuar desde el último evento procesado</button><button class="choice" data-correct="false" data-explanation="No.">Borrar la base y recalcular todo</button><button class="choice" data-correct="false" data-explanation="No.">Sincronizar solo CSS</button><button class="choice" data-correct="false" data-explanation="No.">Consultar 42 desde el frontend</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.4 / 4.6, línea aproximada 409</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>24. ¿Cuál es un riesgo de cursor mal posicionado?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Duplicar o saltarte eventos</button><button class="choice" data-correct="false" data-explanation="No.">Romper __str__</button><button class="choice" data-correct="false" data-explanation="No.">Eliminar unique_together</button><button class="choice" data-correct="false" data-explanation="No.">Cambiar a ManyToMany</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.4 y 4.6 riesgos, línea aproximada 409</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>25. ¿Cuántos cursores hay por coalición y flujo?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Uno de proyectos y uno de evaluaciones por coalición</button><button class="choice" data-correct="false" data-explanation="Incorrecto.">Un cursor global para toda la app</button><button class="choice" data-correct="false" data-explanation="No.">Un cursor por usuario</button><button class="choice" data-correct="false" data-explanation="Sí existen.">Ninguno</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.4 y 4.6, línea aproximada 409</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>26. ¿Qué representa FriendsList?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">La red social mínima del proyecto</button><button class="choice" data-correct="false" data-explanation="No.">Un perfil académico sincronizado</button><button class="choice" data-correct="false" data-explanation="No.">El historial de migraciones</button><button class="choice" data-correct="false" data-explanation="No.">El estado actual de coaliciones</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.9 FriendsList, línea aproximada 761</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>27. ¿Qué relación une FriendsList con User?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">OneToOne mediante owner</button><button class="choice" data-correct="false" data-explanation="No.">ManyToMany</button><button class="choice" data-correct="false" data-explanation="No.">ForeignKey opcional</button><button class="choice" data-correct="false" data-explanation="Sí la hay.">Ninguna</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.9 FriendsList, línea aproximada 761</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>28. ¿Qué significa friends = ManyToManyField('self', symmetrical=True)?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">La amistad es autorreferencial y simétrica</button><button class="choice" data-correct="false" data-explanation="No.">Solo se puede tener un amigo</button><button class="choice" data-correct="false" data-explanation="No.">Borra el owner</button><button class="choice" data-correct="false" data-explanation="No.">Es un OneToOne</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.9 FriendsList, línea aproximada 761</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>29. ¿Para qué sirven friends_requests_received y friends_requests_sent?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Para modelar solicitudes pendientes en ambos sentidos</button><button class="choice" data-correct="false" data-explanation="No.">Para guardar snapshots</button><button class="choice" data-correct="false" data-explanation="No.">Para ordenar coaliciones</button><button class="choice" data-correct="false" data-explanation="No.">Para reemplazar friends</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.9 FriendsList, línea aproximada 761</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>30. ¿Qué modelo guarda custom_avatar y theme_mode?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">UserPreferences</button><button class="choice" data-correct="false" data-explanation="No.">CampusUser</button><button class="choice" data-correct="false" data-explanation="No.">SyncMetadata</button><button class="choice" data-correct="false" data-explanation="No.">Coalition</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.10 UserPreferences, línea aproximada 832</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>31. ¿Qué heredan todos los modelos Django del repo?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">models.Model</button><button class="choice" data-correct="false" data-explanation="No.">forms.Model</button><button class="choice" data-correct="false" data-explanation="No.">serializers.Model</button><button class="choice" data-correct="false" data-explanation="No.">queries.Model</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 5. models.Model, línea aproximada 947</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>32. ¿Qué campo del repo es un CharField claro?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Coalition.name</button><button class="choice" data-correct="false" data-explanation="Eso es IntegerField.">Coalition.total_score</button><button class="choice" data-correct="false" data-explanation="Eso es DecimalField.">CampusUser.level</button><button class="choice" data-correct="false" data-explanation="Eso es DateTimeField.">SyncMetadata.last_time_update</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 5. CharField, línea aproximada 947</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>33. ¿Por qué CampusUser.level usa DecimalField y no FloatField?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Porque el repo usa DecimalField activo y no se ve FloatField activo</button><button class="choice" data-correct="false" data-explanation="Sí existe.">Porque FloatField no existe</button><button class="choice" data-correct="false" data-explanation="No.">Porque level es texto</button><button class="choice" data-correct="false" data-explanation="No.">Porque es una ForeignKey</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 5. FloatField / DecimalField, línea aproximada 947</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>34. ¿Qué significa ForeignKey en snapshots?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Muchos snapshots apuntan a un padre</button><button class="choice" data-correct="false" data-explanation="No.">Un único snapshot para todo el sistema</button><button class="choice" data-correct="false" data-explanation="No.">Relación simétrica</button><button class="choice" data-correct="false" data-explanation="No.">Borrado nulo</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 5. ForeignKey, línea aproximada 947</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>35. ¿Qué te permite related_name='score_snapshots'?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Leer coalition.score_snapshots.all()</button><button class="choice" data-correct="false" data-explanation="No.">Autenticar usuarios</button><button class="choice" data-correct="false" data-explanation="No.">Evitar migraciones</button><button class="choice" data-correct="false" data-explanation="No.">Cambiar el tipo de campo</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 5. related_name, línea aproximada 947</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>36. ¿Qué son las migraciones según el .md?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Archivos Python que describen cambios del esquema SQL</button><button class="choice" data-correct="false" data-explanation="No.">Backups del frontend</button><button class="choice" data-correct="false" data-explanation="No.">Snapshots diarios</button><button class="choice" data-correct="false" data-explanation="No.">Respuestas de la API 42</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 6. Qué son migraciones, línea aproximada 1201</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>37. ¿Qué comando aplica migraciones en este repo?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">make back-migrate</button><button class="choice" data-correct="false" data-explanation="No.">make front-migrate</button><button class="choice" data-correct="false" data-explanation="No.">python manage.py runserver</button><button class="choice" data-correct="false" data-explanation="No.">make sync-only</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 6. Cómo se aplican, línea aproximada 1201</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>38. ¿Qué comando muestra el estado de migraciones?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">make back-showmigrations</button><button class="choice" data-correct="false" data-explanation="Eso abre shell.">make back-shell</button><button class="choice" data-correct="false" data-explanation="No.">make show-schema</button><button class="choice" data-correct="false" data-explanation="No.">make back-syncapi</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 6. Cómo ver su estado, línea aproximada 1201</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>39. ¿Qué migración crea Coalition en sync?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">0005_coalition.py</button><button class="choice" data-correct="false" data-explanation="No.">0012_syncmetadata.py</button><button class="choice" data-correct="false" data-explanation="No.">0003_delete_coalition.py</button><button class="choice" data-correct="false" data-explanation="No.">0001_initial.py de users</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 6. Migraciones relevantes, línea aproximada 1201</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>40. ¿Qué migración crea los snapshots?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">0010_coalitionscoresnapshot_campususerscoresnapshot.py</button><button class="choice" data-correct="false" data-explanation="No.">0015_campususer_coalitions_user_id_and_cursor.py</button><button class="choice" data-correct="false" data-explanation="No.">0014_coalitionprojectcursor.py</button><button class="choice" data-correct="false" data-explanation="No.">0011_delete_fortytwoprofile.py</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 6. Migraciones relevantes, línea aproximada 1201</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>41. ¿Qué endpoint alimenta /status?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">/api/status/</button><button class="choice" data-correct="false" data-explanation="No.">/api/coalitions/</button><button class="choice" data-correct="false" data-explanation="No.">/api/users/details/</button><button class="choice" data-correct="false" data-explanation="No.">/api/auth/me/</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 7. Flujo de datos, línea aproximada 1278</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>42. ¿Qué modelo usa principalmente /status?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">SyncMetadata</button><button class="choice" data-correct="false" data-explanation="No.">FriendsList</button><button class="choice" data-correct="false" data-explanation="No.">UserPreferences</button><button class="choice" data-correct="false" data-explanation="No.">CampusUserScoreSnapshot</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.8 SyncMetadata, línea aproximada 710</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>43. ¿Qué endpoint usa la lista de /coalitions?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">/api/coalitions/</button><button class="choice" data-correct="false" data-explanation="No.">/api/status/</button><button class="choice" data-correct="false" data-explanation="No.">/api/users/friends/</button><button class="choice" data-correct="false" data-explanation="No.">/api/coalitions/details/ solamente</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 7. Flujo de datos, línea aproximada 1278</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>44. ¿Qué modelos alimentan con más claridad /leaderboard?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">CampusUser y Coalition</button><button class="choice" data-correct="false" data-explanation="No.">UserPreferences y SyncMetadata</button><button class="choice" data-correct="false" data-explanation="No.">FriendsList y User</button><button class="choice" data-correct="false" data-explanation="No.">Solo User</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.5 CampusUser + 4.2 Coalition, línea aproximada 467</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>45. ¿Qué endpoint usa el ranking de usuarios?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">/api/coalitions/users-ranking/</button><button class="choice" data-correct="false" data-explanation="No.">/api/users/details/</button><button class="choice" data-correct="false" data-explanation="No.">/api/status/</button><button class="choice" data-correct="false" data-explanation="No.">/api/coalitions/details/</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 7. Flujo de datos, línea aproximada 1278</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>46. ¿Qué bloque de CampusUser está denormalizado respecto a la coalición?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">coalition_id, coalition_name, coalition_slug y coalition_user_score</button><button class="choice" data-correct="false" data-explanation="Eso pertenece a User.">username y password</button><button class="choice" data-correct="false" data-explanation="Eso es FriendsList.">friends y pending requests</button><button class="choice" data-correct="false" data-explanation="Eso es UserPreferences.">custom_avatar y theme_mode</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.5 CampusUser, línea aproximada 467</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>47. ¿Qué síntoma aparece si los snapshots están vacíos?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">No hay evolución histórica útil</button><button class="choice" data-correct="false" data-explanation="No.">La API 42 deja de responder</button><button class="choice" data-correct="false" data-explanation="No.">User pierde permisos</button><button class="choice" data-correct="false" data-explanation="No.">SyncMetadata desaparece</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 9. Snapshots vacíos, línea aproximada 1372</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>48. ¿Cuál es un riesgo de cursor mal posicionado?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Duplicar o saltarte eventos</button><button class="choice" data-correct="false" data-explanation="No.">Romper __str__</button><button class="choice" data-correct="false" data-explanation="No.">Eliminar unique_together</button><button class="choice" data-correct="false" data-explanation="No.">Cambiar a ManyToMany</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.4 y 4.6 riesgos, línea aproximada 409</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>49. ¿Qué riesgo explican las migraciones pendientes?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Que falten tablas o columnas y fallen vistas nuevas</button><button class="choice" data-correct="false" data-explanation="No.">Que baje el color de las coaliciones</button><button class="choice" data-correct="false" data-explanation="No.">Que Django pierda __str__</button><button class="choice" data-correct="false" data-explanation="No.">Que cambie theme_mode</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 9. Migraciones pendientes, línea aproximada 1372</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>50. ¿Qué puede fallar en /coalitions si Coalition o CampusUser están vacíos?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Score, conteos, medias y color pueden salir vacíos o incompletos</button><button class="choice" data-correct="false" data-explanation="No.">Las migraciones cambian solas</button><button class="choice" data-correct="false" data-explanation="No.">FriendsList acepta solicitudes solo</button><button class="choice" data-correct="false" data-explanation="No.">statusApi cambia de endpoint</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección Errores comunes + flujo local, línea aproximada 1372</p>
+</article>
+  </div>
+</section>
+
+      <div class="footer-note small">
+        Fuente principal obligatoria: <code>doc/database-models-explained.md</code>. Verificación adicional contra modelos, migraciones, rutas y stores reales del repo. Página autocontenida y sin dependencias externas.
+      </div>
+    </main>
+  </div>
+  <script>
+document.querySelectorAll('[data-reset-quiz]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const quizId = button.dataset.resetQuiz;
+    const container = document.querySelector(`[data-quiz-id="${quizId}"]`);
+    if (!container) return;
+    container.querySelectorAll('[data-question]').forEach((card) => {
+      card.dataset.answered = 'false';
+      card.querySelectorAll('.choice').forEach((choice) => {
+        choice.disabled = false;
+        choice.classList.remove('correct', 'wrong');
+      });
+      const explanation = card.querySelector('.explanation');
+      explanation.textContent = '';
+      explanation.classList.remove('show');
+    });
+    const scoreEl = document.getElementById(`${quizId}-score`);
+    if (scoreEl) {
+      scoreEl.textContent = `0 / ${container.querySelectorAll('[data-question]').length} correctas`;
+    }
+  });
+});
+
+document.querySelectorAll('[data-quiz-id]').forEach((container) => {
+  const quizId = container.dataset.quizId;
+  const scoreEl = document.getElementById(`${quizId}-score`);
+  let correct = 0;
+  const update = () => {
+    if (scoreEl) {
+      scoreEl.textContent = `${correct} / ${container.querySelectorAll('[data-question]').length} correctas`;
+    }
+  };
+  container.querySelectorAll('[data-question]').forEach((card) => {
+    card.dataset.answered = 'false';
+    const explanation = card.querySelector('.explanation');
+    card.querySelectorAll('.choice').forEach((choice) => {
+      choice.addEventListener('click', () => {
+        if (card.dataset.answered === 'true') return;
+        card.dataset.answered = 'true';
+        const isCorrect = choice.dataset.correct === 'true';
+        if (isCorrect) correct += 1;
+        card.querySelectorAll('.choice').forEach((button) => {
+          const ok = button.dataset.correct === 'true';
+          button.disabled = true;
+          button.classList.add(ok ? 'correct' : 'wrong');
+        });
+        choice.classList.remove('wrong');
+        choice.classList.add(isCorrect ? 'correct' : 'wrong');
+        explanation.textContent = choice.dataset.explanation;
+        explanation.classList.add('show');
+        update();
+      });
+    });
+  });
+  update();
+});
+</script>
+</body>
+</html>

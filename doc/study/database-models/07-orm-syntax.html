@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>07 Sintaxis ORM</title>
+  <style>
+:root {
+  --bg: #07101d;
+  --panel: rgba(14, 23, 41, 0.92);
+  --line: rgba(151, 168, 198, 0.18);
+  --text: #edf4ff;
+  --muted: #9caecc;
+  --brand: #7cc7ff;
+  --green: #8cf2cb;
+  --gold: #ffd37c;
+  --violet: #b8a4ff;
+  --pink: #f4a6ff;
+  --orange: #ffb37a;
+  --radius: 22px;
+  --radius-sm: 16px;
+  --shadow: 0 28px 70px rgba(0, 0, 0, .34);
+  --mono: "SFMono-Regular", Consolas, Menlo, monospace;
+  --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: var(--sans);
+  color: var(--text);
+  background:
+    radial-gradient(circle at top right, rgba(124,199,255,.12), transparent 28%),
+    radial-gradient(circle at 20% 0%, rgba(140,242,203,.08), transparent 24%),
+    linear-gradient(180deg, #06101a 0%, #09121f 48%, #08121f 100%);
+  min-height: 100vh;
+}
+a { color: inherit; text-decoration: none; }
+code { font-family: var(--mono); color: #d9f1ff; }
+.layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 24px; max-width: 1560px; margin: 0 auto; padding: 24px; }
+.sidebar { position: sticky; top: 18px; align-self: start; border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; background: rgba(7,16,29,.76); backdrop-filter: blur(14px); box-shadow: var(--shadow); }
+.side-head h2 { margin: 10px 0 8px; font-size: 1.15rem; }
+.side-head p { margin: 0 0 16px; color: var(--muted); line-height: 1.6; font-size: .93rem; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(124,199,255,.24); color: var(--brand); background: rgba(124,199,255,.08); font-size: .85rem; }
+.course-nav { display: grid; gap: 8px; }
+.step { display: grid; grid-template-columns: 42px 1fr; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 15px; border: 1px solid transparent; background: rgba(255,255,255,.02); color: var(--muted); transition: .18s ease; }
+.step span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 12px; background: rgba(255,255,255,.05); font-family: var(--mono); font-size: .8rem; color: var(--text); }
+.step:hover, .step.active { color: var(--text); border-color: rgba(124,199,255,.28); background: rgba(124,199,255,.08); transform: translateX(2px); }
+.pager { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.main { min-width: 0; }
+.hero, .section, .callout, .footer-note {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+}
+.hero { padding: 32px; position: relative; overflow: hidden; }
+.hero::after { content: ""; position: absolute; right: -50px; bottom: -50px; width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle, rgba(124,199,255,.2), transparent 68%); }
+h1 { margin: 0; font-size: clamp(2rem, 3vw, 3.15rem); line-height: 1.04; letter-spacing: -.04em; }
+.lead { margin: 16px 0 0; color: var(--muted); line-height: 1.75; max-width: 920px; }
+.badges, .cards, .grid-2, .grid-3, .chips, .legend, .timeline { display: flex; flex-wrap: wrap; gap: 10px; }
+.badge, .chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.04); }
+.badge { margin-top: 18px; }
+.chip { color: var(--muted); font-size: .84rem; }
+.section { margin-top: 24px; padding: 22px; }
+.section-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; align-items: flex-end; margin-bottom: 18px; }
+.section-head h2 { margin: 0; font-size: clamp(1.35rem, 2vw, 1.95rem); letter-spacing: -.03em; }
+.section-head p { margin: 8px 0 0; color: var(--muted); line-height: 1.65; max-width: 900px; }
+.section-head.split { align-items: center; }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card, .stat-card, .compare-card, .mini-panel, .mockup, .quiz-card, .syntax-card, .timeline-item {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,.03);
+  padding: 18px;
+}
+.card h3, .stat-card h3, .compare-card h3, .syntax-card h3, .timeline-item h3 { margin: 0 0 10px; font-size: 1.04rem; }
+.card p, .stat-card p, .compare-card p, .mini-panel p, .syntax-card p, .timeline-item p, .reference, .footer-note, .callout p, .mockup-subtitle { color: var(--muted); line-height: 1.65; }
+.tone-blue { box-shadow: inset 0 0 0 1px rgba(124,199,255,.08); }
+.tone-green { box-shadow: inset 0 0 0 1px rgba(140,242,203,.09); }
+.tone-gold { box-shadow: inset 0 0 0 1px rgba(255,211,124,.09); }
+.tone-violet { box-shadow: inset 0 0 0 1px rgba(184,164,255,.09); }
+.tone-pink { box-shadow: inset 0 0 0 1px rgba(244,166,255,.09); }
+.tone-orange { box-shadow: inset 0 0 0 1px rgba(255,179,122,.09); }
+.list, .risk-list, .field-list { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.list li, .risk-list li, .field-list li { padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.04); color: var(--muted); }
+.list strong, .risk-list strong, .field-list strong { color: var(--text); }
+.code-block, .pseudo-block { margin-top: 12px; border-radius: 16px; overflow: auto; border: 1px solid rgba(124,199,255,.18); background: linear-gradient(180deg, rgba(12,21,39,.96), rgba(8,13,24,.96)); }
+.pseudo-block { position: relative; border-color: rgba(140,242,203,.16); box-shadow: inset 0 0 0 1px rgba(140,242,203,.08); }
+.pseudo-block::before { content: attr(data-label); position: absolute; top: 10px; right: 14px; font-size: .72rem; letter-spacing: .08em; color: var(--green); text-transform: uppercase; }
+pre { margin: 0; padding: 16px 18px; font-family: var(--mono); font-size: .9rem; line-height: 1.7; color: #dff2ff; white-space: pre-wrap; word-break: break-word; }
+.reference { font-size: .88rem; margin-top: 12px; }
+.table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 16px; }
+table { width: 100%; border-collapse: collapse; min-width: 760px; }
+th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid rgba(255,255,255,.05); vertical-align: top; }
+th { background: rgba(255,255,255,.04); font-size: .88rem; color: var(--brand); letter-spacing: .04em; text-transform: uppercase; }
+td { color: var(--muted); }
+.status-covered, .status-na { padding: 4px 8px; border-radius: 999px; display: inline-flex; }
+.status-covered { color: #dffdf1; background: rgba(121,242,167,.12); border: 1px solid rgba(121,242,167,.25); }
+.status-na { color: #fff0d1; background: rgba(255,211,124,.12); border: 1px solid rgba(255,211,124,.25); }
+.diagram { border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(180deg, rgba(11,18,31,.96), rgba(12,21,39,.96)); padding: 18px; overflow: auto; }
+svg { width: 100%; height: auto; min-width: 900px; display: block; }
+.node rect { fill: #0f1a31; stroke: rgba(159,176,207,.32); stroke-width: 2; rx: 18; }
+.node text.title { fill: var(--text); font-size: 20px; font-weight: 700; }
+.node text.meta { fill: #9fb0cf; font-size: 14px; }
+.arrow { stroke: rgba(124,199,255,.72); stroke-width: 3; fill: none; }
+.arrow2 { stroke: rgba(184,164,255,.72); stroke-width: 3; fill: none; }
+.legend { margin-top: 14px; color: var(--muted); font-size: .9rem; }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.legend i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; background: currentColor; }
+.mock-grid { display: grid; grid-template-columns: 1.1fr .95fr; gap: 16px; }
+.mockup { overflow: hidden; background: linear-gradient(180deg, rgba(8,14,25,.96), rgba(12,21,39,.98)); }
+.mockup-bar { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.03); }
+.mockup-bar span { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.25); }
+.mockup-bar strong { margin-left: 8px; font-size: .95rem; }
+.mockup-body { padding: 16px; display: grid; gap: 12px; }
+.mock-row { display: grid; grid-template-columns: 54px 1fr auto; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 15px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.05); }
+.mock-avatar { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: rgba(124,199,255,.12); border: 1px solid rgba(124,199,255,.22); font-weight: 700; color: #dff1ff; }
+.mock-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.mini-panel { padding: 14px; }
+.callout { padding: 18px; background: linear-gradient(140deg, rgba(140,242,203,.06), rgba(124,199,255,.05)), var(--panel); }
+.callout strong { display: block; margin-bottom: 6px; color: var(--text); }
+.ghost-btn, .btn, .choice { border: 1px solid transparent; border-radius: 14px; cursor: pointer; font: inherit; transition: .18s ease; }
+.ghost-btn, .btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 14px; }
+.ghost-btn { background: rgba(255,255,255,.04); color: var(--muted); border-color: var(--line); }
+.btn { background: rgba(124,199,255,.12); color: var(--text); border-color: rgba(124,199,255,.28); }
+.quiz-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.score-pill { padding: 10px 14px; border-radius: 999px; border: 1px solid rgba(124,199,255,.2); background: rgba(124,199,255,.08); }
+.quiz-grid { display: grid; gap: 16px; }
+.choice-list { display: grid; gap: 10px; margin-top: 14px; }
+.choice { text-align: left; padding: 13px 14px; background: rgba(255,255,255,.04); color: var(--text); border-color: rgba(255,255,255,.06); }
+.choice.correct { background: rgba(121,242,167,.14); border-color: rgba(121,242,167,.34); color: #e8fff1; }
+.choice.wrong { background: rgba(255,138,138,.13); border-color: rgba(255,138,138,.30); color: #ffe8e8; }
+.explanation { display: none; margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.04); color: var(--muted); line-height: 1.6; }
+.explanation.show { display: block; }
+.footer-note { margin-top: 24px; padding: 18px 20px; }
+.small { font-size: .9rem; }
+@media (max-width: 1180px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; }
+  .cards, .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mock-grid, .grid-2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .layout { padding: 14px; gap: 18px; }
+  .hero, .section, .callout, .footer-note { border-radius: 18px; }
+  .cards, .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .hero { padding: 24px; }
+  .section { padding: 18px; }
+}
+</style>
+</head>
+<body>
+  <div class="layout">
+    
+<aside class="sidebar">
+  <div class="side-head">
+    <span class="eyebrow">Mini curso</span>
+    <h2>Progreso</h2>
+    <p>Curso secuencial con referencias al .md, pseudocódigo, diagramas y quizzes.</p>
+  </div>
+  <nav class="course-nav"><a class="step " href="index.html"><span>01</span>Inicio</a><a class="step " href="01-overview.html"><span>02</span>01 Overview</a><a class="step " href="02-user-vs-campususer.html"><span>03</span>02 User vs CampusUser</a><a class="step " href="03-coalition.html"><span>04</span>03 Coalition</a><a class="step " href="04-snapshots.html"><span>05</span>04 Snapshots</a><a class="step " href="05-cursors-syncmetadata.html"><span>06</span>05 Cursors + SyncMetadata</a><a class="step " href="06-friends-preferences.html"><span>07</span>06 Friends + Preferences</a><a class="step active" href="07-orm-syntax.html"><span>08</span>07 ORM Syntax</a><a class="step " href="08-migrations.html"><span>09</span>08 Migrations</a><a class="step " href="09-data-flow-and-views.html"><span>10</span>09 Data Flow + Views</a><a class="step " href="10-review-final.html"><span>11</span>10 Review Final</a></nav>
+  <div class="pager"><a class="ghost-btn" href="06-friends-preferences.html">← Anterior</a><a class="ghost-btn" href="index.html">Índice</a><a class="btn" href="08-migrations.html">Siguiente →</a></div>
+</aside>
+    <main class="main">
+      <header class="hero">
+        <span class="eyebrow">Curso visual · Modelos de base de datos</span>
+        <h1>07. Sintaxis Django ORM del repo</h1>
+        <p class="lead">Explicación visual de campos, relaciones y Meta usando ejemplos reales del código del proyecto.</p>
+        <div class="badges">
+          <span class="badge">🧩 Django ORM</span>
+          <span class="badge">🐘 PostgreSQL</span>
+          <span class="badge">🌐 API 42</span>
+          <span class="badge">🔄 Sync local</span>
+          <span class="badge">📚 Referencias al repo</span>
+        </div>
+      </header>
+      
+<section class="section">
+  <div class="section-head"><div><h2>Sintaxis Django ORM con ejemplos del repo</h2><p>Esta página convierte el bloque ORM del .md en un formulario de estudio con explicaciones simples, pseudocódigo mental y errores comunes.</p></div></div>
+  <div class="grid-3">
+    <article class="syntax-card"><h3>models.Model</h3><p>Clase base de un modelo persistido.</p><div class="code-block"><pre><code>class CampusUser(models.Model):</code></pre></div><p><strong>Pseudomental:</strong> esta clase se convierte en tabla.</p><p><strong>Error común:</strong> pensar que es solo frontend.</p><p class="reference">Referencia: doc/database-models-explained.md, sección 5. models.Model, línea aproximada 947</p></article>
+    <article class="syntax-card"><h3>CharField</h3><p>Texto corto o medio con <code>max_length</code>.</p><div class="code-block"><pre><code>name = models.CharField(max_length=255)</code></pre></div><p><strong>Pseudomental:</strong> columna de texto.</p><p><strong>Error:</strong> olvidar el tamaño máximo.</p><p class="reference">Referencia: doc/database-models-explained.md, sección 5. CharField, línea aproximada 947</p></article>
+    <article class="syntax-card"><h3>IntegerField</h3><p>Entero con signo, útil para scores.</p><div class="code-block"><pre><code>total_score = models.IntegerField(default=0)</code></pre></div><p><strong>Pseudomental:</strong> entero con default.</p><p><strong>Error:</strong> usar texto para números.</p><p class="reference">Referencia: doc/database-models-explained.md, sección 5. IntegerField, línea aproximada 947</p></article>
+    <article class="syntax-card"><h3>DecimalField</h3><p>Precisión controlada. Aquí se usa para <code>level</code>.</p><div class="code-block"><pre><code>level = models.DecimalField(max_digits=8, decimal_places=2, default=0)</code></pre></div><p><strong>Pseudomental:</strong> número decimal estable.</p><p><strong>Error:</strong> decir que el repo usa FloatField activo.</p><p class="reference">Referencia: doc/database-models-explained.md, sección 5. FloatField / DecimalField, línea aproximada 947</p></article>
+    <article class="syntax-card"><h3>BooleanField</h3><p>True / False.</p><div class="code-block"><pre><code>is_active = models.BooleanField(default=True)</code></pre></div><p><strong>Pseudomental:</strong> interruptor persistido.</p><p><strong>Error:</strong> olvidar el default.</p><p class="reference">Referencia: doc/database-models-explained.md, sección 5. BooleanField, línea aproximada 947</p></article>
+    <article class="syntax-card"><h3>DateTimeField</h3><p>Fecha y hora, manual o automática.</p><div class="code-block"><pre><code>updated_at = models.DateTimeField(auto_now=True)
+last_time_update = models.DateTimeField(null=True, blank=True)</code></pre></div><p><strong>Pseudomental:</strong> timestamp.</p><p><strong>Error:</strong> confundir <code>auto_now</code> con valor manual.</p><p class="reference">Referencia: doc/database-models-explained.md, sección 5. DateTimeField, línea aproximada 947</p></article>
+  </div>
+</section>
+<section class="section">
+  <div class="grid-3">
+    <article class="syntax-card"><h3>ForeignKey</h3><p>Muchos a uno.</p><div class="code-block"><pre><code>coalition = models.ForeignKey(Coalition, on_delete=models.CASCADE, related_name='score_snapshots')</code></pre></div><p><strong>Pseudomental:</strong> muchos hijos apuntan a un padre.</p><p><strong>Error:</strong> llamarlo OneToOne.</p><p class="reference">Referencia: doc/database-models-explained.md, sección 5. ForeignKey, línea aproximada 947</p></article>
+    <article class="syntax-card"><h3>OneToOneField</h3><p>Uno a uno.</p><div class="code-block"><pre><code>user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='preferences')</code></pre></div><p><strong>Pseudomental:</strong> un único registro asociado.</p><p><strong>Error:</strong> olvidar que sigue siendo una relación de BD.</p><p class="reference">Referencia: doc/database-models-explained.md, sección 5. OneToOneField, línea aproximada 947</p></article>
+    <article class="syntax-card"><h3>ManyToManyField</h3><p>N a N; Django crea tabla intermedia.</p><div class="code-block"><pre><code>friends = models.ManyToManyField('self', symmetrical=True, blank=True)</code></pre></div><p><strong>Pseudomental:</strong> lista relacional automática.</p><p><strong>Error:</strong> pensar que todo vive en la tabla principal.</p><p class="reference">Referencia: doc/database-models-explained.md, sección 5. ManyToManyField, línea aproximada 947</p></article>
+    <article class="syntax-card"><h3>related_name</h3><p>Nombre del acceso inverso.</p><div class="code-block"><pre><code>related_name='score_snapshots'</code></pre></div><p><strong>Pseudomental:</strong> cómo leo la relación desde el otro lado.</p><p><strong>Error:</strong> confundirlo con nombre SQL.</p><p class="reference">Referencia: doc/database-models-explained.md, sección 5. related_name, línea aproximada 947</p></article>
+    <article class="syntax-card"><h3>on_delete</h3><p>Comportamiento al borrar el padre.</p><div class="chips"><span class="chip">CASCADE</span><span class="chip">SET_NULL</span></div><p><strong>Pseudomental:</strong> qué le pasa al hijo si cae el padre.</p><p><strong>Error:</strong> decir que todo borra en cascada.</p><p class="reference">Referencia: doc/database-models-explained.md, sección 5. on_delete, línea aproximada 947</p></article>
+    <article class="syntax-card"><h3>null=True / blank=True / default</h3><p><code>null</code> afecta BD, <code>blank</code> validación y <code>default</code> el valor inicial.</p><p><strong>Pseudomental:</strong> opcionalidad y valor de arranque.</p><p><strong>Error:</strong> tratarlos como sinónimos.</p><p class="reference">Referencia: doc/database-models-explained.md, sección 5. null=True / blank=True / default, línea aproximada 947</p></article>
+  </div>
+</section>
+<section class="section">
+  <div class="grid-3">
+    <article class="syntax-card"><h3>unique</h3><p>Unicidad de una sola columna.</p><div class="code-block"><pre><code>coalition_id = models.PositiveIntegerField(unique=True)</code></pre></div><p><strong>Pseudomental:</strong> no se repite.</p><p><strong>Error:</strong> pensar que ordena por sí solo.</p><p class="reference">Referencia: doc/database-models-explained.md, sección 5. unique, línea aproximada 947</p></article>
+    <article class="syntax-card"><h3>unique_together</h3><p>Unicidad por combinación de columnas.</p><div class="code-block"><pre><code>unique_together = ('coalition', 'snapshot_date')</code></pre></div><p><strong>Pseudomental:</strong> una foto por entidad y día.</p><p><strong>Error:</strong> confundirlo con related_name.</p><p class="reference">Referencia: doc/database-models-explained.md, sección 5. Meta / unique_together, línea aproximada 947</p></article>
+    <article class="syntax-card"><h3>indexes</h3><p>Índices SQL para acelerar consultas.</p><div class="code-block"><pre><code>models.Index(fields=['coalition', 'snapshot_date'])</code></pre></div><p><strong>Pseudomental:</strong> atajo para filtrar más rápido.</p><p><strong>Error:</strong> creer que cambia la semántica del dato.</p><p class="reference">Referencia: doc/database-models-explained.md, sección 5. indexes, línea aproximada 947</p></article>
+    <article class="syntax-card"><h3>Meta</h3><p>Configuración extra del modelo.</p><div class="code-block"><pre><code>class Meta:
+    unique_together = (...)
+    indexes = [...]</code></pre></div><p><strong>Pseudomental:</strong> reglas extra del modelo.</p><p><strong>Error:</strong> pensar que guarda filas.</p><p class="reference">Referencia: doc/database-models-explained.md, sección 5. Meta, línea aproximada 947</p></article>
+    <article class="syntax-card"><h3>__str__</h3><p>Representación legible para admin, shell y logs.</p><div class="code-block"><pre><code>def __str__(self):
+    return f'{self.name} ({self.coalition_id})'</code></pre></div><p><strong>Pseudomental:</strong> cómo quiero ver el objeto.</p><p><strong>Error:</strong> creer que altera la tabla.</p><p class="reference">Referencia: doc/database-models-explained.md, sección 5. __str__, línea aproximada 947</p></article>
+    <article class="syntax-card"><h3>ordering</h3><p>No se ve activo en los modelos revisados.</p><p><strong>Pseudomental:</strong> si no está, el orden lo decide la query.</p><p><strong>Error:</strong> asumir orden implícito por fecha.</p><p class="reference">Referencia: doc/database-models-explained.md, sección 5. ordering, línea aproximada 947</p></article>
+  </div>
+  <div class="pseudo-block" data-label="Pseudocódigo global de la página"><pre>FUNCIÓN leer_sintaxis_mental(modelo):
+
+    campo simple = columna
+    ForeignKey = muchos hijos por padre
+    OneToOneField = enlace único
+    ManyToMany = tabla intermedia automática
+    Meta = reglas extra
+    __str__ = representación legible</pre></div>
+</section>
+
+<section class="quiz-section section">
+  <div class="section-head split">
+    <div>
+      <h2>Quiz de la página</h2>
+      <p>Responde antes de avanzar. El feedback marca correcto o incorrecto y te recuerda la referencia.</p>
+    </div>
+    <div class="quiz-toolbar">
+      <span class="score-pill" id="quiz07-score">0 / 10 correctas</span>
+      <button class="ghost-btn" data-reset-quiz="quiz07">Reiniciar</button>
+    </div>
+  </div>
+  <div class="quiz-grid" data-quiz-id="quiz07">
+    
+<article class="quiz-card" data-question>
+  <h3>1. ¿Qué heredan todos los modelos Django del repo?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">models.Model</button><button class="choice" data-correct="false" data-explanation="No.">forms.Model</button><button class="choice" data-correct="false" data-explanation="No.">serializers.Model</button><button class="choice" data-correct="false" data-explanation="No.">queries.Model</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 5. models.Model, línea aproximada 947</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>2. ¿Qué campo del repo es un CharField claro?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Coalition.name</button><button class="choice" data-correct="false" data-explanation="Eso es IntegerField.">Coalition.total_score</button><button class="choice" data-correct="false" data-explanation="Eso es DecimalField.">CampusUser.level</button><button class="choice" data-correct="false" data-explanation="Eso es DateTimeField.">SyncMetadata.last_time_update</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 5. CharField, línea aproximada 947</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>3. ¿Por qué CampusUser.level usa DecimalField y no FloatField?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Porque el repo usa DecimalField activo y no se ve FloatField activo</button><button class="choice" data-correct="false" data-explanation="Sí existe.">Porque FloatField no existe</button><button class="choice" data-correct="false" data-explanation="No.">Porque level es texto</button><button class="choice" data-correct="false" data-explanation="No.">Porque es una ForeignKey</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 5. FloatField / DecimalField, línea aproximada 947</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>4. ¿Qué significa ForeignKey en snapshots?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Muchos snapshots apuntan a un padre</button><button class="choice" data-correct="false" data-explanation="No.">Un único snapshot para todo el sistema</button><button class="choice" data-correct="false" data-explanation="No.">Relación simétrica</button><button class="choice" data-correct="false" data-explanation="No.">Borrado nulo</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 5. ForeignKey, línea aproximada 947</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>5. ¿Qué te permite related_name='score_snapshots'?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Leer coalition.score_snapshots.all()</button><button class="choice" data-correct="false" data-explanation="No.">Autenticar usuarios</button><button class="choice" data-correct="false" data-explanation="No.">Evitar migraciones</button><button class="choice" data-correct="false" data-explanation="No.">Cambiar el tipo de campo</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 5. related_name, línea aproximada 947</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>6. ¿Qué hace on_delete=models.CASCADE en snapshots?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Si se borra el padre, se borran los snapshots asociados</button><button class="choice" data-correct="false" data-explanation="Eso sería SET_NULL.">Pone NULL el snapshot</button><button class="choice" data-correct="false" data-explanation="No.">Impide cualquier borrado</button><button class="choice" data-correct="false" data-explanation="No.">Mueve el registro</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 5. on_delete, línea aproximada 947</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>7. ¿Cuál es la diferencia entre null=True y blank=True?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">null afecta BD y blank validación/formularios</button><button class="choice" data-correct="false" data-explanation="No.">Son sinónimos</button><button class="choice" data-correct="false" data-explanation="No.">Uno es para CSS y otro para JS</button><button class="choice" data-correct="false" data-explanation="No.">Ambos crean índices</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 5. null=True / blank=True, línea aproximada 947</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>8. ¿Qué refleja Meta en estos modelos?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Configuración extra como unique_together e indexes</button><button class="choice" data-correct="false" data-explanation="No.">Solo el contenido de __str__</button><button class="choice" data-correct="false" data-explanation="No.">Los endpoints frontend</button><button class="choice" data-correct="false" data-explanation="No.">Los usuarios autenticados</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 5. Meta, línea aproximada 947</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>9. ¿Qué dice el .md sobre ordering?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">No se ve ordering activo en los modelos revisados</button><button class="choice" data-correct="false" data-explanation="No.">Todos ordenan por created_at</button><button class="choice" data-correct="false" data-explanation="No aparece.">Coalition ordena por total_score en Meta</button><button class="choice" data-correct="false" data-explanation="No.">UserPreferences ordena por theme_mode</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 5. ordering, línea aproximada 947</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>10. ¿Qué error de sintaxis conviene evitar al explicarlo?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Confundir unique_together con related_name o con PK automática</button><button class="choice" data-correct="false" data-explanation="Eso también está mal, pero no es la confusión central aquí.">Decir que CharField guarda enteros</button><button class="choice" data-correct="false" data-explanation="No.">Afirmar que __str__ crea tablas</button><button class="choice" data-correct="false" data-explanation="No.">Decir que ManyToMany genera JWT</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 5. ORM, línea aproximada 947</p>
+</article>
+  </div>
+</section>
+
+      <div class="footer-note small">
+        Fuente principal obligatoria: <code>doc/database-models-explained.md</code>. Verificación adicional contra modelos, migraciones, rutas y stores reales del repo. Página autocontenida y sin dependencias externas.
+      </div>
+    </main>
+  </div>
+  <script>
+document.querySelectorAll('[data-reset-quiz]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const quizId = button.dataset.resetQuiz;
+    const container = document.querySelector(`[data-quiz-id="${quizId}"]`);
+    if (!container) return;
+    container.querySelectorAll('[data-question]').forEach((card) => {
+      card.dataset.answered = 'false';
+      card.querySelectorAll('.choice').forEach((choice) => {
+        choice.disabled = false;
+        choice.classList.remove('correct', 'wrong');
+      });
+      const explanation = card.querySelector('.explanation');
+      explanation.textContent = '';
+      explanation.classList.remove('show');
+    });
+    const scoreEl = document.getElementById(`${quizId}-score`);
+    if (scoreEl) {
+      scoreEl.textContent = `0 / ${container.querySelectorAll('[data-question]').length} correctas`;
+    }
+  });
+});
+
+document.querySelectorAll('[data-quiz-id]').forEach((container) => {
+  const quizId = container.dataset.quizId;
+  const scoreEl = document.getElementById(`${quizId}-score`);
+  let correct = 0;
+  const update = () => {
+    if (scoreEl) {
+      scoreEl.textContent = `${correct} / ${container.querySelectorAll('[data-question]').length} correctas`;
+    }
+  };
+  container.querySelectorAll('[data-question]').forEach((card) => {
+    card.dataset.answered = 'false';
+    const explanation = card.querySelector('.explanation');
+    card.querySelectorAll('.choice').forEach((choice) => {
+      choice.addEventListener('click', () => {
+        if (card.dataset.answered === 'true') return;
+        card.dataset.answered = 'true';
+        const isCorrect = choice.dataset.correct === 'true';
+        if (isCorrect) correct += 1;
+        card.querySelectorAll('.choice').forEach((button) => {
+          const ok = button.dataset.correct === 'true';
+          button.disabled = true;
+          button.classList.add(ok ? 'correct' : 'wrong');
+        });
+        choice.classList.remove('wrong');
+        choice.classList.add(isCorrect ? 'correct' : 'wrong');
+        explanation.textContent = choice.dataset.explanation;
+        explanation.classList.add('show');
+        update();
+      });
+    });
+  });
+  update();
+});
+</script>
+</body>
+</html>

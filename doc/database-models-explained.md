@@ -1493,3 +1493,165 @@ FUNCIÓN modelo_de_datos():
 
     devolver "modelo local listo para consultas"
 ```
+
+## 13. Quiz final tipo test (20 preguntas)
+
+### 1. ¿Qué modelo resuelve la auth interna de Django?
+- A. `CampusUser`
+- B. `User`
+- C. `Coalition`
+- D. `SyncMetadata`
+- Respuesta correcta: B
+- Explicación: `User` es la identidad interna del framework.
+
+### 2. ¿Qué modelo es el centro del dominio de negocio sincronizado desde 42?
+- A. `FriendsList`
+- B. `CampusUser`
+- C. `UserPreferences`
+- D. `CoalitionScoreSnapshot`
+- Respuesta correcta: B
+- Explicación: guarda identidad y métricas principales.
+
+### 3. ¿Qué modelo representa el estado actual de una coalición?
+- A. `Coalition`
+- B. `CoalitionScoreSnapshot`
+- C. `CoalitionProjectCursor`
+- D. `CampusUserScoreSnapshot`
+- Respuesta correcta: A
+- Explicación: `Coalition` es la foto actual agregada.
+
+### 4. ¿Qué modelo guarda histórico diario de score por coalición?
+- A. `SyncMetadata`
+- B. `Coalition`
+- C. `CoalitionScoreSnapshot`
+- D. `FriendsList`
+- Respuesta correcta: C
+- Explicación: el snapshot conserva la evolución temporal.
+
+### 5. ¿Qué modelo guarda histórico diario individual?
+- A. `CampusUserScoreSnapshot`
+- B. `User`
+- C. `CoalitionEvaluationCursor`
+- D. `UserPreferences`
+- Respuesta correcta: A
+- Explicación: es el equivalente individual del snapshot de coalición.
+
+### 6. ¿Qué modelo evita reprocesar eventos de proyectos?
+- A. `CoalitionEvaluationCursor`
+- B. `CoalitionProjectCursor`
+- C. `SyncMetadata`
+- D. `CampusUser`
+- Respuesta correcta: B
+- Explicación: guarda la frontera incremental de proyectos.
+
+### 7. ¿Qué modelo evita reprocesar eventos de correcciones?
+- A. `CoalitionEvaluationCursor`
+- B. `CampusUserScoreSnapshot`
+- C. `Coalition`
+- D. `FriendsList`
+- Respuesta correcta: A
+- Explicación: hace el papel incremental para evaluaciones.
+
+### 8. ¿Qué modelo guarda metadatos como `last_time_update`?
+- A. `UserPreferences`
+- B. `SyncMetadata`
+- C. `Coalition`
+- D. `User`
+- Respuesta correcta: B
+- Explicación: se usa para `last_sync` y observabilidad.
+
+### 9. ¿Qué modelo guarda amigos y solicitudes?
+- A. `FriendsList`
+- B. `SyncMetadata`
+- C. `CampusUser`
+- D. `CoalitionScoreSnapshot`
+- Respuesta correcta: A
+- Explicación: es la capa social propia de la app.
+
+### 10. ¿Qué modelo guarda avatar custom, tema y privacidad?
+- A. `UserPreferences`
+- B. `CampusUser`
+- C. `User`
+- D. `CoalitionEvaluationCursor`
+- Respuesta correcta: A
+- Explicación: persiste configuración propia del producto.
+
+### 11. ¿Qué relación existe entre `User` y `CampusUser`?
+- A. `ManyToMany`
+- B. Ninguna
+- C. `OneToOne` opcional
+- D. `ForeignKey` múltiple
+- Respuesta correcta: C
+- Explicación: `CampusUser` enlaza opcionalmente con `User`.
+
+### 12. ¿Qué lectura es correcta sobre snapshots?
+- A. Sustituyen el estado actual
+- B. Guardan histórico y sirven para tendencias
+- C. Solo sirven para login
+- D. Solo están en frontend
+- Respuesta correcta: B
+- Explicación: complementan al estado actual, no lo reemplazan.
+
+### 13. ¿Qué significa `ForeignKey`?
+- A. Relación muchos-a-uno
+- B. Una cookie segura
+- C. Un comando Docker
+- D. Un hook React
+- Respuesta correcta: A
+- Explicación: varios registros pueden apuntar a uno.
+
+### 14. ¿Qué significa `OneToOneField`?
+- A. Relación N a N
+- B. Relación uno-a-uno
+- C. Un índice SQL
+- D. Un endpoint REST
+- Respuesta correcta: B
+- Explicación: cada lado apunta a un único registro del otro.
+
+### 15. ¿Qué significa `ManyToManyField` en `FriendsList`?
+- A. Que el modelo no se guarda
+- B. Que puede haber amistades y solicitudes entre muchas filas del mismo modelo
+- C. Que solo se usa en CSS
+- D. Que el backend no valida nada
+- Respuesta correcta: B
+- Explicación: modela relaciones sociales autorreferenciales.
+
+### 16. ¿Qué hace `unique_together` en snapshots?
+- A. Obliga a un snapshot por entidad y fecha
+- B. Borra duplicados automáticamente
+- C. Crea JWT
+- D. Sirve `/api/status/`
+- Respuesta correcta: A
+- Explicación: evita más de una foto diaria por combinación lógica.
+
+### 17. ¿Qué lectura es correcta sobre `backend/authentication/models.py`?
+- A. Define el modelo principal de auth del proyecto
+- B. No contiene modelos activos; se apoya en `User` de Django
+- C. Reemplaza a `CampusUser`
+- D. Define snapshots
+- Respuesta correcta: B
+- Explicación: el comentario lo deja explícito.
+
+### 18. ¿Qué lectura es correcta sobre `backend/coalitions/models.py`?
+- A. Sigue siendo la fuente de verdad actual
+- B. Tiene valor histórico, pero la fuente actual está en `sync`
+- C. Sustituye a `sync/models.py`
+- D. Solo vive en frontend
+- Respuesta correcta: B
+- Explicación: la coalición real actual está modelada en la app `sync`.
+
+### 19. ¿Qué crea o cambia el esquema SQL de estos modelos?
+- A. `useEffect`
+- B. Migraciones Django
+- C. `AuthLayout`
+- D. `manifest.ts`
+- Respuesta correcta: B
+- Explicación: las migraciones materializan el ORM en la base.
+
+### 20. ¿Cuál es la idea global correcta del modelo de datos?
+- A. El frontend consulta 42 en vivo y no usa DB local
+- B. PostgreSQL local guarda usuarios, coaliciones, histórico, cursores y datos propios de la app
+- C. Solo existe `User`
+- D. Todo vive en `localStorage`
+- Respuesta correcta: B
+- Explicación: ese es el diseño real del proyecto.

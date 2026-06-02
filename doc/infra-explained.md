@@ -762,3 +762,165 @@ FUNCIÓN infraestructura_del_proyecto():
 
     devolver "infraestructura local operativa"
 ```
+
+## 11. Quiz final tipo test (20 preguntas)
+
+### 1. ¿Qué archivo orquesta frontend, backend y DB en desarrollo?
+- A. `backend/manage.py`
+- B. `docker-compose.dev.yml`
+- C. `frontend/app/layout.tsx`
+- D. `doc/infra-explained.md`
+- Respuesta correcta: B
+- Explicación: ahí se definen servicios, puertos, volúmenes y healthchecks.
+
+### 2. ¿Qué puerto expone el frontend?
+- A. `5432`
+- B. `8000`
+- C. `3000`
+- D. `8080`
+- Respuesta correcta: C
+- Explicación: el frontend se publica en `localhost:3000`.
+
+### 3. ¿Qué puerto expone el backend?
+- A. `3000`
+- B. `8000`
+- C. `5432`
+- D. `9000`
+- Respuesta correcta: B
+- Explicación: Django queda en `localhost:8000`.
+
+### 4. ¿Qué servicio usa `postgres:16-alpine`?
+- A. frontend
+- B. backend
+- C. db
+- D. cron
+- Respuesta correcta: C
+- Explicación: ese es el contenedor PostgreSQL.
+
+### 5. ¿Qué archivo centraliza comandos de uso cotidiano?
+- A. `Makefile`
+- B. `requirements.txt`
+- C. `globals.css`
+- D. `manifest.ts`
+- Respuesta correcta: A
+- Explicación: el Makefile envuelve `docker compose` y scripts frecuentes.
+
+### 6. ¿Qué comando levanta todo el stack?
+- A. `make db-backup`
+- B. `make full-up`
+- C. `make back-shell`
+- D. `make stop`
+- Respuesta correcta: B
+- Explicación: construye y arranca todos los servicios.
+
+### 7. ¿Qué comando aplica migraciones?
+- A. `make back-migrate`
+- B. `make front-up`
+- C. `make db-backup-ls`
+- D. `make full-stop`
+- Respuesta correcta: A
+- Explicación: ejecuta `python manage.py migrate` en backend.
+
+### 8. ¿Qué hace `backend/entrypoint.sh` si no recibe comando?
+- A. Lanza Next.js
+- B. Arranca cron y luego `runserver`
+- C. Apaga Docker
+- D. Ejecuta `pg_dump`
+- Respuesta correcta: B
+- Explicación: inicia cron y el servidor de desarrollo Django.
+
+### 9. ¿Qué archivo sirve como plantilla de variables de entorno del backend?
+- A. `backend/.env.example`
+- B. `frontend/package.json`
+- C. `docker-compose.dev.yml`
+- D. `frontend/app/status/page.tsx`
+- Respuesta correcta: A
+- Explicación: documenta las variables mínimas esperadas.
+
+### 10. ¿Qué healthcheck usa el backend?
+- A. `pg_isready`
+- B. `curl -fsS http://localhost:8000/api/health/`
+- C. `npm run dev`
+- D. `python manage.py check`
+- Respuesta correcta: B
+- Explicación: consulta el endpoint health del propio backend.
+
+### 11. ¿Qué healthcheck usa la base de datos?
+- A. `/api/status/`
+- B. `psql --version`
+- C. `pg_isready -U postgres -d trascendence`
+- D. `curl localhost:5432`
+- Respuesta correcta: C
+- Explicación: es la comprobación estándar de PostgreSQL.
+
+### 12. ¿Qué volumen persistente guarda los datos de PostgreSQL?
+- A. `/app/.next`
+- B. `postgres_data`
+- C. `/app/node_modules`
+- D. `media_cache`
+- Respuesta correcta: B
+- Explicación: ese volumen se monta en `/var/lib/postgresql/data`.
+
+### 13. ¿Qué riesgo existe con `JWT_COOKIE_SECURE=True` en local sin HTTPS?
+- A. Ninguno
+- B. Las cookies pueden no viajar y la auth fallará
+- C. Se borra la DB
+- D. El Makefile deja de funcionar
+- Respuesta correcta: B
+- Explicación: cookies seguras no se envían por HTTP plano.
+
+### 14. ¿Qué comando crea un backup de base?
+- A. `make back-up`
+- B. `make db-backup`
+- C. `make back-showmigrations`
+- D. `make full-logs`
+- Respuesta correcta: B
+- Explicación: ejecuta el script de backup.
+
+### 15. ¿Qué comando restaura una copia de seguridad?
+- A. `make db-restore BACKUP_FILE=...`
+- B. `make restore`
+- C. `make migrate`
+- D. `make front-re`
+- Respuesta correcta: A
+- Explicación: exige pasar el archivo explícitamente.
+
+### 16. ¿Qué hace `fclean`?
+- A. Solo reinicia frontend
+- B. Hace wipe fuerte de volúmenes, imágenes y servicios
+- C. Solo limpia logs
+- D. Solo recrea `.env`
+- Respuesta correcta: B
+- Explicación: es la opción destructiva de limpieza total.
+
+### 17. ¿Qué lectura es correcta sobre `front-up`?
+- A. Arranca solo PostgreSQL
+- B. Arranca y reconstruye solo frontend
+- C. Aplica migraciones
+- D. Hace logout global
+- Respuesta correcta: B
+- Explicación: ese target opera solo sobre el servicio frontend.
+
+### 18. ¿Qué archivo define dependencias Python del backend?
+- A. `backend/requirements.txt`
+- B. `frontend/package.json`
+- C. `backend/config/urls.py`
+- D. `sw.js`
+- Respuesta correcta: A
+- Explicación: el Dockerfile backend las instala desde ahí.
+
+### 19. ¿Qué archivo define dependencias y scripts del frontend?
+- A. `backend/.env.example`
+- B. `frontend/package.json`
+- C. `Makefile`
+- D. `backend/entrypoint.sh`
+- Respuesta correcta: B
+- Explicación: centraliza scripts y librerías Node.
+
+### 20. ¿Cuál es el objetivo principal de la infraestructura descrita?
+- A. Servir la API de 42 al navegador
+- B. Reproducir localmente el stack completo de forma consistente
+- C. Reemplazar PostgreSQL por localStorage
+- D. Evitar toda la configuración del backend
+- Respuesta correcta: B
+- Explicación: Docker + Make ofrecen un entorno local repetible.

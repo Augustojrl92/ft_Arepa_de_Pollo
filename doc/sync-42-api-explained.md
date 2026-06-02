@@ -1171,3 +1171,165 @@ FUNCIÓN sistema_sync_42():
 
     devolver "base local sincronizada"
 ```
+
+## 17. Quiz final tipo test (20 preguntas)
+
+### 1. ¿Cuál es el objetivo principal del sistema de sync?
+- A. Renderizar React
+- B. Alimentar la base local con datos de 42
+- C. Crear backups
+- D. Reemplazar PostgreSQL
+- Respuesta correcta: B
+- Explicación: sincroniza datos de 42 hacia el backend local.
+
+### 2. ¿Por qué el frontend no consulta 42 directamente?
+- A. Porque no existe internet
+- B. Porque la app se apoya en una base local sincronizada y controlada
+- C. Porque React no puede hacer fetch
+- D. Porque Docker lo impide
+- Respuesta correcta: B
+- Explicación: se evita depender de la API externa en cada pantalla.
+
+### 3. ¿Qué función obtiene el token machine-to-machine?
+- A. `_serialize_user_ranking`
+- B. `_request_42_token`
+- C. `fetchCoalitions`
+- D. `AuthLogoutView`
+- Respuesta correcta: B
+- Explicación: es la pieza que consigue el bearer token para sync.
+
+### 4. ¿Qué archivo concentra la persistencia principal de usuarios y coaliciones?
+- A. `frontend/lib/authApi.ts`
+- B. `backend/sync/services.py`
+- C. `backend/config/views.py`
+- D. `frontend/app/status/page.tsx`
+- Respuesta correcta: B
+- Explicación: ahí está la orquestación principal del sync base.
+
+### 5. ¿Qué comando lanza el sync principal de campus users?
+- A. `sync_project_stats`
+- B. `sync_campus_users`
+- C. `sync_evaluation_score_events`
+- D. `db-backup`
+- Respuesta correcta: B
+- Explicación: es el comando general de usuarios y coaliciones.
+
+### 6. ¿Qué flujo guarda snapshots de score?
+- A. El backend auth
+- B. El sync base en `services.py`
+- C. Solo el service worker
+- D. El Makefile
+- Respuesta correcta: B
+- Explicación: el sync crea snapshots para histórico.
+
+### 7. ¿Qué documento o modelo expone `last_sync`?
+- A. `UserPreferences`
+- B. `SyncMetadata`
+- C. `FriendsList`
+- D. `CoalitionProjectCursor`
+- Respuesta correcta: B
+- Explicación: `SyncMetadata` guarda ese metadato operativo.
+
+### 8. ¿Qué hace un cursor incremental?
+- A. Recalcula toda la historia siempre
+- B. Marca hasta dónde ya se procesó un flujo de eventos
+- C. Guarda JWT
+- D. Sirve CSS
+- Respuesta correcta: B
+- Explicación: evita reprocesar pasado.
+
+### 9. ¿Qué archivo trata el incremental de proyectos?
+- A. `backend/sync/projects.py`
+- B. `backend/users/views.py`
+- C. `frontend/hooks/useUser.ts`
+- D. `backend/config/wsgi.py`
+- Respuesta correcta: A
+- Explicación: ahí vive la lógica de proyectos.
+
+### 10. ¿Qué archivo trata el incremental de correcciones?
+- A. `backend/sync/evaluations.py`
+- B. `backend/authentication/views.py`
+- C. `frontend/lib/statusApi.ts`
+- D. `backend/entrypoint.sh`
+- Respuesta correcta: A
+- Explicación: ahí vive la lógica de evaluaciones.
+
+### 11. ¿Qué riesgo aparece con `429` de la API de 42?
+- A. El CSS no compila
+- B. Hay rate limit y el sync necesita reintentos o pacing
+- C. Se borran modelos
+- D. El frontend pierde el tema
+- Respuesta correcta: B
+- Explicación: el sync contempla reintentos y retrasos por presión de API.
+
+### 12. ¿Qué significa que haya timeouts en `requests.get`?
+- A. Que el frontend se cae
+- B. Que el backend limita el tiempo de espera hacia 42
+- C. Que no hay migraciones
+- D. Que PostgreSQL va a reiniciar
+- Respuesta correcta: B
+- Explicación: se protege el proceso ante APIs lentas.
+
+### 13. ¿Qué diferencia hay entre sync base e incremental?
+- A. Ninguna
+- B. El base recarga materia prima; el incremental procesa solo novedades
+- C. El incremental no usa DB
+- D. El base solo toca frontend
+- Respuesta correcta: B
+- Explicación: son dos estrategias complementarias.
+
+### 14. ¿Qué comando permite probar correcciones incrementales?
+- A. `sync_evaluation_score_events`
+- B. `createsuperuser`
+- C. `collectstatic`
+- D. `status_check`
+- Respuesta correcta: A
+- Explicación: procesa score events de corrección por coalición.
+
+### 15. ¿Qué campo usa `/api/status/` para decir cuándo fue el último sync?
+- A. `updated_at` de `Coalition`
+- B. `last_time_update` de `SyncMetadata`
+- C. `created_at` de `CampusUser`
+- D. `last_login` de `User`
+- Respuesta correcta: B
+- Explicación: ese es el metadato consumido por status.
+
+### 16. ¿Qué lectura es correcta sobre snapshots?
+- A. Son necesarios para tendencias, no para el estado actual puro
+- B. Sustituyen a `CampusUser`
+- C. Solo sirven para login
+- D. Solo viven en frontend
+- Respuesta correcta: A
+- Explicación: complementan el dato vivo con histórico.
+
+### 17. ¿Qué hace cron en este proyecto?
+- A. Pinta la UI
+- B. Ejecuta sync periódicamente desde backend
+- C. Renueva JWT
+- D. Compila TypeScript
+- Respuesta correcta: B
+- Explicación: automatiza el refresco de la base local.
+
+### 18. ¿Qué pasa si el sync falla pero la DB ya tenía datos?
+- A. La app puede seguir funcionando con datos viejos
+- B. Todo desaparece
+- C. El frontend ya no abre
+- D. Docker borra volúmenes
+- Respuesta correcta: A
+- Explicación: la UI depende de la frescura, pero no siempre del éxito inmediato.
+
+### 19. ¿Qué función conceptual cumple `_build_sync_context()`?
+- A. Crear componentes React
+- B. Preparar base URL y headers para hablar con 42
+- C. Borrar snapshots
+- D. Crear service workers
+- Respuesta correcta: B
+- Explicación: monta el contexto común de peticiones del sync.
+
+### 20. ¿Cuál es la idea global correcta del sync?
+- A. Consultar 42 una vez por pantalla
+- B. Construir una base local estable que luego usa todo el backend funcional
+- C. Reemplazar Django por cron
+- D. Guardar todo en cookies
+- Respuesta correcta: B
+- Explicación: ese es el objetivo principal del subsistema de sync.

@@ -1063,3 +1063,189 @@ SyncMetadata.objects.filter(key='campus_sync').first()
 - [ ] Entiendo cómo el frontend carga coaliciones
 - [ ] Entiendo cómo funciona leaderboard
 - [ ] Entiendo cómo probar la feature
+
+## 16. Pseudocódigo global de la feature de coaliciones
+
+```text
+FUNCIÓN feature_coalitions():
+
+    leer Coalition y CampusUser desde PostgreSQL
+    agregar scores, niveles, proyectos y correcciones
+    consultar snapshots para cambios históricos
+
+    exponer:
+        /api/coalitions/
+        /api/coalitions/details/
+        /api/coalitions/users-ranking/
+
+    en frontend:
+        coalitionApi.ts consume backend
+        useCoalitionStore guarda estado
+        useLeaderboard añade filtros y UX
+        páginas renderizan cards, detalle y ranking
+
+    SI faltan snapshots:
+        algunas gráficas o cambios serán pobres o nulos
+```
+
+## 17. Quiz final tipo test (20 preguntas)
+
+### 1. ¿Qué endpoint sirve el resumen de coaliciones?
+- A. `/api/status/`
+- B. `/api/coalitions/`
+- C. `/api/auth/profile/`
+- D. `/api/users/details/`
+- Respuesta correcta: B
+- Explicación: devuelve el listado agregado de coaliciones.
+
+### 2. ¿Qué endpoint sirve el detalle de una coalición?
+- A. `/api/coalitions/details/`
+- B. `/api/auth/logout/`
+- C. `/api/health/`
+- D. `/api/auth/42/callback/`
+- Respuesta correcta: A
+- Explicación: entrega nivel, top members, cambios de score y más.
+
+### 3. ¿Qué endpoint sirve el ranking de usuarios?
+- A. `/api/coalitions/users-ranking/`
+- B. `/api/status/`
+- C. `/api/users/preferences/`
+- D. `/api/auth/token/refresh/`
+- Respuesta correcta: A
+- Explicación: es la base del leaderboard.
+
+### 4. ¿Qué modelo representa el estado actual de una coalición?
+- A. `CampusUserScoreSnapshot`
+- B. `Coalition`
+- C. `UserPreferences`
+- D. `SyncMetadata`
+- Respuesta correcta: B
+- Explicación: guarda el estado agregado actual.
+
+### 5. ¿De dónde sale el histórico de score y rank de coalición?
+- A. De `FriendsList`
+- B. De `CoalitionScoreSnapshot`
+- C. De JWT
+- D. De `User`
+- Respuesta correcta: B
+- Explicación: los snapshots alimentan tendencias temporales.
+
+### 6. ¿Qué archivo backend agrega correcciones y proyectos por coalición?
+- A. `backend/authentication/views.py`
+- B. `backend/coalitions/services.py`
+- C. `frontend/lib/coalitionApi.ts`
+- D. `backend/entrypoint.sh`
+- Respuesta correcta: B
+- Explicación: ahí vive la lógica de negocio agregada.
+
+### 7. ¿Qué store frontend guarda listado y ranking?
+- A. `useAuthStore`
+- B. `useCoalitionStore`
+- C. `useTheme`
+- D. `useSearchParams`
+- Respuesta correcta: B
+- Explicación: centraliza coaliciones, ranking y estado de carga.
+
+### 8. ¿Qué hook frontend añade filtros avanzados al leaderboard?
+- A. `useUserStore`
+- B. `useLeaderboard`
+- C. `useEffect`
+- D. `usePathname`
+- Respuesta correcta: B
+- Explicación: encapsula la lógica de UX del ranking.
+
+### 9. ¿Qué archivo cliente transforma `snake_case` del backend a `camelCase`?
+- A. `frontend/lib/coalitionApi.ts`
+- B. `frontend/app/layout.tsx`
+- C. `backend/coalitions/views.py`
+- D. `frontend/components/Header.tsx`
+- Respuesta correcta: A
+- Explicación: la capa API adapta el contrato para React.
+
+### 10. ¿Qué lectura es correcta sobre `PointsEvolutionChart`?
+- A. Hoy está conectado totalmente a un histórico real robusto
+- B. La documentación deja claro que sigue siendo un punto frágil o mock parcial
+- C. Es el componente de logout
+- D. Sustituye a snapshots
+- Respuesta correcta: B
+- Explicación: es una de las partes que no está tan sólida como el resto.
+
+### 11. ¿Qué función obtiene totales de correcciones por coalición?
+- A. `_get_last_time_update`
+- B. `_get_evaluation_totals`
+- C. `_resolve_user_avatar_url`
+- D. `_request_42_token`
+- Respuesta correcta: B
+- Explicación: suma sobre `CampusUser`.
+
+### 12. ¿Qué hace `_serialize_simple_coalitions()`?
+- A. Crea JWT
+- B. Construye la respuesta lista para cards/listado
+- C. Borra coaliciones
+- D. Migra la base
+- Respuesta correcta: B
+- Explicación: serializa el resumen consumido por `/api/coalitions/`.
+
+### 13. ¿Qué hace `_serialize_user_ranking()`?
+- A. Genera el ranking paginado/agregado de usuarios
+- B. Registra service workers
+- C. Refresca access token
+- D. Hace backup DB
+- Respuesta correcta: A
+- Explicación: produce la estructura del endpoint de leaderboard.
+
+### 14. ¿Qué ruta frontend muestra el listado de coaliciones?
+- A. `/leaderboard`
+- B. `/coalitions`
+- C. `/status`
+- D. `/offline`
+- Respuesta correcta: B
+- Explicación: renderiza cards ordenadas por score.
+
+### 15. ¿Qué ruta frontend muestra el detalle de una sola coalición?
+- A. `/coalitions/[name]`
+- B. `/users/[login]`
+- C. `/login`
+- D. `/status`
+- Respuesta correcta: A
+- Explicación: consume el endpoint de detalle.
+
+### 16. ¿Qué ruta frontend puede enseñar correcciones por usuario?
+- A. `/offline`
+- B. `/leaderboard`
+- C. `/status`
+- D. `/login`
+- Respuesta correcta: B
+- Explicación: tiene una pestaña específica de correcciones.
+
+### 17. ¿Qué riesgo aparece si no hay snapshots?
+- A. Se rompe OAuth
+- B. Faltará profundidad histórica en cambios o gráficas
+- C. Se borra la DB
+- D. El backend no compila
+- Respuesta correcta: B
+- Explicación: los datos actuales pueden existir, pero el histórico será pobre.
+
+### 18. ¿Qué lectura es correcta sobre los datos de coaliciones?
+- A. Se consultan a 42 en cada render
+- B. Salen de la base local sincronizada
+- C. Se guardan solo en Zustand
+- D. Son fijos en archivos JSON
+- Respuesta correcta: B
+- Explicación: el backend trabaja con PostgreSQL local.
+
+### 19. ¿Qué campo de respuesta usa el frontend para mostrar frescura?
+- A. `last_time_update`
+- B. `FT_CLIENT_ID`
+- C. `refresh_token`
+- D. `current_season`
+- Respuesta correcta: A
+- Explicación: se usa para mostrar cuándo se actualizó la información.
+
+### 20. ¿Cuál es la idea central de la feature de coaliciones?
+- A. Mezclar auth y CSS
+- B. Presentar estado actual, detalle y ranking sobre datos locales agregados e históricos
+- C. Sustituir la base de datos
+- D. Evitar todo uso de backend
+- Respuesta correcta: B
+- Explicación: esa es la funcionalidad real de la feature.

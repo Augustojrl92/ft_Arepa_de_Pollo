@@ -1,7 +1,15 @@
 from django.db import DatabaseError, connection
 from django.http import JsonResponse
 from django.utils import timezone
+from django_prometheus.exports import ExportToDjangoView
 
+from sync.metrics import (
+	update_campus_user_score_snapshots_total,
+	update_campus_sync_last_update_timestamp,
+	update_coalition_score_snapshots_total,
+	update_season_days_covered_total,
+	update_season_days_missing_total,
+)
 from sync.models import SyncMetadata
 
 
@@ -72,3 +80,12 @@ def status_check(request):
 
 def server_message(request):
 	return JsonResponse({'message': 'esto es una respuesta del servidor'})
+
+
+def metrics_view(request):
+	update_coalition_score_snapshots_total()
+	update_campus_user_score_snapshots_total()
+	update_campus_sync_last_update_timestamp()
+	update_season_days_covered_total()
+	update_season_days_missing_total()
+	return ExportToDjangoView(request)

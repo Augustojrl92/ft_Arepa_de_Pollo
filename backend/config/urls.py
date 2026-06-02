@@ -19,7 +19,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 
-from .views import api_root, health_check, server_message, status_check
+from .views import api_root, health_check, metrics_view, server_message, status_check
 from authentication import urls as auth_urls
 from coalitions import urls as coalition_urls
 from users import urls as user_urls
@@ -33,6 +33,7 @@ urlpatterns = [
     path('api/auth/', include(auth_urls)),
     path('api/coalitions/', include(coalition_urls)),
     path('api/users/', include(user_urls)),
+    path('metrics', metrics_view, name='prometheus-django-metrics'),
 ]
 
 if settings.DEBUG:

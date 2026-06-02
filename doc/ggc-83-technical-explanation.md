@@ -2129,3 +2129,165 @@ GGC-83 no fue una sola feature, sino una **cadena de entregables complementarios
 - PWA mínima, instalable y con offline básico.
 
 La única parte original que sigue claramente pendiente es la **automatización periódica de backups**. Todo lo demás está implementado con evidencia real en el repo y con una historia de validación suficientemente clara como para defenderla en evaluación.
+
+## Quiz final tipo test (20 preguntas)
+
+### 1. ¿Qué endpoint expone la salud básica del backend?
+- A. `/api/status/`
+- B. `/api/health/`
+- C. `/api/auth/profile/`
+- D. `/api/coalitions/`
+- Respuesta correcta: B
+- Explicación: `/api/health/` es el check mínimo de salud.
+
+### 2. ¿Qué endpoint añade información de último sync?
+- A. `/api/status/`
+- B. `/api/auth/logout/`
+- C. `/api/users/details/`
+- D. `/offline`
+- Respuesta correcta: A
+- Explicación: `/api/status/` amplía la observabilidad.
+
+### 3. ¿Qué ruta frontend muestra ese estado operativo?
+- A. `/leaderboard`
+- B. `/status`
+- C. `/login`
+- D. `/users/[login]`
+- Respuesta correcta: B
+- Explicación: es la página pública de salud y sync.
+
+### 4. ¿Qué script crea backups de PostgreSQL?
+- A. `scripts/restore_db.sh`
+- B. `scripts/backup_db.sh`
+- C. `frontend/sw.js`
+- D. `backend/entrypoint.sh`
+- Respuesta correcta: B
+- Explicación: genera dumps comprimidos de la DB.
+
+### 5. ¿Qué script restaura una copia?
+- A. `scripts/restore_db.sh`
+- B. `scripts/run_frontend_pwa.sh`
+- C. `scripts/backup_db.sh`
+- D. `docker-compose.dev.yml`
+- Respuesta correcta: A
+- Explicación: repone un backup seleccionado sobre la base.
+
+### 6. ¿Qué riesgo importante tiene el restore?
+- A. Solo cambia CSS
+- B. Es destructivo sobre el estado actual si se usa mal
+- C. Solo afecta a frontend
+- D. Rompe OAuth siempre
+- Respuesta correcta: B
+- Explicación: pisa el contenido lógico actual de la base.
+
+### 7. ¿Qué comando del Makefile crea backup?
+- A. `make full-up`
+- B. `make db-backup`
+- C. `make shell`
+- D. `make front-up`
+- Respuesta correcta: B
+- Explicación: llama al script de backup.
+
+### 8. ¿Qué comando del Makefile restaura backup?
+- A. `make db-restore BACKUP_FILE=...`
+- B. `make restore`
+- C. `make migrate`
+- D. `make fclean`
+- Respuesta correcta: A
+- Explicación: exige indicar explícitamente qué copia usar.
+
+### 9. ¿Qué documento complementario describe el runbook de recuperación?
+- A. `disaster-recovery.md`
+- B. `Design_Requirements.md`
+- C. `auth-flow-explained.md`
+- D. `database-models-explained.md`
+- Respuesta correcta: A
+- Explicación: ahí está el procedimiento de DR real.
+
+### 10. ¿Qué archivo define el manifest PWA?
+- A. `frontend/app/manifest.ts`
+- B. `frontend/lib/statusApi.ts`
+- C. `backend/manage.py`
+- D. `scripts/backup_db.sh`
+- Respuesta correcta: A
+- Explicación: genera el manifest web de la app.
+
+### 11. ¿Qué archivo registra el service worker?
+- A. `frontend/components/ServiceWorkerRegistration.tsx`
+- B. `frontend/app/login/page.tsx`
+- C. `backend/config/views.py`
+- D. `backend/authentication/views.py`
+- Respuesta correcta: A
+- Explicación: usa `useEffect` para registrar o desregistrar.
+
+### 12. ¿Qué ruta pública sirve como fallback offline básico?
+- A. `/leaderboard`
+- B. `/offline`
+- C. `/coalitions`
+- D. `/users/[login]`
+- Respuesta correcta: B
+- Explicación: es la página pensada para situación offline controlada.
+
+### 13. ¿Qué lectura es correcta sobre la PWA actual?
+- A. Implementa modo offline total de toda la app
+- B. Es una PWA mínima con installability y offline básico
+- C. Sustituye al backend
+- D. No existe en el repo
+- Respuesta correcta: B
+- Explicación: la documentación deja claro que el alcance es deliberadamente limitado.
+
+### 14. ¿Qué archivo del frontend contiene la lógica visual de `/status`?
+- A. `frontend/app/status/page.tsx`
+- B. `frontend/app/page.tsx`
+- C. `frontend/hooks/useUser.ts`
+- D. `frontend/app/users/[login]/page.tsx`
+- Respuesta correcta: A
+- Explicación: consume `fetchSystemStatus` y renderiza cards.
+
+### 15. ¿Qué función backend apoya `/api/status/` para obtener `last_sync`?
+- A. `_build_sync_context`
+- B. `_get_last_sync_time`
+- C. `_apply_evaluation_score_rows`
+- D. `logout`
+- Respuesta correcta: B
+- Explicación: lee el metadato desde `SyncMetadata`.
+
+### 16. ¿Qué problema resuelve GGC-83 más allá de una feature visible?
+- A. Solo cambiar colores
+- B. Añadir observabilidad, recuperación operativa y PWA mínima
+- C. Eliminar PostgreSQL
+- D. Reescribir toda la auth
+- Respuesta correcta: B
+- Explicación: es una capa transversal operativa y de resiliencia.
+
+### 17. ¿Qué lectura es correcta sobre backups periódicos?
+- A. Ya están completamente automatizados
+- B. Es la parte pendiente más clara según la documentación
+- C. No existen scripts
+- D. Solo funcionan sin Docker
+- Respuesta correcta: B
+- Explicación: el repo tiene soporte manual, no automatización completa.
+
+### 18. ¿Qué significa installability en esta tarea?
+- A. Que la app puede instalarse como PWA compatible
+- B. Que Docker instala PostgreSQL
+- C. Que el backend instala usuarios
+- D. Que el Makefile genera HTML
+- Respuesta correcta: A
+- Explicación: forma parte del bloque PWA.
+
+### 19. ¿Qué secuencia describe mejor GGC-83?
+- A. Health/status -> backups/restore -> disaster recovery -> PWA/offline
+- B. CSS -> SEO -> pagos -> chat
+- C. Auth -> ORM -> migraciones -> tests
+- D. 42 API -> cron -> JWT -> avatars
+- Respuesta correcta: A
+- Explicación: ese fue el orden real de las fases técnicas.
+
+### 20. ¿Cuál es la idea final correcta sobre GGC-83?
+- A. Fue una única pantalla
+- B. Fue un conjunto de entregables operativos complementarios y defendibles
+- C. Solo fue documentación sin código
+- D. Solo fue una mejora de rendimiento del frontend
+- Respuesta correcta: B
+- Explicación: abarca health, status, backups, restore, DR y PWA básica.

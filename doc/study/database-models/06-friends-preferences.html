@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>06 FriendsList y UserPreferences</title>
+  <style>
+:root {
+  --bg: #07101d;
+  --panel: rgba(14, 23, 41, 0.92);
+  --line: rgba(151, 168, 198, 0.18);
+  --text: #edf4ff;
+  --muted: #9caecc;
+  --brand: #7cc7ff;
+  --green: #8cf2cb;
+  --gold: #ffd37c;
+  --violet: #b8a4ff;
+  --pink: #f4a6ff;
+  --orange: #ffb37a;
+  --radius: 22px;
+  --radius-sm: 16px;
+  --shadow: 0 28px 70px rgba(0, 0, 0, .34);
+  --mono: "SFMono-Regular", Consolas, Menlo, monospace;
+  --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: var(--sans);
+  color: var(--text);
+  background:
+    radial-gradient(circle at top right, rgba(124,199,255,.12), transparent 28%),
+    radial-gradient(circle at 20% 0%, rgba(140,242,203,.08), transparent 24%),
+    linear-gradient(180deg, #06101a 0%, #09121f 48%, #08121f 100%);
+  min-height: 100vh;
+}
+a { color: inherit; text-decoration: none; }
+code { font-family: var(--mono); color: #d9f1ff; }
+.layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 24px; max-width: 1560px; margin: 0 auto; padding: 24px; }
+.sidebar { position: sticky; top: 18px; align-self: start; border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; background: rgba(7,16,29,.76); backdrop-filter: blur(14px); box-shadow: var(--shadow); }
+.side-head h2 { margin: 10px 0 8px; font-size: 1.15rem; }
+.side-head p { margin: 0 0 16px; color: var(--muted); line-height: 1.6; font-size: .93rem; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(124,199,255,.24); color: var(--brand); background: rgba(124,199,255,.08); font-size: .85rem; }
+.course-nav { display: grid; gap: 8px; }
+.step { display: grid; grid-template-columns: 42px 1fr; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 15px; border: 1px solid transparent; background: rgba(255,255,255,.02); color: var(--muted); transition: .18s ease; }
+.step span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 12px; background: rgba(255,255,255,.05); font-family: var(--mono); font-size: .8rem; color: var(--text); }
+.step:hover, .step.active { color: var(--text); border-color: rgba(124,199,255,.28); background: rgba(124,199,255,.08); transform: translateX(2px); }
+.pager { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.main { min-width: 0; }
+.hero, .section, .callout, .footer-note {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+}
+.hero { padding: 32px; position: relative; overflow: hidden; }
+.hero::after { content: ""; position: absolute; right: -50px; bottom: -50px; width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle, rgba(124,199,255,.2), transparent 68%); }
+h1 { margin: 0; font-size: clamp(2rem, 3vw, 3.15rem); line-height: 1.04; letter-spacing: -.04em; }
+.lead { margin: 16px 0 0; color: var(--muted); line-height: 1.75; max-width: 920px; }
+.badges, .cards, .grid-2, .grid-3, .chips, .legend, .timeline { display: flex; flex-wrap: wrap; gap: 10px; }
+.badge, .chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.04); }
+.badge { margin-top: 18px; }
+.chip { color: var(--muted); font-size: .84rem; }
+.section { margin-top: 24px; padding: 22px; }
+.section-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; align-items: flex-end; margin-bottom: 18px; }
+.section-head h2 { margin: 0; font-size: clamp(1.35rem, 2vw, 1.95rem); letter-spacing: -.03em; }
+.section-head p { margin: 8px 0 0; color: var(--muted); line-height: 1.65; max-width: 900px; }
+.section-head.split { align-items: center; }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card, .stat-card, .compare-card, .mini-panel, .mockup, .quiz-card, .syntax-card, .timeline-item {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,.03);
+  padding: 18px;
+}
+.card h3, .stat-card h3, .compare-card h3, .syntax-card h3, .timeline-item h3 { margin: 0 0 10px; font-size: 1.04rem; }
+.card p, .stat-card p, .compare-card p, .mini-panel p, .syntax-card p, .timeline-item p, .reference, .footer-note, .callout p, .mockup-subtitle { color: var(--muted); line-height: 1.65; }
+.tone-blue { box-shadow: inset 0 0 0 1px rgba(124,199,255,.08); }
+.tone-green { box-shadow: inset 0 0 0 1px rgba(140,242,203,.09); }
+.tone-gold { box-shadow: inset 0 0 0 1px rgba(255,211,124,.09); }
+.tone-violet { box-shadow: inset 0 0 0 1px rgba(184,164,255,.09); }
+.tone-pink { box-shadow: inset 0 0 0 1px rgba(244,166,255,.09); }
+.tone-orange { box-shadow: inset 0 0 0 1px rgba(255,179,122,.09); }
+.list, .risk-list, .field-list { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.list li, .risk-list li, .field-list li { padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.04); color: var(--muted); }
+.list strong, .risk-list strong, .field-list strong { color: var(--text); }
+.code-block, .pseudo-block { margin-top: 12px; border-radius: 16px; overflow: auto; border: 1px solid rgba(124,199,255,.18); background: linear-gradient(180deg, rgba(12,21,39,.96), rgba(8,13,24,.96)); }
+.pseudo-block { position: relative; border-color: rgba(140,242,203,.16); box-shadow: inset 0 0 0 1px rgba(140,242,203,.08); }
+.pseudo-block::before { content: attr(data-label); position: absolute; top: 10px; right: 14px; font-size: .72rem; letter-spacing: .08em; color: var(--green); text-transform: uppercase; }
+pre { margin: 0; padding: 16px 18px; font-family: var(--mono); font-size: .9rem; line-height: 1.7; color: #dff2ff; white-space: pre-wrap; word-break: break-word; }
+.reference { font-size: .88rem; margin-top: 12px; }
+.table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 16px; }
+table { width: 100%; border-collapse: collapse; min-width: 760px; }
+th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid rgba(255,255,255,.05); vertical-align: top; }
+th { background: rgba(255,255,255,.04); font-size: .88rem; color: var(--brand); letter-spacing: .04em; text-transform: uppercase; }
+td { color: var(--muted); }
+.status-covered, .status-na { padding: 4px 8px; border-radius: 999px; display: inline-flex; }
+.status-covered { color: #dffdf1; background: rgba(121,242,167,.12); border: 1px solid rgba(121,242,167,.25); }
+.status-na { color: #fff0d1; background: rgba(255,211,124,.12); border: 1px solid rgba(255,211,124,.25); }
+.diagram { border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(180deg, rgba(11,18,31,.96), rgba(12,21,39,.96)); padding: 18px; overflow: auto; }
+svg { width: 100%; height: auto; min-width: 900px; display: block; }
+.node rect { fill: #0f1a31; stroke: rgba(159,176,207,.32); stroke-width: 2; rx: 18; }
+.node text.title { fill: var(--text); font-size: 20px; font-weight: 700; }
+.node text.meta { fill: #9fb0cf; font-size: 14px; }
+.arrow { stroke: rgba(124,199,255,.72); stroke-width: 3; fill: none; }
+.arrow2 { stroke: rgba(184,164,255,.72); stroke-width: 3; fill: none; }
+.legend { margin-top: 14px; color: var(--muted); font-size: .9rem; }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.legend i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; background: currentColor; }
+.mock-grid { display: grid; grid-template-columns: 1.1fr .95fr; gap: 16px; }
+.mockup { overflow: hidden; background: linear-gradient(180deg, rgba(8,14,25,.96), rgba(12,21,39,.98)); }
+.mockup-bar { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.03); }
+.mockup-bar span { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.25); }
+.mockup-bar strong { margin-left: 8px; font-size: .95rem; }
+.mockup-body { padding: 16px; display: grid; gap: 12px; }
+.mock-row { display: grid; grid-template-columns: 54px 1fr auto; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 15px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.05); }
+.mock-avatar { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: rgba(124,199,255,.12); border: 1px solid rgba(124,199,255,.22); font-weight: 700; color: #dff1ff; }
+.mock-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.mini-panel { padding: 14px; }
+.callout { padding: 18px; background: linear-gradient(140deg, rgba(140,242,203,.06), rgba(124,199,255,.05)), var(--panel); }
+.callout strong { display: block; margin-bottom: 6px; color: var(--text); }
+.ghost-btn, .btn, .choice { border: 1px solid transparent; border-radius: 14px; cursor: pointer; font: inherit; transition: .18s ease; }
+.ghost-btn, .btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 14px; }
+.ghost-btn { background: rgba(255,255,255,.04); color: var(--muted); border-color: var(--line); }
+.btn { background: rgba(124,199,255,.12); color: var(--text); border-color: rgba(124,199,255,.28); }
+.quiz-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.score-pill { padding: 10px 14px; border-radius: 999px; border: 1px solid rgba(124,199,255,.2); background: rgba(124,199,255,.08); }
+.quiz-grid { display: grid; gap: 16px; }
+.choice-list { display: grid; gap: 10px; margin-top: 14px; }
+.choice { text-align: left; padding: 13px 14px; background: rgba(255,255,255,.04); color: var(--text); border-color: rgba(255,255,255,.06); }
+.choice.correct { background: rgba(121,242,167,.14); border-color: rgba(121,242,167,.34); color: #e8fff1; }
+.choice.wrong { background: rgba(255,138,138,.13); border-color: rgba(255,138,138,.30); color: #ffe8e8; }
+.explanation { display: none; margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.04); color: var(--muted); line-height: 1.6; }
+.explanation.show { display: block; }
+.footer-note { margin-top: 24px; padding: 18px 20px; }
+.small { font-size: .9rem; }
+@media (max-width: 1180px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; }
+  .cards, .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mock-grid, .grid-2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .layout { padding: 14px; gap: 18px; }
+  .hero, .section, .callout, .footer-note { border-radius: 18px; }
+  .cards, .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .hero { padding: 24px; }
+  .section { padding: 18px; }
+}
+</style>
+</head>
+<body>
+  <div class="layout">
+    
+<aside class="sidebar">
+  <div class="side-head">
+    <span class="eyebrow">Mini curso</span>
+    <h2>Progreso</h2>
+    <p>Curso secuencial con referencias al .md, pseudocódigo, diagramas y quizzes.</p>
+  </div>
+  <nav class="course-nav"><a class="step " href="index.html"><span>01</span>Inicio</a><a class="step " href="01-overview.html"><span>02</span>01 Overview</a><a class="step " href="02-user-vs-campususer.html"><span>03</span>02 User vs CampusUser</a><a class="step " href="03-coalition.html"><span>04</span>03 Coalition</a><a class="step " href="04-snapshots.html"><span>05</span>04 Snapshots</a><a class="step " href="05-cursors-syncmetadata.html"><span>06</span>05 Cursors + SyncMetadata</a><a class="step active" href="06-friends-preferences.html"><span>07</span>06 Friends + Preferences</a><a class="step " href="07-orm-syntax.html"><span>08</span>07 ORM Syntax</a><a class="step " href="08-migrations.html"><span>09</span>08 Migrations</a><a class="step " href="09-data-flow-and-views.html"><span>10</span>09 Data Flow + Views</a><a class="step " href="10-review-final.html"><span>11</span>10 Review Final</a></nav>
+  <div class="pager"><a class="ghost-btn" href="05-cursors-syncmetadata.html">← Anterior</a><a class="ghost-btn" href="index.html">Índice</a><a class="btn" href="07-orm-syntax.html">Siguiente →</a></div>
+</aside>
+    <main class="main">
+      <header class="hero">
+        <span class="eyebrow">Curso visual · Modelos de base de datos</span>
+        <h1>06. FriendsList y UserPreferences</h1>
+        <p class="lead">Capa social y de personalización propia de la app: relaciones autorreferenciales, avatar custom, tema y privacidad.</p>
+        <div class="badges">
+          <span class="badge">🧩 Django ORM</span>
+          <span class="badge">🐘 PostgreSQL</span>
+          <span class="badge">🌐 API 42</span>
+          <span class="badge">🔄 Sync local</span>
+          <span class="badge">📚 Referencias al repo</span>
+        </div>
+      </header>
+      
+<section class="section">
+  <div class="section-head"><div><h2>Datos propios de la app</h2><p>Este bloque estudia lo que no viene de 42: la capa social y la personalización de experiencia.</p></div></div>
+  <div class="cards">
+    <article class="stat-card tone-green"><h3>FriendsList</h3><p>Amigos y solicitudes con relaciones ManyToMany autorreferenciales.</p></article>
+    <article class="stat-card tone-orange"><h3>UserPreferences</h3><p>Avatar custom, paginación, privacidad, tema y notificaciones.</p></article>
+    <article class="stat-card tone-blue"><h3>Separación sana</h3><p>No mezclar datos del producto con el perfil académico sincronizado.</p></article>
+  </div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.9 y 4.10, línea aproximada 761</p>
+</section>
+<section class="section">
+  <div class="section-head"><div><h2>FriendsList</h2><p>Modelo autorreferencial con un <code>owner</code> único por <code>User</code> y tres relaciones sociales importantes.</p></div></div>
+  <div class="grid-2">
+    <article class="card"><h3>Campos</h3><div class="chips"><span class="chip">owner</span><span class="chip">friends</span><span class="chip">friends_requests_received</span><span class="chip">friends_requests_sent</span></div><div class="code-block"><pre><code>owner = models.OneToOneField(settings.AUTH_USER_MODEL,
+    on_delete=models.CASCADE, related_name="friends_list")
+friends = models.ManyToManyField("self", symmetrical=True, blank=True)</code></pre></div><p class="reference">Archivo: backend/users/models.py, línea aproximada 5. Definición principal de FriendsList.</p></article>
+    <article class="card"><h3>Cómo leerlo</h3><ul class="list"><li><strong>owner:</strong> un FriendsList por User</li><li><strong>friends:</strong> amistad simétrica</li><li><strong>pending received:</strong> solicitudes recibidas</li><li><strong>pending sent:</strong> solicitudes enviadas</li></ul></article>
+  </div>
+  <div class="pseudo-block" data-label="Pseudocódigo local"><pre>FUNCIÓN enviar_solicitud(owner, target):
+
+    lista_owner = FriendsList(owner)
+    lista_target = FriendsList(target)
+
+    añadir target a friends_requests_sent de owner
+    añadir owner a friends_requests_received de target
+    guardar ambos lados</pre></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.9 FriendsList, línea aproximada 761</p>
+</section>
+<section class="section">
+  <div class="section-head"><div><h2>UserPreferences</h2><p>Persistencia de UX y configuración personal.</p></div></div>
+  <div class="grid-3">
+    <article class="card"><h3>Visual y perfil</h3><div class="chips"><span class="chip">custom_avatar</span><span class="chip">custom_username</span><span class="chip">theme_mode</span></div><p>Personalización visible del usuario.</p></article>
+    <article class="card"><h3>Consumo de datos</h3><div class="chips"><span class="chip">items_per_page</span><span class="chip">show_sensitive_data</span></div><p>Control de paginación y visibilidad.</p></article>
+    <article class="card"><h3>Comportamiento</h3><div class="chips"><span class="chip">receive_notifications</span></div><p>Preferencias operativas del producto.</p></article>
+  </div>
+  <div class="code-block"><pre><code>user = models.OneToOneField(settings.AUTH_USER_MODEL,
+    on_delete=models.CASCADE, related_name="preferences")
+custom_avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+items_per_page = models.PositiveIntegerField(default=10)
+show_sensitive_data = models.BooleanField(default=True)</code></pre></div>
+  <div class="pseudo-block" data-label="Pseudocódigo local"><pre>FUNCIÓN cargar_preferencias(user):
+
+    preferencias = buscar UserPreferences por user
+
+    SI no existe:
+        usar defaults del modelo
+
+    devolver avatar, tema, privacidad y paginación</pre></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.10 UserPreferences, línea aproximada 832</p>
+  <p class="reference">Archivo: backend/users/models.py, línea aproximada 15. Definición activa de UserPreferences.</p>
+</section>
+<section class="section">
+  <div class="section-head"><div><h2>Datos de la app vs datos de 42</h2><p>Comparativa corta para fijar la separación conceptual.</p></div></div>
+  <div class="grid-2">
+    <article class="compare-card"><h3>Vienen del sync de 42</h3><p><code>CampusUser</code>, parte de <code>Coalition</code>, scores, ranks y métricas académicas.</p></article>
+    <article class="compare-card"><h3>Viven solo en la app</h3><p><code>FriendsList</code>, <code>UserPreferences</code>, avatar custom, tema, paginación y solicitudes.</p></article>
+  </div>
+</section>
+<section class="section">
+  <div class="section-head"><div><h2>Riesgos concretos</h2><p>Dos tipos de riesgo: lógica social y ficheros media.</p></div></div>
+  <ul class="risk-list">
+    <li><strong>FriendsList:</strong> al ser autorreferencial, es fácil generar inconsistencias si los servicios no actualizan ambos lados.</li>
+    <li><strong>UserPreferences:</strong> <code>custom_avatar</code> depende de media files; si el fichero se pierde, el registro puede apuntar a una ruta rota.</li>
+    <li><strong>Separación de dominio:</strong> mezclar preferencias con CampusUser ensuciaría el modelo sincronizado.</li>
+  </ul>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.9 y 4.10 riesgos, línea aproximada 761</p>
+</section>
+
+<section class="quiz-section section">
+  <div class="section-head split">
+    <div>
+      <h2>Quiz de la página</h2>
+      <p>Responde antes de avanzar. El feedback marca correcto o incorrecto y te recuerda la referencia.</p>
+    </div>
+    <div class="quiz-toolbar">
+      <span class="score-pill" id="quiz06-score">0 / 10 correctas</span>
+      <button class="ghost-btn" data-reset-quiz="quiz06">Reiniciar</button>
+    </div>
+  </div>
+  <div class="quiz-grid" data-quiz-id="quiz06">
+    
+<article class="quiz-card" data-question>
+  <h3>1. ¿Qué representa FriendsList?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">La red social mínima del proyecto</button><button class="choice" data-correct="false" data-explanation="No.">Un perfil académico sincronizado</button><button class="choice" data-correct="false" data-explanation="No.">El historial de migraciones</button><button class="choice" data-correct="false" data-explanation="No.">El estado actual de coaliciones</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.9 FriendsList, línea aproximada 761</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>2. ¿Qué relación une FriendsList con User?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">OneToOne mediante owner</button><button class="choice" data-correct="false" data-explanation="No.">ManyToMany</button><button class="choice" data-correct="false" data-explanation="No.">ForeignKey opcional</button><button class="choice" data-correct="false" data-explanation="Sí la hay.">Ninguna</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.9 FriendsList, línea aproximada 761</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>3. ¿Qué significa friends = ManyToManyField('self', symmetrical=True)?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">La amistad es autorreferencial y simétrica</button><button class="choice" data-correct="false" data-explanation="No.">Solo se puede tener un amigo</button><button class="choice" data-correct="false" data-explanation="No.">Borra el owner</button><button class="choice" data-correct="false" data-explanation="No.">Es un OneToOne</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.9 FriendsList, línea aproximada 761</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>4. ¿Para qué sirven friends_requests_received y friends_requests_sent?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Para modelar solicitudes pendientes en ambos sentidos</button><button class="choice" data-correct="false" data-explanation="No.">Para guardar snapshots</button><button class="choice" data-correct="false" data-explanation="No.">Para ordenar coaliciones</button><button class="choice" data-correct="false" data-explanation="No.">Para reemplazar friends</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.9 FriendsList, línea aproximada 761</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>5. ¿Qué modelo guarda custom_avatar y theme_mode?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">UserPreferences</button><button class="choice" data-correct="false" data-explanation="No.">CampusUser</button><button class="choice" data-correct="false" data-explanation="No.">SyncMetadata</button><button class="choice" data-correct="false" data-explanation="No.">Coalition</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.10 UserPreferences, línea aproximada 832</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>6. ¿Qué significa depender de MEDIA_ROOT y MEDIA_URL?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Que el archivo avatar debe existir y servirse correctamente</button><button class="choice" data-correct="false" data-explanation="No es lo que dice el .md.">Que el avatar se guarda siempre binario en PostgreSQL</button><button class="choice" data-correct="false" data-explanation="No.">Que lo sirve la API 42</button><button class="choice" data-correct="false" data-explanation="No.">Que theme_mode falla</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.10 UserPreferences, línea aproximada 832</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>7. ¿Qué diferencia conceptual hay entre CampusUser y UserPreferences?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">CampusUser viene del sync; UserPreferences es UX de producto</button><button class="choice" data-correct="false" data-explanation="No.">Ambos son históricos</button><button class="choice" data-correct="false" data-explanation="No.">Ambos son migraciones</button><button class="choice" data-correct="false" data-explanation="Incorrecto.">UserPreferences viene de 42</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.10 UserPreferences, línea aproximada 832</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>8. ¿Qué valor por defecto tiene items_per_page en el modelo?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">10</button><button class="choice" data-correct="false" data-explanation="25 es un valor frecuente de frontend, no el default del modelo.">25</button><button class="choice" data-correct="false" data-explanation="No.">50</button><button class="choice" data-correct="false" data-explanation="No.">100</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.10 UserPreferences, línea aproximada 832</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>9. ¿Qué puede pasar si la lógica de FriendsList está mal cerrada?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">Inconsistencias en solicitudes o relaciones autorreferenciales</button><button class="choice" data-correct="false" data-explanation="No.">Coalition cambia de color</button><button class="choice" data-correct="false" data-explanation="No.">SyncMetadata se vuelve nulo</button><button class="choice" data-correct="false" data-explanation="No.">User builtin desaparece</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 4.9 riesgos, línea aproximada 761</p>
+</article>
+<article class="quiz-card" data-question>
+  <h3>10. ¿Qué frase oral es correcta?</h3>
+  <div class="choice-list"><button class="choice" data-correct="true" data-explanation="Correcto.">FriendsList y UserPreferences son datos propios de la app y no vienen de 42</button><button class="choice" data-correct="false" data-explanation="No.">UserPreferences es un cursor</button><button class="choice" data-correct="false" data-explanation="No.">FriendsList pertenece a la API 42</button><button class="choice" data-correct="false" data-explanation="No.">CampusUser guarda el avatar custom local</button></div>
+  <div class="explanation"></div>
+  <p class="reference">Referencia: doc/database-models-explained.md, sección 10. Qué decir en evaluación, línea aproximada 1433</p>
+</article>
+  </div>
+</section>
+
+      <div class="footer-note small">
+        Fuente principal obligatoria: <code>doc/database-models-explained.md</code>. Verificación adicional contra modelos, migraciones, rutas y stores reales del repo. Página autocontenida y sin dependencias externas.
+      </div>
+    </main>
+  </div>
+  <script>
+document.querySelectorAll('[data-reset-quiz]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const quizId = button.dataset.resetQuiz;
+    const container = document.querySelector(`[data-quiz-id="${quizId}"]`);
+    if (!container) return;
+    container.querySelectorAll('[data-question]').forEach((card) => {
+      card.dataset.answered = 'false';
+      card.querySelectorAll('.choice').forEach((choice) => {
+        choice.disabled = false;
+        choice.classList.remove('correct', 'wrong');
+      });
+      const explanation = card.querySelector('.explanation');
+      explanation.textContent = '';
+      explanation.classList.remove('show');
+    });
+    const scoreEl = document.getElementById(`${quizId}-score`);
+    if (scoreEl) {
+      scoreEl.textContent = `0 / ${container.querySelectorAll('[data-question]').length} correctas`;
+    }
+  });
+});
+
+document.querySelectorAll('[data-quiz-id]').forEach((container) => {
+  const quizId = container.dataset.quizId;
+  const scoreEl = document.getElementById(`${quizId}-score`);
+  let correct = 0;
+  const update = () => {
+    if (scoreEl) {
+      scoreEl.textContent = `${correct} / ${container.querySelectorAll('[data-question]').length} correctas`;
+    }
+  };
+  container.querySelectorAll('[data-question]').forEach((card) => {
+    card.dataset.answered = 'false';
+    const explanation = card.querySelector('.explanation');
+    card.querySelectorAll('.choice').forEach((choice) => {
+      choice.addEventListener('click', () => {
+        if (card.dataset.answered === 'true') return;
+        card.dataset.answered = 'true';
+        const isCorrect = choice.dataset.correct === 'true';
+        if (isCorrect) correct += 1;
+        card.querySelectorAll('.choice').forEach((button) => {
+          const ok = button.dataset.correct === 'true';
+          button.disabled = true;
+          button.classList.add(ok ? 'correct' : 'wrong');
+        });
+        choice.classList.remove('wrong');
+        choice.classList.add(isCorrect ? 'correct' : 'wrong');
+        explanation.textContent = choice.dataset.explanation;
+        explanation.classList.add('show');
+        update();
+      });
+    });
+  });
+  update();
+});
+</script>
+</body>
+</html>

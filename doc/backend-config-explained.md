@@ -1275,3 +1275,165 @@ FUNCIÓN backend_django():
 
     devolver "backend configurado y sirviendo API"
 ```
+
+## 14. Quiz final tipo test (20 preguntas)
+
+### 1. ¿Qué archivo es la puerta de entrada típica de comandos Django?
+- A. `docker-compose.dev.yml`
+- B. `backend/manage.py`
+- C. `frontend/app/layout.tsx`
+- D. `backend/entrypoint.sh`
+- Respuesta correcta: B
+- Explicación: `manage.py` arranca el entorno Django para comandos y servidor.
+
+### 2. ¿Qué archivo concentra la configuración base del backend?
+- A. `backend/config/settings/settings.py`
+- B. `frontend/lib/statusApi.ts`
+- C. `backend/authentication/models.py`
+- D. `README_CUSTOM_MAJOR.md`
+- Respuesta correcta: A
+- Explicación: ahí viven apps, middleware, DB, DRF, JWT y más.
+
+### 3. ¿Qué archivo sirve para desarrollo y hereda o ajusta settings?
+- A. `dev.py`
+- B. `manifest.ts`
+- C. `sw.js`
+- D. `views.py`
+- Respuesta correcta: A
+- Explicación: `dev.py` ajusta configuración del entorno de desarrollo.
+
+### 4. ¿Qué estado real tiene `prod.py` según la documentación actual?
+- A. Es la única configuración usada
+- B. Existe pero no parece el camino principal de desarrollo local
+- C. Sustituye a Docker
+- D. Configura Next.js
+- Respuesta correcta: B
+- Explicación: la lectura honesta es que no es la pieza principal del flujo local.
+
+### 5. ¿Qué endpoint comprueba salud básica del backend y DB?
+- A. `/api/auth/profile/`
+- B. `/api/health/`
+- C. `/api/auth/logout/`
+- D. `/api/coalitions/`
+- Respuesta correcta: B
+- Explicación: esa ruta hace el check mínimo de salud.
+
+### 6. ¿Qué endpoint añade información de `last_sync`?
+- A. `/api/status/`
+- B. `/api/health/`
+- C. `/api/leaderboard/`
+- D. `/api/auth/42/login/`
+- Respuesta correcta: A
+- Explicación: `/api/status/` amplía la visibilidad operativa.
+
+### 7. ¿Qué clase de autenticación se configura por defecto en DRF?
+- A. SessionAuthentication pura
+- B. TokenAuthentication pura
+- C. `authentication.authentication.CookieJWTAuthentication`
+- D. Ninguna
+- Respuesta correcta: C
+- Explicación: es la auth custom basada en header o cookie.
+
+### 8. ¿Qué permiso se configura por defecto en DRF?
+- A. `AllowAny`
+- B. `IsAuthenticated`
+- C. `IsAdminUser`
+- D. Ninguno
+- Respuesta correcta: B
+- Explicación: por defecto las vistas requieren autenticación.
+
+### 9. ¿Qué archivo enruta las rutas globales del backend?
+- A. `backend/config/urls.py`
+- B. `backend/config/wsgi.py`
+- C. `frontend/app/page.tsx`
+- D. `backend/cron_scheduler/apps.py`
+- Respuesta correcta: A
+- Explicación: ahí se conectan `auth`, `users`, `coalitions`, `status`, etc.
+
+### 10. ¿Qué hace `_check_database`?
+- A. Limpia tablas
+- B. Verifica que la DB responde con una consulta mínima
+- C. Ejecuta sync completo
+- D. Refresca JWT
+- Respuesta correcta: B
+- Explicación: es el check técnico base para salud.
+
+### 11. ¿Qué hace `_get_last_sync_time`?
+- A. Lee el último login
+- B. Busca `last_time_update` en `SyncMetadata`
+- C. Calcula promedio de niveles
+- D. Lee el service worker
+- Respuesta correcta: B
+- Explicación: se usa para poblar `/api/status/`.
+
+### 12. ¿Qué significa WSGI en este contexto?
+- A. El sistema de migraciones
+- B. La interfaz clásica de despliegue Python web síncrono
+- C. El cliente de 42
+- D. El driver de PostgreSQL
+- Respuesta correcta: B
+- Explicación: es el punto de entrada típico para servidores web Python tradicionales.
+
+### 13. ¿Qué significa ASGI?
+- A. Una forma de empaquetar CSS
+- B. Una interfaz más moderna compatible con async y websockets
+- C. El login OAuth
+- D. La tabla de usuarios
+- Respuesta correcta: B
+- Explicación: complementa o sustituye a WSGI según despliegue.
+
+### 14. ¿Qué comando muestra migraciones?
+- A. `make back-showmigrations`
+- B. `make db-backup`
+- C. `make front-up`
+- D. `make full-stop`
+- Respuesta correcta: A
+- Explicación: envuelve `python manage.py showmigrations`.
+
+### 15. ¿Qué lectura es correcta sobre `/api/status/`?
+- A. Es privado y requiere JWT
+- B. Resume backend, DB y último sync
+- C. Crea snapshots
+- D. Sirve el leaderboard
+- Respuesta correcta: B
+- Explicación: está orientado a observabilidad operativa.
+
+### 16. ¿Qué riesgo existe si `DATABASE_URL` o variables DB están mal?
+- A. Solo falla el CSS
+- B. El backend no podrá abrir conexión con PostgreSQL
+- C. Solo falla el service worker
+- D. Solo falla `/offline`
+- Respuesta correcta: B
+- Explicación: la configuración de DB es crítica para cualquier request útil.
+
+### 17. ¿Qué archivo del backend responde a `/api/status/` y `/api/health/`?
+- A. `backend/config/views.py`
+- B. `backend/authentication/views.py`
+- C. `frontend/app/status/page.tsx`
+- D. `backend/sync/services.py`
+- Respuesta correcta: A
+- Explicación: ahí están `health_check` y `status_check`.
+
+### 18. ¿Qué hace `path(...)` en Django?
+- A. Define rutas URL
+- B. Crea tablas SQL
+- C. Guarda cookies
+- D. Hace `fetch`
+- Respuesta correcta: A
+- Explicación: conecta una ruta con una view o include.
+
+### 19. ¿Qué hace `include(...)` en `urls.py`?
+- A. Inserta middleware
+- B. Reutiliza subárboles de rutas de otras apps
+- C. Inicia cron
+- D. Crea superusuarios
+- Respuesta correcta: B
+- Explicación: delega a módulos como `authentication.urls`.
+
+### 20. ¿Cuál es el objetivo del documento de backend config?
+- A. Explicar CSS del frontend
+- B. Explicar arranque, settings, rutas, views globales y request flow
+- C. Reemplazar el código
+- D. Describir solo la API de 42
+- Respuesta correcta: B
+- Explicación: sirve como guía del esqueleto técnico del backend.

@@ -819,3 +819,176 @@ FUNCIÓN entender_repo_arepa():
 
     devolver "mapa global del proyecto"
 ```
+
+## 22. Tabla modelo → endpoint → frontend
+
+| Modelo o fuente | Endpoint backend | Archivo frontend principal | Qué se ve |
+|---|---|---|---|
+| `SyncMetadata` | `/api/status/` | [frontend/app/status/page.tsx](/home/aurodrig/Desktop/arepa/frontend/app/status/page.tsx:17) | Estado del backend, DB y último sync |
+| `User` + `CampusUser` | `/api/auth/profile/` | [frontend/hooks/useAuth.ts](/home/aurodrig/Desktop/arepa/frontend/hooks/useAuth.ts:59) | Sesión local e identidad del usuario |
+| `Coalition` | `/api/coalitions/` | [frontend/app/coalitions/page.tsx](/home/aurodrig/Desktop/arepa/frontend/app/coalitions/page.tsx:6) | Cards de coaliciones |
+| `Coalition` + snapshots | `/api/coalitions/details/?coalition=slug` | [frontend/app/coalitions/[name]/page.tsx](/home/aurodrig/Desktop/arepa/frontend/app/coalitions/[name]/page.tsx:1) | Detalle de coalición |
+| `CampusUser` | `/api/coalitions/users-ranking/` | [frontend/app/leaderboard/page.tsx](/home/aurodrig/Desktop/arepa/frontend/app/leaderboard/page.tsx:12) | Ranking por puntos y correcciones |
+| `CampusUser` + `FriendsList` + `UserPreferences` | `/api/users/details/`, endpoints friends/preferences | [frontend/app/users/[login]/page.tsx](/home/aurodrig/Desktop/arepa/frontend/app/users/[login]/page.tsx:16) | Perfil, amigos, ajustes |
+
+## 23. Quiz final tipo test (20 preguntas)
+
+### 1. ¿Cuál es el stack principal del proyecto?
+- A. Vue + Laravel + MySQL
+- B. Next.js + Django/DRF + PostgreSQL
+- C. React Native + FastAPI + SQLite
+- D. Svelte + Rails + Redis
+- Respuesta correcta: B
+- Explicación: esa es la arquitectura real del repo.
+
+### 2. ¿Qué carpeta concentra el backend principal?
+- A. `frontend/app/`
+- B. `backend/`
+- C. `scripts/`
+- D. `backups/`
+- Respuesta correcta: B
+- Explicación: ahí viven Django, DRF, sync y modelos.
+
+### 3. ¿Qué carpeta concentra las rutas App Router?
+- A. `frontend/app/`
+- B. `frontend/public/`
+- C. `backend/config/`
+- D. `doc/`
+- Respuesta correcta: A
+- Explicación: `app/` contiene páginas y layouts del frontend.
+
+### 4. ¿Qué documento conviene leer para entender Docker y Make primero?
+- A. `database-models-explained.md`
+- B. `infra-explained.md`
+- C. `auth-flow-explained.md`
+- D. `ggc-83-progress-phase-1.md`
+- Respuesta correcta: B
+- Explicación: es el documento base de infraestructura.
+
+### 5. ¿Qué modelo es la fuente de verdad del dominio de usuario sincronizado?
+- A. `User`
+- B. `CampusUser`
+- C. `SyncMetadata`
+- D. `FriendsList`
+- Respuesta correcta: B
+- Explicación: `CampusUser` guarda identidad y métricas de 42.
+
+### 6. ¿Qué componente del frontend protege rutas privadas?
+- A. `StatusPage`
+- B. `AuthLayout`
+- C. `Footer`
+- D. `NavLink`
+- Respuesta correcta: B
+- Explicación: `AuthLayout` decide acceso y redirects.
+
+### 7. ¿Qué carpeta backend contiene la lógica de sync con 42?
+- A. `backend/users/`
+- B. `backend/coalitions/`
+- C. `backend/sync/`
+- D. `backend/config/`
+- Respuesta correcta: C
+- Explicación: ahí están services, projects, evaluations y commands.
+
+### 8. ¿Qué documento conviene estudiar para entender OAuth?
+- A. `auth-flow-explained.md`
+- B. `infra-explained.md`
+- C. `README_CUSTOM_MAJOR.md`
+- D. `Functional_Requirements.md`
+- Respuesta correcta: A
+- Explicación: es el documento especializado de auth.
+
+### 9. ¿Qué ruta frontend muestra el estado operativo del sistema?
+- A. `/leaderboard`
+- B. `/offline`
+- C. `/status`
+- D. `/users`
+- Respuesta correcta: C
+- Explicación: consume `/api/status/`.
+
+### 10. ¿Qué relación es correcta entre backend y frontend?
+- A. El frontend consulta 42 directamente
+- B. El frontend consulta Django y Django se apoya en PostgreSQL local
+- C. El backend solo sirve HTML
+- D. El backend no usa base de datos
+- Respuesta correcta: B
+- Explicación: la API interna y la DB local sostienen la app.
+
+### 11. ¿Qué carpeta del frontend concentra la capa de acceso a APIs?
+- A. `frontend/lib/`
+- B. `frontend/public/`
+- C. `frontend/styles/`
+- D. `frontend/node_modules/`
+- Respuesta correcta: A
+- Explicación: ahí viven `authApi.ts`, `coalitionApi.ts`, `statusApi.ts`, etc.
+
+### 12. ¿Qué documento explica la funcionalidad de coalitions y leaderboard?
+- A. `coalitions-feature-explained.md`
+- B. `disaster-recovery.md`
+- C. `backend-config-explained.md`
+- D. `Design_Requirements.md`
+- Respuesta correcta: A
+- Explicación: es la guía funcional y técnica de esa feature.
+
+### 13. ¿Qué documento explica health, status, backups y PWA?
+- A. `ggc-83-technical-explanation.md`
+- B. `database-models-explained.md`
+- C. `auth-flow-explained.md`
+- D. `project-codebase-map.md`
+- Respuesta correcta: A
+- Explicación: GGC-83 cubre esa parte operativa.
+
+### 14. ¿Qué lectura es correcta sobre snapshots?
+- A. Son la única fuente de verdad
+- B. Son histórico complementario, no sustituyen el estado actual
+- C. Solo se usan en Docker
+- D. Guardan cookies
+- Respuesta correcta: B
+- Explicación: sirven para evolución temporal.
+
+### 15. ¿Qué pieza organiza el orden recomendado de estudio del repo?
+- A. Solo el Makefile
+- B. El mapa del codebase
+- C. El manifest PWA
+- D. `AuthLayout`
+- Respuesta correcta: B
+- Explicación: este documento conecta carpetas, flujos y lectura sugerida.
+
+### 16. ¿Qué modelo conecta mejor con `/api/status/`?
+- A. `FriendsList`
+- B. `SyncMetadata`
+- C. `CoalitionScoreSnapshot`
+- D. `UserPreferences`
+- Respuesta correcta: B
+- Explicación: `last_sync` sale de metadatos de sync.
+
+### 17. ¿Qué ruta del backend sirve la sesión autenticada del usuario?
+- A. `/api/auth/profile/`
+- B. `/api/health/`
+- C. `/api/status/`
+- D. `/api/coalitions/details/`
+- Respuesta correcta: A
+- Explicación: entrega el perfil autenticado al frontend.
+
+### 18. ¿Qué carpeta documenta el proyecto sin tocar código productivo?
+- A. `doc/`
+- B. `frontend/app/`
+- C. `backend/config/`
+- D. `scripts/`
+- Respuesta correcta: A
+- Explicación: ahí viven los manuales técnicos y material de estudio.
+
+### 19. ¿Qué vista consume ranking de usuarios?
+- A. `/leaderboard`
+- B. `/offline`
+- C. `/status`
+- D. `/login`
+- Respuesta correcta: A
+- Explicación: el leaderboard usa `users-ranking`.
+
+### 20. ¿Cuál es el objetivo principal de este mapa del codebase?
+- A. Sustituir al código fuente
+- B. Mostrar arquitectura, carpetas, relaciones y orden de estudio
+- C. Ejecutar el backend
+- D. Crear migraciones
+- Respuesta correcta: B
+- Explicación: sirve como guía de orientación técnica del repo.

@@ -4,8 +4,6 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 
-RUN npm ci
-
 EXPOSE 3000
 
-CMD ["npm", "run", "dev"]
+CMD ["sh", "-lc", "if [ ! -d node_modules ] || [ -z \"$(ls -A node_modules 2>/dev/null)\" ]; then npm ci --cache /tmp/.npm --no-audit --no-fund && rm -rf /tmp/.npm /root/.npm; fi && npm run dev"]
