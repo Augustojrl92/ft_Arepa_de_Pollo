@@ -40,7 +40,7 @@ class OnlineStatusMiddleware:
 
 			campus_user = CampusUser.objects.filter(login=login).first()
 			if campus_user:
-				campus_user.last_active_time = time()
+				campus_user.last_active_time = int(time())
 				# Persist last_active_time without wrapping in transaction here
 				campus_user.save(update_fields=['last_active_time'])
 
