@@ -28,17 +28,16 @@ Actualmente están implementados:
 - página `/offline`;
 - installability y offline básico validados manualmente en modo PWA.
 
-### Qué queda pendiente
+### Mejoras opcionales
 
-Lo pendiente importante, si se compara con la descripción original completa, es:
+La descripción original está cubierta. Como mejoras futuras se puede:
 
-- **backups automáticos** como flujo periódico cerrado;
-- opcionalmente una **retención** de backups;
-- opcionalmente mejorar `/api/status/` para incluir checks más ambiciosos, por ejemplo API externa de 42 o frescura explícita del scheduler.
+- copiar los backups automáticos a almacenamiento externo y cifrado;
+- mejorar `/api/status/` para incluir checks más ambiciosos, por ejemplo API externa de 42 o frescura explícita del scheduler.
 
 ### Lectura honesta del estado
 
-GGC-83 está **mayormente implementada**. Lo no cerrado del todo no está en PWA, ni en restore, ni en runbook, sino en la parte de **automatización periódica de backups**.
+GGC-83 está **implementada**: health/status, backup manual y automático, restore, runbook y PWA tienen evidencia ejecutable en el repositorio.
 
 ### Panel visual rápido
 
@@ -49,15 +48,15 @@ GGC-83 está **mayormente implementada**. Lo no cerrado del todo no está en PWA
 | Restore manual | `Hecho` | Recuperación explícita con `BACKUP_FILE` |
 | Runbook DR | `Hecho` | Procedimiento de recuperación documentado |
 | PWA mínima | `Hecho` | Manifest + SW + `/offline` + installability |
-| Backup automático | `Pendiente` | Falta automatización periódica |
+| Backup automático | `Hecho` | Servicio `db-backup` cada 6 horas con retención de 7 días |
 
 ```text
-GGC-83 total                  [████████████████░░] Muy avanzado
+GGC-83 total                  [██████████████████] Hecha
 Fase 1 health/status          [██████████████████] Hecha
 Fase 2A backup/restore        [██████████████████] Hecha
 Fase 3 runbook                [██████████████████] Hecha
 Fase 4 PWA/offline            [██████████████████] Hecha
-Fase 2B backup automático     [░░░░░░░░░░░░░░░░░░] Pendiente
+Fase 2B backup automático     [██████████████████] Hecha
 ```
 
 ```mermaid
@@ -66,7 +65,7 @@ flowchart LR
     A --> C["Fase 2A<br/>Backup/restore manual<br/>Hecha"]
     A --> D["Fase 3<br/>Runbook DR<br/>Hecha"]
     A --> E["Fase 4<br/>PWA mínima<br/>Hecha"]
-    A --> F["Fase 2B<br/>Backup automático<br/>Pendiente"]
+    A --> F["Fase 2B<br/>Backup automático<br/>Hecha"]
 ```
 
 Lectura bloque por bloque:
@@ -75,7 +74,7 @@ Lectura bloque por bloque:
 - `Fase 2A` representa backup y restore manual, ya resueltos.
 - `Fase 3` representa el runbook de disaster recovery, también cerrado.
 - `Fase 4` representa la PWA mínima con manifest, SW y offline básico, ya implementada.
-- `Fase 2B` queda separada como pendiente porque la automatización periódica de backups todavía no está hecha.
+- `Fase 2B` usa un servicio Docker dedicado para ejecutar backups cada 6 horas y aplicar retención solo a copias automáticas.
 
 ## 2. Mapa general de la tarea
 
@@ -2128,7 +2127,7 @@ GGC-83 no fue una sola feature, sino una **cadena de entregables complementarios
 - documentación de disaster recovery;
 - PWA mínima, instalable y con offline básico.
 
-La única parte original que sigue claramente pendiente es la **automatización periódica de backups**. Todo lo demás está implementado con evidencia real en el repo y con una historia de validación suficientemente clara como para defenderla en evaluación.
+La automatización periódica de backups queda cubierta por el servicio `db-backup`, con ejecución cada 6 horas, validación gzip y retención de 7 días para copias automáticas.
 
 ## Quiz final tipo test (20 preguntas)
 
@@ -2265,8 +2264,8 @@ La única parte original que sigue claramente pendiente es la **automatización 
 - B. Es la parte pendiente más clara según la documentación
 - C. No existen scripts
 - D. Solo funcionan sin Docker
-- Respuesta correcta: B
-- Explicación: el repo tiene soporte manual, no automatización completa.
+- Respuesta correcta: A
+- Explicación: el servicio `db-backup` crea y valida copias cada 6 horas y aplica una retención de 7 días.
 
 ### 18. ¿Qué significa installability en esta tarea?
 - A. Que la app puede instalarse como PWA compatible

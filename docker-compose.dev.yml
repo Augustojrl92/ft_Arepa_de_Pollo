@@ -27,6 +27,25 @@ services:
       timeout: 3s
       retries: 10
 
+  db-backup:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: trascendence
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-21600}
+      BACKUP_RETRY_SECONDS: ${BACKUP_RETRY_SECONDS:-300}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+    volumes:
+      - ./backups/postgres:/backups/postgres
+      - ./scripts/automated_backup_db.sh:/usr/local/bin/automated_backup_db.sh:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/automated_backup_db.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend
@@ -45,23 +64,6 @@ services:
       interval: 10s
       timeout: 3s
       retries: 10
-
-  prometheus:
-    image: prom/prometheus:latest
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    depends_on:
-      backend:
-        condition: service_healthy
-
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3001:3000"
-    depends_on:
-      - prometheus
 
 volumes:
   postgres_data:
