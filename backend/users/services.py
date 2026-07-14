@@ -46,7 +46,6 @@ def _serialize_user_details(user_login, request=None):
 	avatar_url = _resolve_avatar_url(owner, campus_user.avatar_url, request=request)
 
 	active = time() - campus_user.last_active_time < time_until_inactivity
-	print(active)
 
 	return {
 		'id': campus_user.user_id,
