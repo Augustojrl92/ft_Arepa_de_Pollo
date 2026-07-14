@@ -69,12 +69,15 @@ def _serialize_friend_entry(friend_list, request=None):
 	fallback_avatar_url = campus_user.avatar_url if campus_user else ''
 	avatar_url = _resolve_avatar_url(owner, fallback_avatar_url, request=request)
 
+	active = time() - campus_user.last_active_time < time_until_inactivity
+
 	return {
 		'user_id': owner.id,
 		'username': owner.username,
 		'login': campus_user.login if campus_user else owner.username,
 		'display_name': campus_user.display_name if campus_user else owner.username,
 		'avatar_url': avatar_url,
+		'active': active
 	}
 
 
