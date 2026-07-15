@@ -218,13 +218,24 @@ def get_achivements_for(login) -> list[UserAchievement] | None:
 	if campus_user is None:
 		return None
 	
-	if UserAchievement.objects.__len__() == 0:
+	if Achievement.objects.__len__() == 0:
 		return None
 	achievements_of_user = list(UserAchievement.objects.filter(user=campus_user))
 
 	# Check missing achievements and add them
 	if len(achievements_of_user) < len(Achievement.objects):
-		# Do things
+		new_len = len(achievements_of_user)
+		for achievement in reversed(Achievement.objects):
+			if UserAchievement.objects.filter(achievement=achievement) != None:
+				continue
+			
+			new_row = UserAchievement(user=campus_user, achievement=achievement, completion_date=None)
+			new_row.save()
+
+			new_len += 1
+			if new_len >= len(Achievement.objects):
+				break
+
 		achievements_of_user = list(UserAchievement.objects.filter(user=campus_user))
 
 
@@ -241,7 +252,9 @@ def get_achivements_for(login) -> list[UserAchievement] | None:
 		if False or achievement.completion_date == None:
 			if check_func():
 				achievement.completion_date = datetime.now()
+				achievement.save(update_fields=['completion_date'])
 	
 	if missing_func:
-		print('Add the check function inside User/models.py->Achievement.__init__()')
+		print('Add the check function inside User/models.py->Achievement.__init__()', end='')
+		print(', the file User/achievement_functions.py exists to hold these functions.')
 	return achievements_of_user
