@@ -132,7 +132,7 @@ down: full-down
 logs: full-logs
 migrate: back-migrate
 makemigrations: back-makemigrations
-initialize: up back-syncdb back-syncapi up
+initialize: up back-syncdb back-syncapi
 reinitialize: fclean initialize
 superuser: back-superuser
 shell: back-shell
