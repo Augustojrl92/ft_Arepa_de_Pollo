@@ -228,7 +228,7 @@ def get_achivements_for(login) -> list[UserAchievement] | None:
 		for achievement in reversed(Achievement.objects):
 			if UserAchievement.objects.filter(achievement=achievement) != None:
 				continue
-			
+
 			new_row = UserAchievement(user=campus_user, achievement=achievement, completion_date=None)
 			new_row.save()
 
@@ -238,7 +238,7 @@ def get_achivements_for(login) -> list[UserAchievement] | None:
 
 		achievements_of_user = list(UserAchievement.objects.filter(user=campus_user))
 
-
+	# Check for achievement completion
 	missing_func = False
 	for achievement in achievements_of_user:
 		name = achievement.achievement.name
