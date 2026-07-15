@@ -533,14 +533,12 @@ export const LeaderboardView = ({ mode }: LeaderboardViewProps) => {
 																className="w-full h-full object-cover"
 															/>
 														</div>
-														<a
-															href={`https://profile.intra.42.fr/users/${rankingUser.login}`}
-															target="_blank"
-															rel="noreferrer"
+														<Link
+															href={`/users/${encodeURIComponent(rankingUser.login)}`}
 															className="font-semibold text-text group-hover:text-accent transition-colors"
 														>
 															{rankingUser.login}
-														</a>
+														</Link>
 													</div>
 												</td>
 												<td className="px-6 py-4">

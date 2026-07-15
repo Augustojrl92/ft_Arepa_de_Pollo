@@ -68,6 +68,8 @@ interface CoalitionDetails {
 	activeMembers: number | 0
 	evaluationsDoneTotal: number
 	evaluationsDoneCurrentSeason: number
+	projectsDeliveredTotal: number
+	projectsDeliveredCurrentSeason: number
 }
 
 export interface Coalition {
@@ -83,6 +85,8 @@ export interface Coalition {
 	averageLevel: number
 	evaluationsDoneTotal: number
 	evaluationsDoneCurrentSeason: number
+	projectsDeliveredTotal: number
+	projectsDeliveredCurrentSeason: number
 	details?: CoalitionDetails
 }
 

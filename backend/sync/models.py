@@ -34,6 +34,16 @@ class CoalitionScoreSnapshot(models.Model):
 		return f'{self.coalition.name} - {self.snapshot_date}: {self.total_score}'
 
 
+class CoalitionProjectCursor(models.Model):
+	coalition = models.OneToOneField(Coalition, on_delete=models.CASCADE, related_name='project_cursor')
+	last_score_id = models.PositiveBigIntegerField(null=True, blank=True)
+	last_score_created_at = models.DateTimeField(null=True, blank=True)
+	last_synced_at = models.DateTimeField(auto_now=True)
+
+	def __str__(self):
+		return f'{self.coalition.name}: {self.last_score_id or "sin cursor"}'
+
+
 class CampusUser(models.Model):
 	django_user = models.OneToOneField(User, on_delete=models.SET_NULL, related_name='campus_user_profile', null=True, blank=True)
 
@@ -52,6 +62,9 @@ class CampusUser(models.Model):
 	avatar_url = models.URLField(max_length=500, blank=True)
 	wallet = models.IntegerField(default=0)
 	correction_points = models.IntegerField(default=0)
+	projects_delivered_total = models.PositiveIntegerField(default=0)
+	projects_delivered_current_season = models.PositiveIntegerField(default=0)
+	projects_delivered_synced_at = models.DateTimeField(null=True, blank=True)
 	pool_month = models.CharField(max_length=30, blank=True)
 	pool_year = models.PositiveIntegerField(null=True, blank=True)
 	is_active = models.BooleanField(default=True)

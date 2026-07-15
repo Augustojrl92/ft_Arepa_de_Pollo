@@ -17,6 +17,8 @@ type CoalitionApiItem = {
 	average_level?: number
 	evaluations_done_total?: number
 	evaluations_done_current_season?: number
+	projects_delivered_total?: number
+	projects_delivered_current_season?: number
 }
 
 type CoalitionApiResponse = {
@@ -69,6 +71,8 @@ type CoalitionDetailsApiResponse = {
 		active_members: number,
 		evaluations_done_total?: number,
 		evaluations_done_current_season?: number,
+		projects_delivered_total?: number,
+		projects_delivered_current_season?: number,
 	}
 }
 
@@ -92,6 +96,8 @@ export const fetchCoalitions = async (): Promise<{ coalitions: Coalition[], last
 		averageLevel: coalition.average_level ?? 0,
 		evaluationsDoneTotal: coalition.evaluations_done_total ?? 0,
 		evaluationsDoneCurrentSeason: coalition.evaluations_done_current_season ?? 0,
+		projectsDeliveredTotal: coalition.projects_delivered_total ?? 0,
+		projectsDeliveredCurrentSeason: coalition.projects_delivered_current_season ?? 0,
 	}))
 	return { coalitions: parsedCoalitions, lastUpdate }
 }
@@ -212,6 +218,8 @@ export const fetchCoalitionDetails = async (slug: string) => {
 		activeMembers: coalition.active_members,
 		evaluationsDoneTotal: coalition.evaluations_done_total ?? 0,
 		evaluationsDoneCurrentSeason: coalition.evaluations_done_current_season ?? 0,
+		projectsDeliveredTotal: coalition.projects_delivered_total ?? 0,
+		projectsDeliveredCurrentSeason: coalition.projects_delivered_current_season ?? 0,
 	}
 
 }

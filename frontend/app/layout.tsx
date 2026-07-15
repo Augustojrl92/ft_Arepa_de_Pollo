@@ -1,18 +1,20 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import AuthLayout from "@/components/AuthLayout";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import "./globals.css";
-
-declare global {
-  namespace React {
-    interface ReactNode {}
-  }
-}
 
 export const metadata: Metadata = {
   title: "AEDLPH",
   description: "Plataforma AEDLPH",
+  applicationName: "AEDLPH",
+  manifest: "/manifest.webmanifest",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0f172a",
 };
 
 const inter = Inter({
@@ -30,7 +32,10 @@ export default function RootLayout({
         className={`${inter.className} antialiased flex flex-col min-h-screen bg-surface text-text`}
       >
         <ThemeProvider>
-          <AuthLayout>{children}</AuthLayout>
+          <ServiceWorkerRegistration />
+          <Suspense fallback={<main className="aedlph-container flex-1">{children}</main>}>
+            <AuthLayout>{children}</AuthLayout>
+          </Suspense>
         </ThemeProvider>
       </body>
     </html>
