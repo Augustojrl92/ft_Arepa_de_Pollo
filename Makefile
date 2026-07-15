@@ -132,6 +132,8 @@ down: full-down
 logs: full-logs
 migrate: back-migrate
 makemigrations: back-makemigrations
+initialize: up back-syncapi back-syncdb up
+reinitialize: fclean initialize
 superuser: back-superuser
 shell: back-shell
 test: back-test
@@ -150,5 +152,5 @@ dev-re: front-re
 		back-superuser back-shell back-test back-import-evaluations \
         full-up full-stop full-down full-re full-logs \
         fclean \
-		up stop down logs migrate makemigrations superuser shell test \
+		up stop down logs migrate makemigrations initialize reinitialize superuser shell test \
         dev-up dev-stop dev-down dev-re dev-logs
