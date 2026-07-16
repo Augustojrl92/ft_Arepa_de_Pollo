@@ -5,7 +5,8 @@ import { usePathname } from 'next/navigation';
 
 const navigation = [
 	{ title: 'Leaderboard', href: '/leaderboard' },
-	{ title: 'Coalitions', href: '/coalitions' }
+	{ title: 'Coalitions', href: '/coalitions' },
+	{ title: 'Status', href: '/status' },
 ];
 
 export default function NavLink() {
