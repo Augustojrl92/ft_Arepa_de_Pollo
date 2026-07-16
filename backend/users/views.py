@@ -281,12 +281,15 @@ class UserAchievementsView(APIView):
 		
 		serialized = []
 		for achv in achvs:
+			completion_date = achv.completion_date
+			if completion_date != None:
+				completion_date = completion_date.isoformat()
 			serialized.append({
 				'name': achv.achievement.name,
 				'description': achv.achievement.description,
 				'progress': achv.progress, 
 				'completion_progress': achv.achievement.completion_points,
-				'completion_date': achv.completion_date.isoformat(),
+				'completion_date': completion_date,
 				'icon_HTML': achv.achievement.icon_HTML
 			})
 		
