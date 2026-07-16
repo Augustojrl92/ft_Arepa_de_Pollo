@@ -11,5 +11,5 @@ urlpatterns = [
 	path('friends/requests/', FriendsRequestView.as_view(), name='friends-requests'),
 	path('preferences/', UserPreferencesView.as_view(), name='user-preferences'),
 	path('preferences/avatar/', UserAvatarView.as_view(), name='user-avatar'),
-	path('achievements/', UserAchievementsView.as_view(), name='user-achievements')
+	path('achievements/<str:login>', UserAchievementsView.as_view(), name='user-achievements')
 ]

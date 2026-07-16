@@ -265,8 +265,7 @@ class UserAvatarView(APIView):
 		)
 	
 class UserAchievementsView(APIView):
-	def get(self, req):
-		login = req.query_params.get('login')
+	def get(self, req, login: str):
 		if not login:
 			return Response(
 				{'error': 'User login is required'},
