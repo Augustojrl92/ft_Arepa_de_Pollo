@@ -32,7 +32,7 @@ class UserPreferences(models.Model):
 # Pongo esta clase aqui a falta de archivos más apropiados y ya que los logros respectan a los usuarios
 class Achievement(models.Model):
 	def __init__(self, *args, **kwargs):
-		super().__init__(args, kwargs)
+		super().__init__(*args, **kwargs)
 
 		# Insert achievement completion check functions below: 🠳🠳🠳
 		self.completion_check_funcs['Dios de las arepas'] = dios_de_las_arepas_completion_check # Augusto no me odies por esto

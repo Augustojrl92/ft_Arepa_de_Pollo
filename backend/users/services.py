@@ -218,25 +218,28 @@ def get_achivements_for(login) -> list[UserAchievement] | None:
 	if campus_user is None:
 		return None
 	
-	if Achievement.objects.__len__() == 0:
+	if Achievement.objects.count() == 0:
 		return None
-	achievements_of_user = list(UserAchievement.objects.filter(user=campus_user))
+	achievements_of_user = list(UserAchievement.objects.filter(user=campus_user).iterator())
+
+	print(len(achievements_of_user), ' | ', Achievement.objects.count())
 
 	# Check missing achievements and add them
-	if len(achievements_of_user) < len(Achievement.objects):
+	if len(achievements_of_user) < Achievement.objects.count():
 		new_len = len(achievements_of_user)
-		for achievement in reversed(Achievement.objects):
-			if UserAchievement.objects.filter(achievement=achievement) != None:
+		for achievement in list(Achievement.objects.iterator()):
+			if UserAchievement.objects.filter(achievement=achievement).count() != 0:
 				continue
 
 			new_row = UserAchievement(user=campus_user, achievement=achievement, completion_date=None)
 			new_row.save()
+			print('added achievement to user')
 
 			new_len += 1
-			if new_len >= len(Achievement.objects):
+			if new_len >= Achievement.objects.count():
 				break
 
-		achievements_of_user = list(UserAchievement.objects.filter(user=campus_user))
+		achievements_of_user = list(UserAchievement.objects.filter(user=campus_user).iterator())
 
 	# Check for achievement completion
 	missing_func = False
@@ -250,7 +253,7 @@ def get_achivements_for(login) -> list[UserAchievement] | None:
 
 		# Set to True to allow value progression after getting the achievement
 		if False or achievement.completion_date == None:
-			if check_func():
+			if check_func(achievement):
 				achievement.completion_date = datetime.now()
 				achievement.save(update_fields=['completion_date'])
 	
