@@ -34,8 +34,12 @@ class Achievement(models.Model):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 
+		if not Achievement.initialized:
+			Achievement.initialized = True
+			set_up_achievements()
+
 		# Insert achievement completion check functions below: 🠳🠳🠳
-		self.completion_check_funcs['Dios de las arepas'] = dios_de_las_arepas_completion_check # Augusto no me odies por esto
+		Achievement.completion_check_funcs['Dios de las arepas'] = dios_de_las_arepas_completion_check # Augusto no me odies por esto
 
 
 	# HTML for the achievement icon to be inserted into the page. The default value is a copy of the html of the div of a mock up icon
@@ -51,6 +55,8 @@ class Achievement(models.Model):
 	# To add the function just do inside __init__: self.completion_check_funcs['achievement_name'] = function_name
 	# Remember to return True or False and set the progress value from UserAchievement only if completion_date == None else return True
 	completion_check_funcs = dict()
+
+	initialized = False
 
 class UserAchievement(models.Model):
 	user = models.OneToOneField(CampusUser, on_delete=models.CASCADE)
