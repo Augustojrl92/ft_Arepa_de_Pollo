@@ -1,0 +1,136 @@
+from django.core.management.base import BaseCommand, CommandError
+from django.db.models import Max
+from django.utils.dateparse import parse_datetime
+
+from sync.models import CampusUser
+from sync.projects import (
+	bootstrap_project_score_cursors_from_datetime,
+	sync_projects_from_coalition_scores,
+	sync_users_projects_delivered,
+)
+
+
+# Objective:
+# Provide a management command to sync approved delivered-project counters from 42 into `CampusUser`.
+# Expects:
+# - CLI options controlling request pacing, batch size, offset, and auto-batch mode.
+# Returns:
+# - Prints a processing summary to stdout after the sync finishes.
+class Command(BaseCommand):
+	help = 'Sincroniza el numero de proyectos entregados y aprobados para CampusUser.'
+
+	# Objective:
+	# Declare the CLI arguments supported by this command.
+	# Expects:
+	# - Django's argument parser for management commands.
+	# Returns:
+	# - No explicit return value; it mutates the parser in place.
+	def add_arguments(self, parser):
+		parser.add_argument('--request-interval', type=float, default=0.6)
+		parser.add_argument('--limit', type=int, default=100)
+		parser.add_argument('--offset', type=int, default=0)
+		parser.add_argument('--auto-batch', action='store_true')
+		parser.add_argument('--max-batches', type=int, default=None)
+		parser.add_argument('--incremental', action='store_true')
+		parser.add_argument('--bootstrap-cursors-from-snapshot', action='store_true')
+		parser.add_argument('--bootstrap-cursors-from-datetime', default=None)
+
+	# Objective:
+	# Execute the delivered-project sync for one slice or for the whole dataset in automatic batches.
+	# Expects:
+	# - Parsed CLI options coming from `add_arguments`.
+	# Returns:
+	# - No explicit return value; writes progress and summary information to stdout.
+	def handle(self, *args, **options):
+		request_interval = options['request_interval']
+		limit = options['limit']
+		offset = options['offset']
+		auto_batch = options['auto_batch']
+		max_batches = options['max_batches']
+		incremental = options['incremental']
+		bootstrap_cursors_from_snapshot = options['bootstrap_cursors_from_snapshot']
+		bootstrap_cursors_from_datetime = options['bootstrap_cursors_from_datetime']
+
+		base_queryset = CampusUser.objects.exclude(login='').order_by('id')
+
+		if bootstrap_cursors_from_snapshot or bootstrap_cursors_from_datetime:
+			if bootstrap_cursors_from_datetime:
+				cutoff = parse_datetime(bootstrap_cursors_from_datetime)
+				if cutoff is None:
+					raise CommandError(f'Fecha invalida: {bootstrap_cursors_from_datetime}')
+			else:
+				cutoff = CampusUser.objects.aggregate(last=Max('projects_delivered_synced_at'))['last']
+				if cutoff is None:
+					raise CommandError('No hay projects_delivered_synced_at para calcular el snapshot')
+
+			result = bootstrap_project_score_cursors_from_datetime(
+				cutoff=cutoff,
+				request_interval=request_interval,
+			)
+			self.stdout.write('Cursores de proyectos recalculados desde snapshot')
+			self.stdout.write(f'Fecha snapshot: {result["cutoff"].isoformat()}')
+			self.stdout.write(f'Coaliciones procesadas: {result["processed_coalitions"]}')
+			self.stdout.write(f'Coaliciones posicionadas: {result["positioned_coalitions"]}')
+			self.stdout.write(f'Coaliciones con escaneo completo pendiente: {result["full_scan_coalitions"]}')
+			return
+
+		if incremental:
+			result = sync_projects_from_coalition_scores(request_interval=request_interval)
+			self.stdout.write('Sincronizacion incremental de proyectos completada')
+			self.stdout.write(f'Coaliciones procesadas: {result["processed_coalitions"]}')
+			self.stdout.write(f'Coaliciones bootstrap: {result["bootstrapped_coalitions"]}')
+			self.stdout.write(f'Rows score revisadas: {result["scanned_rows"]}')
+			self.stdout.write(f'Rows de proyecto: {result["project_rows"]}')
+			self.stdout.write(f'Usuarios actualizados: {result["updated_users"]}')
+			return
+
+		if auto_batch:
+			batches_run = 0
+			total_processed = 0
+			total_updated = 0
+			total_skipped_missing = 0
+			executed_batches = 0
+			current_offset = offset
+
+			while True:
+				if max_batches is not None and batches_run >= max_batches:
+					break
+
+				batch = list(base_queryset[current_offset:current_offset + limit])
+				if not batch:
+					break
+
+				executed_batches += 1
+				result = sync_users_projects_delivered(
+					queryset=batch,
+					request_interval=request_interval,
+				)
+				total_processed += result['processed']
+				total_updated += result['updated']
+				total_skipped_missing += result.get('skipped_missing', 0)
+
+				self.stdout.write(
+					f'Bloque {executed_batches} | offset {current_offset} | procesados {result["processed"]} | actualizados {result["updated"]} | missing-404 {result.get("skipped_missing", 0)} | acumulado {total_processed}'
+				)
+
+				current_offset += limit
+				batches_run += 1
+
+			self.stdout.write('Sincronizacion de proyectos completada')
+			self.stdout.write(f'Usuarios procesados: {total_processed}')
+			self.stdout.write(f'Usuarios actualizados: {total_updated}')
+			self.stdout.write(f'Usuarios omitidos por 404 en 42: {total_skipped_missing}')
+			self.stdout.write(f'Bloques ejecutados: {executed_batches}')
+			self.stdout.write(f'Tamano de bloque: {limit}')
+			return
+
+		queryset = base_queryset[offset:offset + limit]
+		result = sync_users_projects_delivered(
+			queryset=queryset,
+			request_interval=request_interval,
+		)
+
+		self.stdout.write('Sincronizacion de proyectos completada')
+		self.stdout.write(f'Usuarios procesados: {result["processed"]}')
+		self.stdout.write(f'Usuarios actualizados: {result["updated"]}')
+		self.stdout.write(f'Usuarios omitidos por 404 en 42: {result.get("skipped_missing", 0)}')

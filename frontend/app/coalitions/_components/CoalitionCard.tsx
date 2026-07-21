@@ -46,7 +46,7 @@ export default function CoalitionCard({ coalition, index }: { coalition: Coaliti
 					/>
 				</div>
 
-				<div className="grid grid-cols-4 gap-4">
+				<div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
 					<div className="bg-surface p-4 rounded">
 						<p className="text-text-secondary mb-2 font-medium text-xs uppercase">Activos</p>
 						<p className="font-bold text-2xl">{coalition.activeMembers}</p>
@@ -56,6 +56,11 @@ export default function CoalitionCard({ coalition, index }: { coalition: Coaliti
 						<p className="text-text-secondary mb-2 font-medium text-xs uppercase">Correcciones</p>
 						<p className="font-bold text-2xl">{coalition.evaluationsDoneCurrentSeason.toLocaleString()}</p>
 						<p className="text-xs text-text-secondary">total {coalition.evaluationsDoneTotal.toLocaleString()}</p>
+					</div>
+					<div className="bg-surface p-4 rounded">
+						<p className="text-text-secondary mb-2 font-medium text-xs uppercase">Proyectos</p>
+						<p className="font-bold text-2xl">{coalition.projectsDeliveredCurrentSeason.toLocaleString()}</p>
+						<p className="text-xs text-text-secondary">temporada actual</p>
 					</div>
 					<div className="bg-surface p-4 rounded">
 						<p className="text-text-secondary mb-2 font-medium text-xs uppercase">Nivel prom.</p>

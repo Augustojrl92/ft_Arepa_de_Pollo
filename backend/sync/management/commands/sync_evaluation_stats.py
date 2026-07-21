@@ -64,9 +64,9 @@ class Command(BaseCommand):
 
 			# Objective:
 			# Print one progress line per processed batch.
-			def report_progress(batch_index, offset, processed, updated, total_processed, total_updated):
+			def report_progress(batch_index, offset, processed, updated, total_processed, total_updated, skipped_missing):
 				self.stdout.write(
-					f'Bloque {batch_index} | offset {offset} | procesados {processed} | actualizados {updated} | acumulado {total_processed}'
+					f'Bloque {batch_index} | offset {offset} | procesados {processed} | actualizados {updated} | missing-404 {skipped_missing} | acumulado {total_processed}'
 				)
 
 			# Objective:
@@ -98,6 +98,7 @@ class Command(BaseCommand):
 			# These counters accumulate the global command result across all yielded batches.
 			total_processed = 0
 			total_updated = 0
+			total_skipped_missing = 0
 			executed_batches = 0
 
 			# Process one batch at a time, update the cumulative counters, and print progress after each batch.
@@ -106,6 +107,7 @@ class Command(BaseCommand):
 				result = sync_users_evaluations_done_total(queryset=batch, request_interval=request_interval)
 				total_processed += result['processed']
 				total_updated += result['updated']
+				total_skipped_missing += result.get('skipped_missing', 0)
 				report_progress(
 					batch_index=executed_batches,
 					offset=batch_offset,
@@ -113,11 +115,13 @@ class Command(BaseCommand):
 					updated=result['updated'],
 					total_processed=total_processed,
 					total_updated=total_updated,
+					skipped_missing=result.get('skipped_missing', 0),
 				)
 
 			self.stdout.write('Sincronizacion de evaluaciones completada')
 			self.stdout.write(f'Usuarios procesados: {total_processed}')
 			self.stdout.write(f'Usuarios actualizados: {total_updated}')
+			self.stdout.write(f'Usuarios omitidos por 404 en 42: {total_skipped_missing}')
 			self.stdout.write(f'Bloques ejecutados: {executed_batches}')
 			self.stdout.write(f'Tamano de bloque: {limit}')
 			return
@@ -132,3 +136,4 @@ class Command(BaseCommand):
 		self.stdout.write('Sincronizacion de evaluaciones completada')
 		self.stdout.write(f'Usuarios procesados: {result["processed"]}')
 		self.stdout.write(f'Usuarios actualizados: {result["updated"]}')
+		self.stdout.write(f'Usuarios omitidos por 404 en 42: {result.get("skipped_missing", 0)}')
