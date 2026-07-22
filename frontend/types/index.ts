@@ -28,6 +28,13 @@ export interface UserDetails {
 	achievements?: string | unknown
 }
 
+export interface PointsHistoryEntry {
+	date: string
+	points: number
+	coalitionRank?: number | null
+	campusRank?: number | null
+}
+
 export interface FriendEntry {
 	userId: number
 	username: string

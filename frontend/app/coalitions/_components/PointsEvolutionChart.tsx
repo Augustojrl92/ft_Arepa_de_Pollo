@@ -1,38 +1,11 @@
 'use client'
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp } from 'lucide-react'
 import CardContainer from '../../../components/CardContainer';
-
-
-// Datos mock para daily (últimos 7 días)
-const dailyData = [
-	{ day: 'Lun', points: 200 },
-	{ day: 'Mar', points: 350 },
-	{ day: 'Mié', points: 500 },
-	{ day: 'Jue', points: 700 },
-	{ day: 'Vie', points: 900 },
-	{ day: 'Sáb', points: 1200 },
-	{ day: 'Dom', points: 1500 },
-];
-
-// Datos mock para weekly (últimas 4 semanas)
-const weeklyData = [
-	{ week: 'Semana 1', points: 0 },
-	{ week: 'Semana 2', points: 500 },
-	{ week: 'Semana 3', points: 1500 },
-	{ week: 'Semana 4', points: 3500 },
-];
-
-// Datos mock para monthly/cumulative (últimos 6 meses)
-const monthlyData = [
-	{ month: 'Ene', points: 0 },
-	{ month: 'Feb', points: 0 },
-	{ month: 'Mar', points: 0 },
-	{ month: 'Abr', points: 500 },
-	{ month: 'May', points: 2500 },
-	{ month: 'Jun', points: 5500 },
-];
+import { fetchCoalitionPointsHistory } from '@/lib/coalitionApi';
+import { buildChartPoints } from '@/lib/pointsHistory';
+import { PointsHistoryEntry } from '@/types';
 
 const tabs = [
 	{ key: 'weekly', label: '7 Días' },
@@ -42,23 +15,77 @@ const tabs = [
 
 interface PointsEvolutionChartProps {
 	color: string;
+	coalitionSlug: string;
 	title?: string;
 }
 
-export default function PointsEvolutionChart({ color, title = 'Evolución de Puntos' }: PointsEvolutionChartProps) {
+export default function PointsEvolutionChart({ color, coalitionSlug, title = 'Evolución de Puntos' }: PointsEvolutionChartProps) {
 	const [activeTab, setActiveTab] = useState<'weekly' | 'monthly' | 'cumulative'>('weekly');
+	const [history, setHistory] = useState<PointsHistoryEntry[]>([]);
+	const [isLoading, setIsLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 
-	let chartData: any[] = [];
-	let xKey = '';
-	if (activeTab === 'weekly') {
-		chartData = dailyData;
-		xKey = 'day';
-	} else if (activeTab === 'monthly') {
-		chartData = weeklyData;
-		xKey = 'week';
-	} else {
-		chartData = monthlyData;
-		xKey = 'month';
+	useEffect(() => {
+		let isMounted = true;
+
+		const loadHistory = async () => {
+			setIsLoading(true);
+			setError(null);
+
+			try {
+				const payload = await fetchCoalitionPointsHistory(coalitionSlug);
+				if (!isMounted) {
+					return;
+				}
+				setHistory(payload.history);
+			} catch (err) {
+				if (!isMounted) {
+					return;
+				}
+				setError(err instanceof Error ? err.message : 'No se pudo cargar el historial.');
+				setHistory([]);
+			} finally {
+				if (isMounted) {
+					setIsLoading(false);
+				}
+			}
+		};
+
+		void loadHistory();
+
+		return () => {
+			isMounted = false;
+		};
+	}, [coalitionSlug]);
+
+	const chartData = buildChartPoints(history, activeTab);
+
+	if (isLoading) {
+		return (
+			<CardContainer>
+				<div className="h-[356px] animate-pulse rounded-lg bg-surface-elevated" />
+			</CardContainer>
+		);
+	}
+
+	if (error) {
+		return (
+			<CardContainer>
+				<div className="flex h-[356px] items-center justify-center text-sm text-red-400">
+					{error}
+				</div>
+			</CardContainer>
+		);
+	}
+
+	if (chartData.length === 0) {
+		return (
+			<CardContainer>
+				<div className="flex h-[356px] items-center justify-center text-sm text-text-secondary">
+					No hay snapshots de puntos para esta coalición.
+				</div>
+			</CardContainer>
+		);
 	}
 
 	return (
@@ -92,7 +119,7 @@ export default function PointsEvolutionChart({ color, title = 'Evolución de Pun
 						</linearGradient>
 					</defs>
 					<CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-					<XAxis dataKey={xKey} tick={{ fill: '#888', fontSize: 12 }} />
+					<XAxis dataKey="label" tick={{ fill: '#888', fontSize: 12 }} />
 					<YAxis hide />
 					<Tooltip contentStyle={{
 						background: '#222',

@@ -5,10 +5,11 @@ import TournamentCard from "./_components/TournamentCard"
 import CoalitionCard from "./_components/CoalitionCard"
 import CoalitionPointsChart from "../components/CoalitionPointsChart"
 import Chat from "../components/Chat"
-import { useCoalitionStore } from "@/hooks"
+import { useAuthStore, useCoalitionStore } from "@/hooks"
 
 export default function Home() {
 	const { isCoalitionsLoading, coalitions } = useCoalitionStore()
+	const user = useAuthStore((state) => state.user)
 
 	// Mostrar skeletons mientras se cargan las coaliciones
 	if (isCoalitionsLoading && coalitions.length === 0) {
@@ -33,10 +34,10 @@ export default function Home() {
 				<TournamentCard />
 				<CoalitionCard />
 			</section>
-			<section>
-				<CoalitionPointsChart />
-			</section>
-			<Chat />
+				<section>
+					<CoalitionPointsChart userLogin={user?.login ?? null} />
+				</section>
+				<Chat />
 		</>
 	)
 }

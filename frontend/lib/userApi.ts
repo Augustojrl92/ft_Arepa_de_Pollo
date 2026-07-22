@@ -69,6 +69,21 @@ type AvatarResult = {
 	hasCustomAvatar: boolean;
 }
 
+type UserPointsHistoryResponse = {
+	user: {
+		id: number;
+		login: string;
+		display_name: string;
+		coalition_slug: string;
+	};
+	history: {
+		date: string;
+		points: number;
+		coalition_rank: number | null;
+		campus_rank: number | null;
+	}[];
+}
+
 const toRankingPerPage = (value: number): 10 | 25 | 50 | 100 => {
 	if (value === 10 || value === 25 || value === 50 || value === 100) {
 		return value;
@@ -247,5 +262,26 @@ export async function updateMyPreferences(preferences: UserPreferencesPayload): 
 		showSensitiveData: payload.show_sensitive_data,
 		notificationsEnabled: payload.receive_notifications,
 		theme: payload.theme_mode,
+	};
+}
+
+export async function fetchUserPointsHistory(login: string) {
+	const payload = await authFetchJson<UserPointsHistoryResponse>(`${USER_BASE_URL}points-history/?login=${encodeURIComponent(login)}`, {
+		method: 'GET',
+	}, 'Failed to fetch user points history');
+
+	return {
+		user: {
+			id: payload.user.id,
+			login: payload.user.login,
+			displayName: payload.user.display_name,
+			coalitionSlug: payload.user.coalition_slug,
+		},
+		history: payload.history.map((entry) => ({
+			date: entry.date,
+			points: entry.points,
+			coalitionRank: entry.coalition_rank,
+			campusRank: entry.campus_rank,
+		})),
 	};
 }

@@ -354,18 +354,37 @@ Review:
 - connection errors;
 - possible incompatibilities between old backups and newer migrations.
 
-## 10. Risks and limitations
+## 10. Automated backup policy
+
+The `db-backup` Compose service creates a validated PostgreSQL backup when it starts
+and repeats the operation every 6 hours. Automated files use the prefix
+`auto_trascendence_`, use UTC timestamps, and are retained for 7 days. Manual backups
+are never removed by the automated retention policy.
+
+The schedule can be overridden before starting Compose:
+
+```bash
+BACKUP_INTERVAL_SECONDS=21600 BACKUP_RETENTION_DAYS=7 make up
+```
+
+Useful operational commands:
+
+```bash
+make db-backup-auto-up
+make db-backup-auto-logs
+make db-backup-auto-stop
+```
+
+## 11. Risks and limitations
 
 - the current backup is **local** and **unencrypted**;
 - backups may consume disk space over time;
-- manual backup is not the same as automatic backup;
 - restore is destructive;
 - old backups may not match newer migrations;
-- there is still no retention policy;
-- there is still no scheduled automation;
+- automated backups are stored locally and should be copied off-host for production use;
 - there is still no automated recovery checklist.
 
-## 11. Relation to the subject
+## 12. Relation to the subject
 
 This runbook contributes directly to the module:
 
@@ -376,16 +395,15 @@ What is already covered:
 - backend and PostgreSQL health checks;
 - status page / status endpoint;
 - demonstrable manual backup;
+- periodic automated backup every 6 hours;
+- 7-day retention for automated backups;
 - demonstrable manual restore;
 - documented recovery procedure.
 
-What is still missing to defend the module more solidly:
+The remaining production-hardening step is copying backups to encrypted off-host
+storage and exercising the recovery checklist regularly as a team.
 
-- periodic automated backups;
-- a retention policy;
-- a fully closed DR process as a regular team procedure.
-
-## 12. Recovery checklist
+## 13. Recovery checklist
 
 - [ ] Confirm the nature of the incident.
 - [ ] Review `docker compose ps`.

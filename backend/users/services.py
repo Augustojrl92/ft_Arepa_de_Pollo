@@ -1,4 +1,5 @@
 from datetime import datetime
+from time import time
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -10,6 +11,8 @@ from django.contrib.auth.models import User
 from sync.models import CampusUser
 from .models import FriendsList, Achievement, UserAchievement, Message
 from .achievement_functions import set_up_achievements
+
+time_until_inactivity = 2 * 60
 
 class FriendsRequestError(Exception):
 	def __init__(self, message, http_status):
@@ -47,6 +50,8 @@ def _serialize_user_details(user_login, request=None):
 	has_account = owner is not None
 	avatar_url = _resolve_avatar_url(owner, campus_user.avatar_url, request=request)
 
+	active = time() - campus_user.last_active_time < time_until_inactivity
+
 	return {
 		'id': campus_user.user_id,
 		'login': campus_user.login,
@@ -59,8 +64,41 @@ def _serialize_user_details(user_login, request=None):
 		'coalition_rank': campus_user.coalition_rank,
 		'has_account': has_account,
 		'general_rank': campus_user.general_rank,
-		'achievements': 'none'  # Placeholder for achievements data,
+		'achievements': 'none',  # Placeholder for achievements data,
+		'active': active
+	}
 
+
+def _serialize_user_points_history(user_login):
+	campus_user = CampusUser.objects.filter(login=user_login).first()
+	if campus_user is None:
+		return None
+
+	history = list(
+		campus_user.score_snapshots.order_by('snapshot_date').values(
+			'snapshot_date',
+			'coalition_user_score',
+			'coalition_user_rank',
+			'campus_user_rank',
+		)
+	)
+
+	return {
+		'user': {
+			'id': campus_user.id,
+			'login': campus_user.login,
+			'display_name': campus_user.display_name,
+			'coalition_slug': campus_user.coalition_slug,
+		},
+		'history': [
+			{
+				'date': item['snapshot_date'].isoformat(),
+				'points': item['coalition_user_score'],
+				'coalition_rank': item['coalition_user_rank'],
+				'campus_rank': item['campus_user_rank'],
+			}
+			for item in history
+		],
 	}
 
 def _serialize_friend_entry(friend_list, request=None):
@@ -69,12 +107,16 @@ def _serialize_friend_entry(friend_list, request=None):
 	fallback_avatar_url = campus_user.avatar_url if campus_user else ''
 	avatar_url = _resolve_avatar_url(owner, fallback_avatar_url, request=request)
 
+	login = getattr(campus_user, "login", None)
+	active = time() - User.objects.filter(username=login).first().last_active_time < time_until_inactivity
+
 	return {
 		'user_id': owner.id,
 		'username': owner.username,
 		'login': campus_user.login if campus_user else owner.username,
 		'display_name': campus_user.display_name if campus_user else owner.username,
 		'avatar_url': avatar_url,
+		'active': active
 	}
 
 

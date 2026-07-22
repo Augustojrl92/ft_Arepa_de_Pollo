@@ -1,7 +1,6 @@
 from django.db import DatabaseError, connection
 from django.http import JsonResponse
 from django.utils import timezone
-
 from sync.models import SyncMetadata
 
 
