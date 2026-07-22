@@ -410,3 +410,7 @@ class UserAchievementsView(APIView):
 			},
 			status=status.HTTP_200_OK
 		)
+
+class MessagesView(APIView):
+	def get(self, req, other_login: str):
+		pass
