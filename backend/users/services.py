@@ -2,11 +2,12 @@ from datetime import datetime
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Q
 
 from django.contrib.auth.models import User
 
 from sync.models import CampusUser
-from .models import FriendsList, Achievement, UserAchievement
+from .models import FriendsList, Achievement, UserAchievement, Message
 
 class FriendsRequestError(Exception):
 	def __init__(self, message, http_status):
@@ -261,3 +262,13 @@ def get_achivements_for(login) -> list[UserAchievement] | None:
 		print('Add the check function inside User/models.py->Achievement.__init__()', end='')
 		print(', the file User/achievement_functions.py exists to hold these functions.')
 	return achievements_of_user
+
+'''Return list[{sender, message, datetime}]'''
+def get_messages_between(login1: str, login2: str) -> list[{str, str, datetime}]:
+	message_rows = Message.objects.filter((Q(sender=login1) & Q(receiver=login2)) | (Q(sender=login2) & Q(receiver=login1))).iterator()
+	output = [{row.sender, row.message, row.date_time} for row in message_rows]
+	return output
+
+def message_sent(sender_login: str, receiver_login: str, message: str):
+	to_add = Message(sender=sender_login, receiver=receiver_login, message=message, date_time=datetime.now())
+	to_add.save()
