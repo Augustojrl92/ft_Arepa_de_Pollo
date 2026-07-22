@@ -28,17 +28,16 @@ Actualmente están implementados:
 - página `/offline`;
 - installability y offline básico validados manualmente en modo PWA.
 
-### Qué queda pendiente
+### Mejoras opcionales
 
-Lo pendiente importante, si se compara con la descripción original completa, es:
+La descripción original está cubierta. Como mejoras futuras se puede:
 
-- **backups automáticos** como flujo periódico cerrado;
-- opcionalmente una **retención** de backups;
-- opcionalmente mejorar `/api/status/` para incluir checks más ambiciosos, por ejemplo API externa de 42 o frescura explícita del scheduler.
+- copiar los backups automáticos a almacenamiento externo y cifrado;
+- mejorar `/api/status/` para incluir checks más ambiciosos, por ejemplo API externa de 42 o frescura explícita del scheduler.
 
 ### Lectura honesta del estado
 
-GGC-83 está **mayormente implementada**. Lo no cerrado del todo no está en PWA, ni en restore, ni en runbook, sino en la parte de **automatización periódica de backups**.
+GGC-83 está **implementada**: health/status, backup manual y automático, restore, runbook y PWA tienen evidencia ejecutable en el repositorio.
 
 ### Panel visual rápido
 
@@ -49,15 +48,15 @@ GGC-83 está **mayormente implementada**. Lo no cerrado del todo no está en PWA
 | Restore manual | `Hecho` | Recuperación explícita con `BACKUP_FILE` |
 | Runbook DR | `Hecho` | Procedimiento de recuperación documentado |
 | PWA mínima | `Hecho` | Manifest + SW + `/offline` + installability |
-| Backup automático | `Pendiente` | Falta automatización periódica |
+| Backup automático | `Hecho` | Servicio `db-backup` cada 6 horas con retención de 7 días |
 
 ```text
-GGC-83 total                  [████████████████░░] Muy avanzado
+GGC-83 total                  [██████████████████] Hecha
 Fase 1 health/status          [██████████████████] Hecha
 Fase 2A backup/restore        [██████████████████] Hecha
 Fase 3 runbook                [██████████████████] Hecha
 Fase 4 PWA/offline            [██████████████████] Hecha
-Fase 2B backup automático     [░░░░░░░░░░░░░░░░░░] Pendiente
+Fase 2B backup automático     [██████████████████] Hecha
 ```
 
 ```mermaid
@@ -66,7 +65,7 @@ flowchart LR
     A --> C["Fase 2A<br/>Backup/restore manual<br/>Hecha"]
     A --> D["Fase 3<br/>Runbook DR<br/>Hecha"]
     A --> E["Fase 4<br/>PWA mínima<br/>Hecha"]
-    A --> F["Fase 2B<br/>Backup automático<br/>Pendiente"]
+    A --> F["Fase 2B<br/>Backup automático<br/>Hecha"]
 ```
 
 Lectura bloque por bloque:
@@ -75,7 +74,7 @@ Lectura bloque por bloque:
 - `Fase 2A` representa backup y restore manual, ya resueltos.
 - `Fase 3` representa el runbook de disaster recovery, también cerrado.
 - `Fase 4` representa la PWA mínima con manifest, SW y offline básico, ya implementada.
-- `Fase 2B` queda separada como pendiente porque la automatización periódica de backups todavía no está hecha.
+- `Fase 2B` usa un servicio Docker dedicado para ejecutar backups cada 6 horas y aplicar retención solo a copias automáticas.
 
 ## 2. Mapa general de la tarea
 
@@ -300,6 +299,31 @@ En otras palabras:
 - si la base está viva, añade la última sincronización registrada;
 - siempre añade un timestamp de cuándo se hizo la comprobación.
 
+### Pseudocódigo
+
+```text
+FUNCIÓN status_check():
+
+    database_status, error = comprobar_base_de_datos()
+    now = hora_actual()
+
+    SI database_status == "ok":
+        last_sync = leer_ultimo_sync()
+        status = "ok"
+    SI NO:
+        last_sync = null
+        status = "error"
+
+    devolver JSON {
+        service: "pollo-backend",
+        status: status,
+        database: database_status,
+        last_sync: last_sync,
+        timestamp: now,
+        error: error
+    }
+```
+
 #### Cómo se comprueba la base de datos
 
 ##### `_check_database`
@@ -502,6 +526,20 @@ Interpretación:
 
 - `db` se considera sana si PostgreSQL responde a `pg_isready`;
 - `backend` se considera sano si `curl` recibe respuesta correcta de `/api/health/`.
+
+### Pseudocódigo
+
+```text
+FUNCIÓN docker_healthcheck_backend():
+
+    respuesta = curl("http://localhost:8000/api/health/")
+
+    SI respuesta es 200:
+        marcar backend como healthy
+
+    SI respuesta falla repetidamente:
+        marcar backend como unhealthy
+```
 
 #### Mapa corto del bloque health/status
 
@@ -719,6 +757,40 @@ En el restore:
 
 ```bash
 gzip -t "$backup_file" || fail "El archivo no es un gzip válido: $backup_input"
+```
+
+### Pseudocódigo
+
+```text
+FUNCIÓN backup_db():
+
+    validar dependencias docker, compose y gzip
+    crear carpeta backups/postgres si hace falta
+    construir nombre timestamp.sql.gz
+
+    ejecutar pg_dump dentro del contenedor db
+    comprimir salida con gzip
+    guardar archivo
+
+    SI gzip -t falla:
+        devolver error
+
+    devolver ruta_del_backup
+```
+
+```text
+FUNCIÓN restore_db(backup_file):
+
+    SI backup_file no existe:
+        devolver error
+
+    validar backup_file con gzip -t
+    detener backend temporalmente
+    descomprimir SQL
+    ejecutar psql dentro del contenedor db
+    volver a levantar backend
+
+    devolver "restore completado"
 ```
 
 ### Explicación de sintaxis Bash usada
@@ -981,6 +1053,28 @@ Después de recuperar el sistema hay que comprobar:
 - acceso a frontend
 - coherencia visible de los datos restaurados
 
+### Pseudocódigo
+
+```text
+FUNCIÓN disaster_recovery(backup_file):
+
+    revisar estado de contenedores
+    revisar logs de backend y db
+
+    SI el problema parece de datos:
+        restore_db(backup_file)
+
+    comprobar /api/health/
+    comprobar /api/status/
+    comprobar frontend
+
+    SI todo responde:
+        declarar sistema recuperado
+
+    SI algo sigue fallando:
+        volver a logs y conservar backups antiguos
+```
+
 ```mermaid
 flowchart LR
     A["Detectar fallo"] --> B["Revisar health/status"]
@@ -1128,6 +1222,35 @@ Best effort si ya se visitaron antes:
 - `/`
 - `/coalitions`
 - `/leaderboard`
+
+### Pseudocódigo
+
+```text
+FUNCIÓN service_worker_fetch(request):
+
+    SI request es navegación HTML:
+        intentar red
+        SI red responde:
+            cachear página
+            devolver respuesta
+        SI red falla:
+            devolver página cacheada
+            SI no existe:
+                devolver /offline
+
+    SI request es /api/status/:
+        intentar red
+        SI red responde:
+            cachear JSON
+            devolver respuesta
+        SI red falla:
+            devolver último JSON cacheado
+
+    SI request es asset estático:
+        intentar caché
+        SI no existe:
+            pedir a red y cachear
+```
 
 #### Qué NO se promete offline
 
@@ -1963,6 +2086,38 @@ Lectura bloque por bloque:
 - `/status o /offline` representa el comportamiento final esperado en la prueba offline.
 - Refleja por qué se añadió `make front-pwa` para poder probar installability y offline básico.
 
+## 7. Pseudocódigo global del flujo GGC-83
+
+```text
+FUNCIÓN ggc83():
+
+    implementar /api/health/ y /api/status/
+    exponer /status como página pública
+    activar healthcheck del backend en Docker
+
+    crear script de backup PostgreSQL
+    crear script de restore PostgreSQL
+    añadir comandos make para operar ambos
+
+    escribir runbook de disaster recovery
+    definir smoke checks post-restore
+
+    crear manifest PWA
+    crear service worker mínimo
+    crear página /offline
+    registrar PWA solo en producción o con flag
+
+    validar:
+        health/status
+        backup
+        restore
+        runbook
+        installability
+        offline básico
+
+    devolver "GGC-83 implementada"
+```
+
 ## Conclusión
 
 GGC-83 no fue una sola feature, sino una **cadena de entregables complementarios**:
@@ -1972,4 +2127,166 @@ GGC-83 no fue una sola feature, sino una **cadena de entregables complementarios
 - documentación de disaster recovery;
 - PWA mínima, instalable y con offline básico.
 
-La única parte original que sigue claramente pendiente es la **automatización periódica de backups**. Todo lo demás está implementado con evidencia real en el repo y con una historia de validación suficientemente clara como para defenderla en evaluación.
+La automatización periódica de backups queda cubierta por el servicio `db-backup`, con ejecución cada 6 horas, validación gzip y retención de 7 días para copias automáticas.
+
+## Quiz final tipo test (20 preguntas)
+
+### 1. ¿Qué endpoint expone la salud básica del backend?
+- A. `/api/status/`
+- B. `/api/health/`
+- C. `/api/auth/profile/`
+- D. `/api/coalitions/`
+- Respuesta correcta: B
+- Explicación: `/api/health/` es el check mínimo de salud.
+
+### 2. ¿Qué endpoint añade información de último sync?
+- A. `/api/status/`
+- B. `/api/auth/logout/`
+- C. `/api/users/details/`
+- D. `/offline`
+- Respuesta correcta: A
+- Explicación: `/api/status/` amplía la observabilidad.
+
+### 3. ¿Qué ruta frontend muestra ese estado operativo?
+- A. `/leaderboard`
+- B. `/status`
+- C. `/login`
+- D. `/users/[login]`
+- Respuesta correcta: B
+- Explicación: es la página pública de salud y sync.
+
+### 4. ¿Qué script crea backups de PostgreSQL?
+- A. `scripts/restore_db.sh`
+- B. `scripts/backup_db.sh`
+- C. `frontend/sw.js`
+- D. `backend/entrypoint.sh`
+- Respuesta correcta: B
+- Explicación: genera dumps comprimidos de la DB.
+
+### 5. ¿Qué script restaura una copia?
+- A. `scripts/restore_db.sh`
+- B. `scripts/run_frontend_pwa.sh`
+- C. `scripts/backup_db.sh`
+- D. `docker-compose.dev.yml`
+- Respuesta correcta: A
+- Explicación: repone un backup seleccionado sobre la base.
+
+### 6. ¿Qué riesgo importante tiene el restore?
+- A. Solo cambia CSS
+- B. Es destructivo sobre el estado actual si se usa mal
+- C. Solo afecta a frontend
+- D. Rompe OAuth siempre
+- Respuesta correcta: B
+- Explicación: pisa el contenido lógico actual de la base.
+
+### 7. ¿Qué comando del Makefile crea backup?
+- A. `make full-up`
+- B. `make db-backup`
+- C. `make shell`
+- D. `make front-up`
+- Respuesta correcta: B
+- Explicación: llama al script de backup.
+
+### 8. ¿Qué comando del Makefile restaura backup?
+- A. `make db-restore BACKUP_FILE=...`
+- B. `make restore`
+- C. `make migrate`
+- D. `make fclean`
+- Respuesta correcta: A
+- Explicación: exige indicar explícitamente qué copia usar.
+
+### 9. ¿Qué documento complementario describe el runbook de recuperación?
+- A. `disaster-recovery.md`
+- B. `Design_Requirements.md`
+- C. `auth-flow-explained.md`
+- D. `database-models-explained.md`
+- Respuesta correcta: A
+- Explicación: ahí está el procedimiento de DR real.
+
+### 10. ¿Qué archivo define el manifest PWA?
+- A. `frontend/app/manifest.ts`
+- B. `frontend/lib/statusApi.ts`
+- C. `backend/manage.py`
+- D. `scripts/backup_db.sh`
+- Respuesta correcta: A
+- Explicación: genera el manifest web de la app.
+
+### 11. ¿Qué archivo registra el service worker?
+- A. `frontend/components/ServiceWorkerRegistration.tsx`
+- B. `frontend/app/login/page.tsx`
+- C. `backend/config/views.py`
+- D. `backend/authentication/views.py`
+- Respuesta correcta: A
+- Explicación: usa `useEffect` para registrar o desregistrar.
+
+### 12. ¿Qué ruta pública sirve como fallback offline básico?
+- A. `/leaderboard`
+- B. `/offline`
+- C. `/coalitions`
+- D. `/users/[login]`
+- Respuesta correcta: B
+- Explicación: es la página pensada para situación offline controlada.
+
+### 13. ¿Qué lectura es correcta sobre la PWA actual?
+- A. Implementa modo offline total de toda la app
+- B. Es una PWA mínima con installability y offline básico
+- C. Sustituye al backend
+- D. No existe en el repo
+- Respuesta correcta: B
+- Explicación: la documentación deja claro que el alcance es deliberadamente limitado.
+
+### 14. ¿Qué archivo del frontend contiene la lógica visual de `/status`?
+- A. `frontend/app/status/page.tsx`
+- B. `frontend/app/page.tsx`
+- C. `frontend/hooks/useUser.ts`
+- D. `frontend/app/users/[login]/page.tsx`
+- Respuesta correcta: A
+- Explicación: consume `fetchSystemStatus` y renderiza cards.
+
+### 15. ¿Qué función backend apoya `/api/status/` para obtener `last_sync`?
+- A. `_build_sync_context`
+- B. `_get_last_sync_time`
+- C. `_apply_evaluation_score_rows`
+- D. `logout`
+- Respuesta correcta: B
+- Explicación: lee el metadato desde `SyncMetadata`.
+
+### 16. ¿Qué problema resuelve GGC-83 más allá de una feature visible?
+- A. Solo cambiar colores
+- B. Añadir observabilidad, recuperación operativa y PWA mínima
+- C. Eliminar PostgreSQL
+- D. Reescribir toda la auth
+- Respuesta correcta: B
+- Explicación: es una capa transversal operativa y de resiliencia.
+
+### 17. ¿Qué lectura es correcta sobre backups periódicos?
+- A. Ya están completamente automatizados
+- B. Es la parte pendiente más clara según la documentación
+- C. No existen scripts
+- D. Solo funcionan sin Docker
+- Respuesta correcta: A
+- Explicación: el servicio `db-backup` crea y valida copias cada 6 horas y aplica una retención de 7 días.
+
+### 18. ¿Qué significa installability en esta tarea?
+- A. Que la app puede instalarse como PWA compatible
+- B. Que Docker instala PostgreSQL
+- C. Que el backend instala usuarios
+- D. Que el Makefile genera HTML
+- Respuesta correcta: A
+- Explicación: forma parte del bloque PWA.
+
+### 19. ¿Qué secuencia describe mejor GGC-83?
+- A. Health/status -> backups/restore -> disaster recovery -> PWA/offline
+- B. CSS -> SEO -> pagos -> chat
+- C. Auth -> ORM -> migraciones -> tests
+- D. 42 API -> cron -> JWT -> avatars
+- Respuesta correcta: A
+- Explicación: ese fue el orden real de las fases técnicas.
+
+### 20. ¿Cuál es la idea final correcta sobre GGC-83?
+- A. Fue una única pantalla
+- B. Fue un conjunto de entregables operativos complementarios y defendibles
+- C. Solo fue documentación sin código
+- D. Solo fue una mejora de rendimiento del frontend
+- Respuesta correcta: B
+- Explicación: abarca health, status, backups, restore, DR y PWA básica.

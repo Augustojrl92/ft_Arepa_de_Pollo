@@ -27,6 +27,25 @@ services:
       timeout: 3s
       retries: 10
 
+  db-backup:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: trascendence
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-21600}
+      BACKUP_RETRY_SECONDS: ${BACKUP_RETRY_SECONDS:-300}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+    volumes:
+      - ./backups/postgres:/backups/postgres
+      - ./scripts/automated_backup_db.sh:/usr/local/bin/automated_backup_db.sh:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/automated_backup_db.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend

@@ -195,7 +195,11 @@ export default function CoalitionDetailPage({
 				</div>
 			</CardContainer>
 
-			<PointsEvolutionChart color={coalition.color} title={`Evolución de Puntos de ${coalition.name}`} />
+				<PointsEvolutionChart
+					coalitionSlug={coalition.slug}
+					color={coalition.color}
+					title={`Evolución de Puntos de ${coalition.name}`}
+				/>
 
 			<div className="grid grid-cols-2 gap-6">
 				<CardContainer className="p-6">
