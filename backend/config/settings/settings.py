@@ -179,7 +179,7 @@ SIMPLE_JWT = {
 # Cron Jobs configuration
 CRONJOBS = [
     ('*/20 * * * *', 'django.core.management.call_command', ['sync_campus_users', '--mode=full']),
-    ('*/1 * * * *', 'sync.services.run_check_achievements'),
+    ('*/20 * * * *', 'sync.services.run_check_achievements'),
 ]
 
 # Cron runs with a minimal environment; load .env variables explicitly for each job.
