@@ -2,7 +2,6 @@ from django.conf import settings
 from django.db import models
 
 from sync.models import CampusUser
-from .achievement_functions import *
 
 class FriendsList(models.Model):
 	owner = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='friends_list')
@@ -36,10 +35,9 @@ class Achievement(models.Model):
 
 		if not Achievement.initialized:
 			Achievement.initialized = True
-			set_up_achievements()
 
 		# Insert achievement completion check functions below: 🠳🠳🠳
-		Achievement.completion_check_funcs['Dios de las arepas'] = dios_de_las_arepas_completion_check # Augusto no me odies por esto
+		#Achievement.completion_check_funcs['Dios de las arepas'] = dios_de_las_arepas_completion_check # Augusto no me odies por esto
 
 
 	# HTML for the achievement icon to be inserted into the page. The default value is a copy of the html of the div of a mock up icon
@@ -59,7 +57,7 @@ class Achievement(models.Model):
 	initialized = False
 
 class UserAchievement(models.Model):
-	user = models.OneToOneField(CampusUser, on_delete=models.CASCADE)
+	user = models.ForeignKey(CampusUser, on_delete=models.CASCADE)
 	achievement = models.OneToOneField(Achievement, on_delete=models.CASCADE)
 	progress = models.PositiveIntegerField(default=0)
 

@@ -3,11 +3,13 @@ from datetime import datetime
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Q
+from django.db.models import Q
 
 from django.contrib.auth.models import User
 
 from sync.models import CampusUser
 from .models import FriendsList, Achievement, UserAchievement, Message
+from .achievement_functions import set_up_achievements
 
 class FriendsRequestError(Exception):
 	def __init__(self, message, http_status):
@@ -215,12 +217,12 @@ def remove_friend(current_user, friend_login):
 		current_list.friends.remove(friend_list)
 
 def get_achivements_for(login) -> list[UserAchievement] | None:
+	set_up_achievements()
+
 	campus_user = CampusUser.objects.filter(login=login).first()
 	if campus_user is None:
 		return None
 	
-	if Achievement.objects.count() == 0:
-		return None
 	achievements_of_user = list(UserAchievement.objects.filter(user=campus_user).iterator())
 
 	print(len(achievements_of_user), ' | ', Achievement.objects.count())
@@ -229,7 +231,7 @@ def get_achivements_for(login) -> list[UserAchievement] | None:
 	if len(achievements_of_user) < Achievement.objects.count():
 		new_len = len(achievements_of_user)
 		for achievement in list(Achievement.objects.iterator()):
-			if UserAchievement.objects.filter(achievement=achievement).count() != 0:
+			if UserAchievement.objects.filter(achievement=achievement).filter(user=campus_user).count() != 0:
 				continue
 
 			new_row = UserAchievement(user=campus_user, achievement=achievement, completion_date=None)
@@ -241,6 +243,10 @@ def get_achivements_for(login) -> list[UserAchievement] | None:
 				break
 
 		achievements_of_user = list(UserAchievement.objects.filter(user=campus_user).iterator())
+
+	if Achievement.objects.count() == 0:
+		return None
+
 
 	# Check for achievement completion
 	missing_func = False
