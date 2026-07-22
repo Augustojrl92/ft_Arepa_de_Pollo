@@ -270,8 +270,13 @@ def get_achivements_for(login) -> list[UserAchievement] | None:
 	return achievements_of_user
 
 '''Return list[{sender, message, datetime}]'''
-def get_messages_between(login1: str, login2: str) -> list[{str, str, datetime}]:
-	message_rows = Message.objects.filter((Q(sender=login1) & Q(receiver=login2)) | (Q(sender=login2) & Q(receiver=login1))).iterator()
+def get_messages_between(login1: str, login2: str) -> list[{str, str, datetime}] | None:
+	if login1 == login2:
+		return None
+	user1 = CampusUser.objects.filter(login=login1)
+	user2 = CampusUser.objects.filter(login=login2)
+
+	message_rows = list(Message.objects.filter((Q(sender=user1) & Q(receiver=user2)) | (Q(sender=user2) & Q(receiver=user1))).iterator())
 	output = [{row.sender, row.message, row.date_time} for row in message_rows]
 	return output
 
