@@ -30,17 +30,14 @@ class UserPreferences(models.Model):
 
 # Pongo esta clase aqui a falta de archivos más apropiados y ya que los logros respectan a los usuarios
 class Achievement(models.Model):
-	
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
-		from .achievement_functions import set_up_achievements
 
 		if not Achievement.initialized:
 			Achievement.initialized = True
-			set_up_achievements()
 
 		# Insert achievement completion check functions below: 🠳🠳🠳
-		Achievement.completion_check_funcs['Dios de las arepas'] = dios_de_las_arepas_completion_check # Augusto no me odies por esto
+		#Achievement.completion_check_funcs['Dios de las arepas'] = dios_de_las_arepas_completion_check # Augusto no me odies por esto
 
 
 	# HTML for the achievement icon to be inserted into the page. The default value is a copy of the html of the div of a mock up icon
@@ -60,7 +57,7 @@ class Achievement(models.Model):
 	initialized = False
 
 class UserAchievement(models.Model):
-	user = models.OneToOneField(CampusUser, on_delete=models.CASCADE)
+	user = models.ForeignKey(CampusUser, on_delete=models.CASCADE)
 	achievement = models.OneToOneField(Achievement, on_delete=models.CASCADE)
 	progress = models.PositiveIntegerField(default=0)
 

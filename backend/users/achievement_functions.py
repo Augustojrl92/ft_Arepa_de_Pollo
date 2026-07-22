@@ -15,11 +15,11 @@ def set_up_achievements():
 	create_achievement_if_unexistant(senior_achievement_name, 'Has entregado 7 proyectos en una temporada de coaliciones.', 7)
 
 	coalition_rank_name = 'Vengo a ver a mis fieles seguidores.'
-	Achievement.completion_check_funcs[coalition_rank_name] = coalition_rank_name
+	Achievement.completion_check_funcs[coalition_rank_name] = coalition_rank_completion
 	create_achievement_if_unexistant(coalition_rank_name, 'Inicia sesión en la plataforma siendo el primero de tu coalición', 1)
 
 
-def create_achievement_if_unexistant(name: str, description: str, completion_points: int, icon_HTML: str | None) -> None:
+def create_achievement_if_unexistant(name: str, description: str, completion_points: int, icon_HTML: str | None = None) -> None:
 	if Achievement.objects.filter(name=name).count() > 0:
 		return
 	to_add = Achievement(name=name, description=description, completion_points=completion_points)
