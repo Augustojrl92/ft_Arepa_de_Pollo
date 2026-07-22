@@ -2,7 +2,6 @@ from django.conf import settings
 from django.db import models
 
 from sync.models import CampusUser
-from .achievement_functions import *
 
 class FriendsList(models.Model):
 	owner = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='friends_list')
@@ -31,8 +30,10 @@ class UserPreferences(models.Model):
 
 # Pongo esta clase aqui a falta de archivos más apropiados y ya que los logros respectan a los usuarios
 class Achievement(models.Model):
+	
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
+		from .achievement_functions import set_up_achievements
 
 		if not Achievement.initialized:
 			Achievement.initialized = True
