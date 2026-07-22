@@ -76,6 +76,20 @@ type CoalitionDetailsApiResponse = {
 	}
 }
 
+type CoalitionPointsHistoryApiResponse = {
+	coalition: {
+		id: number
+		name: string
+		slug: string
+		color: string
+	}
+	history: {
+		date: string
+		points: number
+		campus_rank: number | null
+	}[]
+}
+
 export const fetchCoalitions = async (): Promise<{ coalitions: Coalition[], lastUpdate: string | null }> => {
 	const payload = await authFetchJson<CoalitionApiResponse>(COALITION_BASE_URL, {
 		method: "GET",
@@ -222,4 +236,24 @@ export const fetchCoalitionDetails = async (slug: string) => {
 		projectsDeliveredCurrentSeason: coalition.projects_delivered_current_season ?? 0,
 	}
 
+}
+
+export const fetchCoalitionPointsHistory = async (slug: string) => {
+	const payload = await authFetchJson<CoalitionPointsHistoryApiResponse>(`${COALITION_BASE_URL}points-history/?coalition=${encodeURIComponent(slug)}`, {
+		method: "GET",
+	}, "Failed to fetch coalition points history")
+
+	return {
+		coalition: {
+			id: payload.coalition.id,
+			name: payload.coalition.name,
+			slug: payload.coalition.slug,
+			color: payload.coalition.color,
+		},
+		history: payload.history.map((entry) => ({
+			date: entry.date,
+			points: entry.points,
+			campusRank: entry.campus_rank,
+		})),
+	}
 }

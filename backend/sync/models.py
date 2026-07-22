@@ -68,6 +68,7 @@ class CampusUser(models.Model):
 	pool_month = models.CharField(max_length=30, blank=True)
 	pool_year = models.PositiveIntegerField(null=True, blank=True)
 	is_active = models.BooleanField(default=True)
+	last_active_time = models.PositiveIntegerField(default=0)
 
 	# Coalicion
 	coalition_id = models.PositiveIntegerField(null=True, blank=True)

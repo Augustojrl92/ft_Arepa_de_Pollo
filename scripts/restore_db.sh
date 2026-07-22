@@ -149,4 +149,4 @@ gzip -dc "$backup_file" | docker compose -f "$COMPOSE_FILE" exec -T "$DB_SERVICE
 		--set ON_ERROR_STOP=1
 '
 
-info "Restore completado correctamente."
+info "Restore completado y validado correctamente."

@@ -27,11 +27,11 @@ fi
 endef
 
 # Helper: stop selected services only if any of the important services are running
-# We consider frontend, backend or db as the key services for full-stop (OR)
+# We consider frontend, backend, db, or db-backup as the key services for full-stop (OR)
 define stop_all_if_running
-@# Check frontend/backend/db and stop only those actually running (simple OR check)
+@# Check full-stack services and stop only those actually running (simple OR check)
 @running=""; \
-for svc in frontend backend db; do \
+for svc in frontend backend db db-backup; do \
   $(DOCKER) ps --filter "label=com.docker.compose.service=$$svc" -q | grep -q . && running="$$running $$svc" || true; \
 done; \
 if [ -n "$$running" ]; then \
@@ -120,6 +120,15 @@ db-restore:
 db-backup-ls:
 	@if ls -1 backups/postgres/*.sql.gz >/dev/null 2>&1; then ls -lh backups/postgres/*.sql.gz; else echo "No hay backups en backups/postgres/"; fi
 
+db-backup-auto-up:
+	$(DOCKER_COMPOSE) up -d db-backup
+
+db-backup-auto-stop:
+	$(DOCKER_COMPOSE) stop db-backup
+
+db-backup-auto-logs:
+	$(DOCKER_COMPOSE) logs -f db-backup
+
 # ─── Full stack ────────────────────────────────────────────────────────────────
 full-up:
 	$(DOCKER_COMPOSE) up -d --build
@@ -165,6 +174,7 @@ dev-re: front-re
 			back-showmigrations back-showmigrations-app back-syncdb \
 			back-superuser back-shell back-test back-import-evaluations front-pwa \
 			db-backup db-restore db-backup-ls \
+			db-backup-auto-up db-backup-auto-stop db-backup-auto-logs \
 	        full-up full-stop full-down full-re full-logs \
         fclean \
 		up stop down logs migrate makemigrations initialize reinitialize superuser shell test \
