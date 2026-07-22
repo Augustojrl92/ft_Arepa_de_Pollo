@@ -1,11 +1,15 @@
+from datetime import datetime
 from time import time
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Q
 
 from django.contrib.auth.models import User
+
 from sync.models import CampusUser
-from .models import FriendsList
+from .models import FriendsList, Achievement, UserAchievement
+from .achievement_functions import set_up_achievements
 
 time_until_inactivity = 2 * 60
 
@@ -252,3 +256,56 @@ def remove_friend(current_user, friend_login):
 
 	with transaction.atomic():
 		current_list.friends.remove(friend_list)
+
+def get_achivements_for(login) -> list[UserAchievement] | None:
+	set_up_achievements()
+
+	campus_user = CampusUser.objects.filter(login=login).first()
+	if campus_user is None:
+		return None
+	
+	achievements_of_user = list(UserAchievement.objects.filter(user=campus_user).iterator())
+
+	print(len(achievements_of_user), ' | ', Achievement.objects.count())
+
+	# Check missing achievements and add them
+	if len(achievements_of_user) < Achievement.objects.count():
+		new_len = len(achievements_of_user)
+		for achievement in list(Achievement.objects.iterator()):
+			if UserAchievement.objects.filter(achievement=achievement).filter(user=campus_user).count() != 0:
+				continue
+
+			new_row = UserAchievement(user=campus_user, achievement=achievement, completion_date=None)
+			new_row.save()
+			print('added achievement to user')
+
+			new_len += 1
+			if new_len >= Achievement.objects.count():
+				break
+
+		achievements_of_user = list(UserAchievement.objects.filter(user=campus_user).iterator())
+
+	if Achievement.objects.count() == 0:
+		return None
+
+
+	# Check for achievement completion
+	missing_func = False
+	for achievement in achievements_of_user:
+		name = achievement.achievement.name
+		check_func = Achievement.completion_check_funcs[name]
+		if check_func == None:
+			print('Missing achievement completion check function for ', name)
+			missing_func = True
+			continue
+
+		# Set to True to allow value progression after getting the achievement
+		if False or achievement.completion_date == None:
+			if check_func(achievement):
+				achievement.completion_date = datetime.now()
+				achievement.save(update_fields=['completion_date'])
+	
+	if missing_func:
+		print('Add the check function inside User/models.py->Achievement.__init__()', end='')
+		print(', the file User/achievement_functions.py exists to hold these functions.')
+	return achievements_of_user

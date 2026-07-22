@@ -1,5 +1,6 @@
 from django.urls import path
 
+
 from .views import (
 	FriendsMeView,
 	FriendsPendingView,
@@ -9,8 +10,8 @@ from .views import (
 	UserDetailView,
 	UserPointsHistoryView,
 	UserPreferencesView,
+  UserAchievementsView,
 )
-
 
 urlpatterns = [
 	path('details/', UserDetailView.as_view(), name='user-details'),
@@ -21,4 +22,5 @@ urlpatterns = [
 	path('friends/requests/', FriendsRequestView.as_view(), name='friends-requests'),
 	path('preferences/', UserPreferencesView.as_view(), name='user-preferences'),
 	path('preferences/avatar/', UserAvatarView.as_view(), name='user-avatar'),
+	path('achievements/<str:login>', UserAchievementsView.as_view(), name='user-achievements')
 ]

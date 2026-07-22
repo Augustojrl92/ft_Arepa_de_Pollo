@@ -1,10 +1,12 @@
 import os
 import time
 from django.utils import timezone
+from django.core.management.base import BaseCommand
 
 import requests
 from django.utils.dateparse import parse_datetime
 from .models import CampusUser, Coalition, CoalitionScoreSnapshot, CampusUserScoreSnapshot, SyncMetadata
+from users.services import get_achivements_for
 
 
 _TOKEN_CACHE = {
@@ -520,3 +522,15 @@ def run_coalitions_only_sync(request_interval=0.25):
 		'campus_id': ctx['campus_id'],
 		'cursus_id': ctx['cursus_id'],
 	}
+
+class CheckAchievements(BaseCommand):
+	def handle(self, *args, **options):
+		print('getting achievements')
+		for user in list(CampusUser.objects.iterator()):
+			get_achivements_for(user.login)
+		return None
+
+
+def run_check_achievements(*args, **options):
+	checker = CheckAchievements()
+	checker.handle(*args, **options)

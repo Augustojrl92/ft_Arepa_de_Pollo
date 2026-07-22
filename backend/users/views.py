@@ -16,6 +16,7 @@ from .services import (
 	reject_friend_request,
 	send_friend_request,
 	withdraw_friend_request,
+	get_achivements_for,
 )
 
 # Create your views here.
@@ -284,4 +285,42 @@ class UserAvatarView(APIView):
 				'has_custom_avatar': False,
 			},
 			status=status.HTTP_200_OK,
+		)
+	
+class UserAchievementsView(APIView):
+	def get(self, req, login: str):
+		if not login:
+			return Response(
+				{'error': 'User login is required'},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+		
+		achvs = get_achivements_for(login)
+		if achvs == None:
+			return Response(
+				{'error': 'User not found or no achievements'},
+				status=status.HTTP_404_NOT_FOUND
+			)
+		
+		serialized = []
+		for achv in achvs:
+			completion_date = achv.completion_date
+			if completion_date != None:
+				completion_date = completion_date.isoformat()
+			serialized.append({
+				'name': achv.achievement.name,
+				'description': achv.achievement.description,
+				'progress': achv.progress, 
+				'completion_progress': achv.achievement.completion_points,
+				'completion_date': completion_date,
+				'icon_HTML': achv.achievement.icon_HTML
+			})
+		
+		return Response(
+			{
+				'login': login,
+				'n_achievements': len(achvs),
+				'achievements': serialized
+			},
+			status=status.HTTP_200_OK
 		)
