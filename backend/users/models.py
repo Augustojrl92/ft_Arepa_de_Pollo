@@ -67,8 +67,8 @@ class UserAchievement(models.Model):
 	completion_date = models.DateTimeField(null=True)
 
 class Message(models.Model):
-	sender = models.OneToOneField(CampusUser, on_delete=models.CASCADE)
-	receiver = models.OneToOneField(CampusUser, on_delete=models.CASCADE)
+	sender = models.ForeignKey(CampusUser, on_delete=models.CASCADE)
+	receiver = models.ForeignKey(CampusUser, on_delete=models.CASCADE)
 
 	message = models.TextField(null=False)
 	date_time = models.DateTimeField(null=False)
