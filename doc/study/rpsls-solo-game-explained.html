@@ -1,0 +1,1127 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Guía visual y práctica del juego RPSLS contra CPU y las correcciones de migración de AEDLPH.">
+  <title>AEDLPH | Juego contra CPU explicado</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101418;
+      --surface: #171d23;
+      --surface-2: #202831;
+      --text: #eef3f7;
+      --muted: #9aa8b5;
+      --line: #34414d;
+      --cyan: #3dd6c6;
+      --yellow: #f0c75e;
+      --red: #ff7185;
+      --green: #62d98b;
+      --blue: #65a8ff;
+      --code: #0c1116;
+      --sidebar: 17rem;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.65;
+    }
+    button, input { font: inherit; }
+    button { letter-spacing: 0; }
+    a { color: inherit; }
+    code, pre { font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace; }
+
+    .reading-progress {
+      position: fixed;
+      inset: 0 0 auto 0;
+      z-index: 100;
+      height: 4px;
+      background: var(--surface-2);
+    }
+    .reading-progress span {
+      display: block;
+      width: 0;
+      height: 100%;
+      background: var(--cyan);
+    }
+
+    .sidebar {
+      position: fixed;
+      inset: 4px auto 0 0;
+      z-index: 20;
+      width: var(--sidebar);
+      overflow-y: auto;
+      border-right: 1px solid var(--line);
+      background: var(--surface);
+      padding: 1.4rem 1rem;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: 1.4rem;
+    }
+    .brand-mark {
+      width: 2.4rem;
+      height: 2.4rem;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--cyan);
+      border-radius: 6px;
+      color: var(--cyan);
+      font-weight: 900;
+    }
+    .brand strong { display: block; font-size: .9rem; }
+    .brand span { display: block; color: var(--muted); font-size: .7rem; }
+    .sidebar nav { display: grid; gap: .2rem; }
+    .sidebar nav a {
+      border-left: 2px solid transparent;
+      padding: .45rem .65rem;
+      color: var(--muted);
+      font-size: .8rem;
+      text-decoration: none;
+    }
+    .sidebar nav a:hover,
+    .sidebar nav a.active {
+      border-left-color: var(--cyan);
+      background: var(--surface-2);
+      color: var(--text);
+    }
+    .quiz-meter {
+      margin-top: 1.5rem;
+      border-top: 1px solid var(--line);
+      padding-top: 1rem;
+    }
+    .quiz-meter div {
+      height: .45rem;
+      overflow: hidden;
+      border-radius: 4px;
+      background: var(--surface-2);
+    }
+    .quiz-meter div span {
+      display: block;
+      width: 0;
+      height: 100%;
+      background: var(--green);
+      transition: width .25s ease;
+    }
+    .quiz-meter p { margin: .5rem 0 0; color: var(--muted); font-size: .75rem; }
+
+    main {
+      margin-left: var(--sidebar);
+      min-width: 0;
+    }
+    .content {
+      width: min(100% - 2.5rem, 76rem);
+      margin-inline: auto;
+    }
+    .hero {
+      min-height: 78vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border-bottom: 1px solid var(--line);
+      padding: 5rem 0 3rem;
+    }
+    .kicker {
+      margin: 0 0 .6rem;
+      color: var(--cyan);
+      font-size: .78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    h1, h2, h3 { line-height: 1.18; letter-spacing: 0; }
+    h1 {
+      max-width: 56rem;
+      margin: 0;
+      font-size: clamp(2.2rem, 6vw, 5rem);
+    }
+    .hero-copy {
+      max-width: 48rem;
+      margin: 1.2rem 0 0;
+      color: var(--muted);
+      font-size: clamp(1rem, 2vw, 1.2rem);
+    }
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .7rem;
+      margin-top: 1.7rem;
+    }
+    .button {
+      min-height: 2.6rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--cyan);
+      border-radius: 6px;
+      padding: .55rem .9rem;
+      background: var(--cyan);
+      color: #062b2a;
+      font-weight: 800;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .button.secondary { background: transparent; color: var(--cyan); }
+    .scope-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px;
+      margin-top: 3rem;
+      border: 1px solid var(--line);
+      background: var(--line);
+    }
+    .scope-strip div { min-width: 0; background: var(--surface); padding: 1rem; }
+    .scope-strip strong { display: block; color: var(--yellow); font-size: 1.25rem; }
+    .scope-strip span { color: var(--muted); font-size: .76rem; }
+
+    .chapter {
+      scroll-margin-top: 1rem;
+      border-bottom: 1px solid var(--line);
+      padding: 4.5rem 0;
+    }
+    .chapter-head { max-width: 54rem; margin-bottom: 2rem; }
+    .chapter-number { color: var(--cyan); font-family: monospace; font-size: .8rem; }
+    h2 { margin: .3rem 0 .8rem; font-size: clamp(1.7rem, 3.5vw, 2.7rem); }
+    h3 { margin: 2rem 0 .7rem; font-size: 1.18rem; }
+    .chapter-head p, .lead { color: var(--muted); }
+
+    .terminal,
+    .code-window {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--code);
+    }
+    .window-bar {
+      min-height: 2.35rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      border-bottom: 1px solid var(--line);
+      padding: .45rem .75rem;
+      background: var(--surface-2);
+      color: var(--muted);
+      font-family: monospace;
+      font-size: .72rem;
+    }
+    .copy-button {
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: transparent;
+      padding: .25rem .55rem;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .copy-button:hover { border-color: var(--cyan); color: var(--cyan); }
+    pre {
+      margin: 0;
+      overflow-x: auto;
+      padding: 1rem;
+      color: #d8e1e8;
+      font-size: .82rem;
+      line-height: 1.65;
+      tab-size: 2;
+    }
+    .tok-key { color: #cf8cff; }
+    .tok-fn { color: #69b7ff; }
+    .tok-str { color: #a6df78; }
+    .tok-num { color: #f4c66a; }
+    .tok-com { color: #71808d; }
+    .tok-type { color: #5ed8ca; }
+
+    .explain-grid,
+    .file-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      margin: 1.2rem 0;
+    }
+    .explain,
+    .file-card {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--surface);
+      padding: 1rem;
+    }
+    .explain strong, .file-card strong { color: var(--yellow); }
+    .explain p, .file-card p { margin: .4rem 0 0; color: var(--muted); font-size: .86rem; }
+    .file-card code { overflow-wrap: anywhere; color: var(--cyan); font-size: .78rem; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      align-items: stretch;
+      gap: 1.5rem;
+      margin: 1.5rem 0;
+    }
+    .flow-step {
+      position: relative;
+      display: grid;
+      align-content: center;
+      min-height: 7rem;
+      border: 1px solid var(--line);
+      border-top: 3px solid var(--blue);
+      background: var(--surface);
+      padding: .8rem;
+      text-align: center;
+    }
+    .flow-step:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      left: calc(100% + .45rem);
+      top: 50%;
+      color: var(--yellow);
+      transform: translateY(-50%);
+    }
+    .flow-step strong { font-size: .82rem; }
+    .flow-step span { color: var(--muted); font-size: .7rem; }
+
+    .quiz {
+      margin: 1.5rem 0 2.4rem;
+      border-left: 3px solid var(--yellow);
+      background: var(--surface);
+      padding: 1rem;
+    }
+    .quiz > p { margin: 0 0 .8rem; font-weight: 800; }
+    .quiz-options { display: grid; gap: .5rem; }
+    .quiz-option {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: var(--surface-2);
+      padding: .65rem .8rem;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+    }
+    .quiz-option:hover { border-color: var(--cyan); }
+    .quiz-option.correct { border-color: var(--green); color: var(--green); }
+    .quiz-option.incorrect { border-color: var(--red); color: var(--red); }
+    .quiz-feedback { min-height: 1.5rem; margin: .65rem 0 0; color: var(--muted); font-size: .82rem; }
+
+    .rules-board {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(7rem, 1fr));
+      gap: .65rem;
+      overflow-x: auto;
+      padding-bottom: .5rem;
+    }
+    .rule-token {
+      min-width: 7rem;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--surface);
+      padding: .85rem;
+      text-align: center;
+    }
+    .rule-token span { display: block; font-size: 2.3rem; }
+    .rule-token strong { display: block; }
+    .rule-token small { color: var(--muted); }
+
+    .state-machine {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1.6rem;
+      margin: 1.5rem 0;
+    }
+    .state {
+      position: relative;
+      min-height: 8rem;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-bottom: 3px solid var(--cyan);
+      background: var(--surface);
+      padding: .9rem;
+      text-align: center;
+    }
+    .state:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      left: calc(100% + .55rem);
+      color: var(--yellow);
+    }
+    .state span { display: block; color: var(--muted); font-size: .74rem; }
+
+    .demo {
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .demo-score {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-bottom: 1px solid var(--line);
+    }
+    .demo-score div { padding: .8rem; text-align: center; }
+    .demo-score div + div { border-left: 1px solid var(--line); }
+    .demo-score span { display: block; color: var(--muted); font-size: .7rem; text-transform: uppercase; }
+    .demo-score strong { font-size: 1.5rem; }
+    .demo-arena {
+      display: grid;
+      grid-template-columns: 1fr minmax(8rem, .8fr) 1fr;
+      min-height: 10rem;
+    }
+    .demo-choice, .demo-result {
+      display: grid;
+      place-items: center;
+      align-content: center;
+      padding: .8rem;
+      text-align: center;
+    }
+    .demo-choice b { font-size: 3rem; line-height: 1.1; }
+    .demo-choice small { color: var(--muted); }
+    .demo-result { border-inline: 1px solid var(--line); color: var(--yellow); }
+    .demo-buttons {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: .5rem;
+      border-top: 1px solid var(--line);
+      padding: .8rem;
+    }
+    .demo-buttons button {
+      min-height: 4.2rem;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--surface-2);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .demo-buttons button:hover { border-color: var(--cyan); }
+    .demo-buttons span { display: block; font-size: 1.6rem; }
+
+    .migration-map {
+      display: grid;
+      grid-template-columns: 1fr 4rem 1fr;
+      align-items: center;
+      margin: 1.4rem 0;
+    }
+    .migration-branch { display: grid; gap: .6rem; }
+    .migration-node {
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--blue);
+      background: var(--surface);
+      padding: .8rem;
+      font-family: monospace;
+      font-size: .75rem;
+    }
+    .migration-join {
+      display: grid;
+      place-items: center;
+      width: 3rem;
+      height: 3rem;
+      margin: auto;
+      border: 1px solid var(--green);
+      border-radius: 50%;
+      color: var(--green);
+      font-weight: 900;
+    }
+    .callout {
+      margin: 1rem 0;
+      border-left: 4px solid var(--cyan);
+      background: var(--surface);
+      padding: .9rem 1rem;
+    }
+    .callout.warning { border-left-color: var(--yellow); }
+    .callout.danger { border-left-color: var(--red); }
+    .callout p { margin: .2rem 0; color: var(--muted); }
+
+    .check-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .84rem;
+    }
+    .check-table th, .check-table td {
+      border-bottom: 1px solid var(--line);
+      padding: .75rem;
+      text-align: left;
+    }
+    .check-table th { color: var(--muted); }
+    .ok { color: var(--green); font-weight: 800; }
+    .pending { color: var(--yellow); font-weight: 800; }
+
+    .glossary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1px;
+      border: 1px solid var(--line);
+      background: var(--line);
+    }
+    .glossary div { background: var(--surface); padding: 1rem; }
+    .glossary dt { color: var(--cyan); font-family: monospace; font-weight: 800; }
+    .glossary dd { margin: .35rem 0 0; color: var(--muted); font-size: .82rem; }
+    footer { padding: 2rem 0 4rem; color: var(--muted); font-size: .8rem; }
+
+    @media (max-width: 950px) {
+      :root { --sidebar: 0rem; }
+      .sidebar { display: none; }
+      .scope-strip { grid-template-columns: repeat(2, 1fr); }
+      .flow { grid-template-columns: 1fr; gap: .7rem; }
+      .flow-step:not(:last-child)::after { content: "↓"; left: 50%; top: calc(100% + .05rem); }
+      .state-machine { grid-template-columns: repeat(2, 1fr); }
+      .state::after { display: none; }
+    }
+    @media (max-width: 640px) {
+      .content { width: min(100% - 1.25rem, 76rem); }
+      .hero { min-height: auto; padding-top: 4rem; }
+      .scope-strip, .explain-grid, .file-grid, .glossary { grid-template-columns: 1fr; }
+      .state-machine { grid-template-columns: 1fr; }
+      .demo-arena { grid-template-columns: 1fr 5.5rem 1fr; }
+      .demo-choice b { font-size: 2.3rem; }
+      .demo-buttons { grid-template-columns: repeat(3, 1fr); }
+      .migration-map { grid-template-columns: 1fr; gap: .8rem; }
+      .migration-join { transform: rotate(90deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="reading-progress" aria-hidden="true"><span id="reading-progress"></span></div>
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">A</div>
+      <div><strong>AEDLPH</strong><span>Guía de defensa técnica</span></div>
+    </div>
+    <nav aria-label="Capítulos">
+      <a href="#inicio">00. Objetivo y arranque</a>
+      <a href="#arquitectura">01. Arquitectura</a>
+      <a href="#reglas">02. Motor de reglas</a>
+      <a href="#react">03. Estado React</a>
+      <a href="#partida">04. Ciclo de una ronda</a>
+      <a href="#persistencia">05. Persistencia segura</a>
+      <a href="#interfaz">06. Interfaz y CSS</a>
+      <a href="#migraciones">07. Migraciones Django</a>
+      <a href="#pruebas">08. Pruebas y diagnóstico</a>
+      <a href="#defensa">09. Resumen para defender</a>
+    </nav>
+    <div class="quiz-meter">
+      <div><span id="quiz-progress"></span></div>
+      <p id="quiz-score">0 de 9 preguntas correctas</p>
+    </div>
+  </aside>
+
+  <main>
+    <div class="content">
+      <header class="hero" id="inicio">
+        <p class="kicker">Rama feat/rpsls-solo-game-and-migration-fixes</p>
+        <h1>Juego contra CPU, explicado de principio a fin</h1>
+        <p class="hero-copy">Cómo AEDLPH implementa Piedra, Papel, Tijera, Lagarto, Spock en Next.js, resuelve las reglas con un motor declarativo, conserva la partida en el navegador y corrige una bifurcación de migraciones Django.</p>
+        <div class="hero-actions">
+          <a class="button" href="#arrancar">Empezar la guía</a>
+          <a class="button secondary" href="http://localhost:3000/games">Abrir el juego local</a>
+        </div>
+        <div class="scope-strip" aria-label="Resumen del alcance">
+          <div><strong>5</strong><span>jugadas disponibles</span></div>
+          <div><strong>10</strong><span>relaciones ganadoras</span></div>
+          <div><strong>3</strong><span>modos de puntuación</span></div>
+          <div><strong>0</strong><span>dependencias de chat o multijugador</span></div>
+        </div>
+      </header>
+
+      <section class="chapter" id="arrancar">
+        <div class="chapter-head">
+          <span class="chapter-number">00 / ARRANQUE</span>
+          <h2>Cómo levantar y abrir el programa</h2>
+          <p>Docker Compose inicia frontend, backend, PostgreSQL y el servicio automático de backup. El juego vive en el frontend, pero se prueba dentro del entorno completo para verificar que la navegación de AEDLPH funciona.</p>
+        </div>
+
+        <div class="terminal">
+          <div class="window-bar"><span>Git Bash · raíz del repositorio</span><button class="copy-button" data-copy="make full-up">Copiar</button></div>
+          <pre><span class="tok-com"># 1. Levantar todos los servicios</span>
+<span class="tok-fn">make</span> full-up
+
+<span class="tok-com"># 2. Ver el frontend</span>
+http://localhost:3000
+
+<span class="tok-com"># 3. Abrir directamente el juego</span>
+http://localhost:3000/games</pre>
+        </div>
+
+        <div class="flow" aria-label="Flujo de arranque">
+          <div class="flow-step"><strong>make full-up</strong><span>invoca Docker Compose</span></div>
+          <div class="flow-step"><strong>frontend</strong><span>Next.js en puerto 3000</span></div>
+          <div class="flow-step"><strong>/games</strong><span>App Router carga page.tsx</span></div>
+          <div class="flow-step"><strong>React</strong><span>hidrata el estado local</span></div>
+          <div class="flow-step"><strong>Jugador</strong><span>elige una jugada</span></div>
+        </div>
+
+        <div class="callout warning">
+          <strong>Por qué se usa Webpack en desarrollo</strong>
+          <p>El script es <code>next dev --webpack</code>. Turbopack provocaba un error nativo porque el entorno no soporta instrucciones BMI2. Webpack evita esa incompatibilidad sin cambiar el comportamiento del juego.</p>
+        </div>
+
+        <div class="quiz" data-answer="b" data-explanation="La página pertenece al App Router de Next.js y se publica en /games.">
+          <p>Después del arranque, ¿qué URL abre directamente el juego?</p>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="a">http://localhost:8000/games</button>
+            <button class="quiz-option" data-value="b">http://localhost:3000/games</button>
+            <button class="quiz-option" data-value="c">http://localhost:3000/chat</button>
+          </div>
+          <p class="quiz-feedback" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="chapter" id="arquitectura">
+        <div class="chapter-head">
+          <span class="chapter-number">01 / ARQUITECTURA</span>
+          <h2>Qué archivo hace cada trabajo</h2>
+          <p>La implementación separa reglas, presentación, estilos y navegación. El backend no decide rondas porque esta versión es exclusivamente jugador contra máquina.</p>
+        </div>
+
+        <div class="file-grid">
+          <article class="file-card"><code>frontend/lib/rpsls.ts</code><strong> Dominio</strong><p>Define jugadas, relaciones, resolución y elección aleatoria de la CPU.</p></article>
+          <article class="file-card"><code>frontend/app/games/page.tsx</code><strong> Experiencia</strong><p>Gestiona estado, eventos, puntuación, historial y renderizado.</p></article>
+          <article class="file-card"><code>frontend/app/globals.css</code><strong> Presentación</strong><p>Construye arena, marcador, controles, diálogo y adaptación móvil.</p></article>
+          <article class="file-card"><code>frontend/components/NavLink.tsx</code><strong> Entrada</strong><p>Añade la pestaña Juegos a la navegación principal.</p></article>
+          <article class="file-card"><code>frontend/package.json</code><strong> Dependencias</strong><p>Declara json-rules-engine y el modo Webpack de desarrollo.</p></article>
+          <article class="file-card"><code>backend/sync/migrations/0017_...</code><strong> Integridad</strong><p>Une dos ramas válidas del historial de migraciones.</p></article>
+        </div>
+
+        <div class="flow" aria-label="Arquitectura de una jugada">
+          <div class="flow-step"><strong>Botón React</strong><span>playRound(choice)</span></div>
+          <div class="flow-step"><strong>CPU segura</strong><span>crypto.getRandomValues</span></div>
+          <div class="flow-step"><strong>Motor</strong><span>engine.run(facts)</span></div>
+          <div class="flow-step"><strong>Estado</strong><span>setGame(current)</span></div>
+          <div class="flow-step"><strong>Navegador</strong><span>localStorage</span></div>
+        </div>
+
+        <div class="quiz" data-answer="a" data-explanation="rpsls.ts contiene la lógica de dominio; page.tsx consume esa API y presenta el resultado.">
+          <p>¿Dónde se decide si Piedra vence a Lagarto?</p>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="a">En frontend/lib/rpsls.ts</button>
+            <button class="quiz-option" data-value="b">En una vista de Django</button>
+            <button class="quiz-option" data-value="c">En globals.css</button>
+          </div>
+          <p class="quiz-feedback" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="chapter" id="reglas">
+        <div class="chapter-head">
+          <span class="chapter-number">02 / MOTOR DE REGLAS</span>
+          <h2>Reglas declarativas, no una cadena de if</h2>
+          <p>Cada relación se representa como datos. Esto permite mostrar las mismas reglas en pantalla y convertirlas en reglas ejecutables sin duplicar conocimiento.</p>
+        </div>
+
+        <div class="rules-board">
+          <div class="rule-token"><span>🪨</span><strong>Piedra</strong><small>aplasta Lagarto y Tijera</small></div>
+          <div class="rule-token"><span>📄</span><strong>Papel</strong><small>cubre Piedra y refuta Spock</small></div>
+          <div class="rule-token"><span>✂️</span><strong>Tijera</strong><small>corta Papel y decapita Lagarto</small></div>
+          <div class="rule-token"><span>🦎</span><strong>Lagarto</strong><small>envenena Spock y come Papel</small></div>
+          <div class="rule-token"><span>🖖</span><strong>Spock</strong><small>rompe Tijera y vaporiza Piedra</small></div>
+        </div>
+
+        <h3>1. Una única fuente de verdad</h3>
+        <div class="code-window">
+          <div class="window-bar"><span>frontend/lib/rpsls.ts · relaciones</span><button class="copy-button">Copiar</button></div>
+          <pre><span class="tok-key">export const</span> WINNING_RELATIONS = [
+  { winner: <span class="tok-str">'scissors'</span>, loser: <span class="tok-str">'paper'</span>, verb: <span class="tok-str">'corta'</span> },
+  { winner: <span class="tok-str">'paper'</span>, loser: <span class="tok-str">'rock'</span>, verb: <span class="tok-str">'cubre'</span> },
+  { winner: <span class="tok-str">'rock'</span>, loser: <span class="tok-str">'lizard'</span>, verb: <span class="tok-str">'aplasta'</span> },
+  <span class="tok-com">// ... siete relaciones más</span>
+]</pre>
+        </div>
+        <div class="explain-grid">
+          <div class="explain"><strong>winner</strong><p>La jugada que gana cuando se encuentra esta combinación.</p></div>
+          <div class="explain"><strong>loser</strong><p>La jugada derrotada por la relación.</p></div>
+          <div class="explain"><strong>verb</strong><p>Explica el resultado con lenguaje humano: corta, cubre, aplasta.</p></div>
+          <div class="explain"><strong>Ventaja</strong><p>La lista alimenta tanto el motor como el panel visual de reglas.</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c" data-explanation="La relación declarada dice que rock es winner, lizard es loser y el verbo es aplasta.">
+          <p>Según el fragmento, ¿qué devuelve la relación Piedra contra Lagarto?</p>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="a">Empate</button>
+            <button class="quiz-option" data-value="b">Lagarto envenena Piedra</button>
+            <button class="quiz-option" data-value="c">Piedra aplasta Lagarto</button>
+          </div>
+          <p class="quiz-feedback" aria-live="polite"></p>
+        </div>
+
+        <h3>2. Conversión a reglas ejecutables</h3>
+        <div class="code-window">
+          <div class="window-bar"><span>frontend/lib/rpsls.ts · Engine</span><button class="copy-button">Copiar</button></div>
+          <pre><span class="tok-key">const</span> rules = WINNING_RELATIONS.<span class="tok-fn">map</span>((relation) =&gt; ({
+  conditions: {
+    all: [
+      { fact: <span class="tok-str">'first'</span>, operator: <span class="tok-str">'equal'</span>, value: relation.winner },
+      { fact: <span class="tok-str">'second'</span>, operator: <span class="tok-str">'equal'</span>, value: relation.loser },
+    ],
+  },
+  event: { type: <span class="tok-str">'winning-relation'</span>, params: relation },
+}))
+
+<span class="tok-key">const</span> engine = <span class="tok-key">new</span> <span class="tok-type">Engine</span>(rules)</pre>
+        </div>
+        <p class="lead"><code>json-rules-engine</code> recibe hechos, prueba las condiciones y emite el evento de la combinación coincidente. Así, el algoritmo no depende de diez bloques condicionales escritos manualmente.</p>
+
+        <div class="quiz" data-answer="b" data-explanation="El motor compara los hechos first y second contra cada relación y devuelve el evento que coincide.">
+          <p>¿Qué representan <code>first</code> y <code>second</code>?</p>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="a">Puntuaciones acumuladas</button>
+            <button class="quiz-option" data-value="b">Las dos jugadas que se comparan</button>
+            <button class="quiz-option" data-value="c">Usuarios conectados</button>
+          </div>
+          <p class="quiz-feedback" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="chapter" id="react">
+        <div class="chapter-head">
+          <span class="chapter-number">03 / ESTADO REACT</span>
+          <h2>Qué recuerda la página y por qué</h2>
+          <p>React mantiene dos clases de estado: la partida persistente y la animación temporal de la ronda actual.</p>
+        </div>
+
+        <div class="code-window">
+          <div class="window-bar"><span>frontend/app/games/page.tsx · estado</span><button class="copy-button">Copiar</button></div>
+          <pre><span class="tok-key">const</span> [game, setGame] = <span class="tok-fn">useState</span>&lt;<span class="tok-type">SavedGame</span>&gt;(EMPTY_GAME)
+<span class="tok-key">const</span> [playerChoice, setPlayerChoice] = <span class="tok-fn">useState</span>(<span class="tok-key">null</span>)
+<span class="tok-key">const</span> [cpuChoice, setCpuChoice] = <span class="tok-fn">useState</span>(<span class="tok-key">null</span>)
+<span class="tok-key">const</span> [roundResult, setRoundResult] = <span class="tok-fn">useState</span>(<span class="tok-key">null</span>)
+<span class="tok-key">const</span> [isPlaying, setIsPlaying] = <span class="tok-fn">useState</span>(<span class="tok-key">false</span>)
+<span class="tok-key">const</span> playingRef = <span class="tok-fn">useRef</span>(<span class="tok-key">false</span>)</pre>
+        </div>
+
+        <div class="state-machine" aria-label="Máquina de estados de una ronda">
+          <div class="state"><strong>Preparado</strong><span>isPlaying = false</span></div>
+          <div class="state"><strong>Jugador elige</strong><span>playerChoice = choice</span></div>
+          <div class="state"><strong>CPU piensa</strong><span>isPlaying = true</span></div>
+          <div class="state"><strong>Resultado</strong><span>score + history</span></div>
+        </div>
+
+        <div class="callout">
+          <strong>useRef evita el doble clic</strong>
+          <p><code>playingRef.current</code> cambia inmediatamente sin esperar un nuevo render. Bloquea una segunda llamada a <code>playRound</code> mientras la primera ronda está pendiente.</p>
+        </div>
+
+        <div class="quiz" data-answer="a" data-explanation="useRef ofrece un bloqueo sincrónico inmediato; isPlaying además actualiza la interfaz y deshabilita botones.">
+          <p>¿Por qué existen <code>playingRef</code> e <code>isPlaying</code>?</p>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="a">Uno bloquea inmediatamente y el otro controla la UI</button>
+            <button class="quiz-option" data-value="b">Ambos conectan con Django</button>
+            <button class="quiz-option" data-value="c">Guardan usuarios distintos</button>
+          </div>
+          <p class="quiz-feedback" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="chapter" id="partida">
+        <div class="chapter-head">
+          <span class="chapter-number">04 / CICLO DE PARTIDA</span>
+          <h2>Qué ocurre al pulsar una jugada</h2>
+          <p>La función de ronda coordina interacción, aleatoriedad, motor de reglas y actualización inmutable del estado.</p>
+        </div>
+
+        <div class="code-window">
+          <div class="window-bar"><span>frontend/app/games/page.tsx · playRound</span><button class="copy-button">Copiar</button></div>
+          <pre><span class="tok-key">const</span> <span class="tok-fn">playRound</span> = <span class="tok-key">async</span> (choice: <span class="tok-type">RpslsChoice</span>) =&gt; {
+  <span class="tok-key">if</span> (playingRef.current || matchWinner) <span class="tok-key">return</span>
+  playingRef.current = <span class="tok-key">true</span>
+  <span class="tok-fn">setIsPlaying</span>(<span class="tok-key">true</span>)
+
+  <span class="tok-key">const</span> computer = <span class="tok-fn">randomRpslsChoice</span>()
+  <span class="tok-key">await new</span> <span class="tok-type">Promise</span>((resolve) =&gt; setTimeout(resolve, <span class="tok-num">550</span>))
+  <span class="tok-key">const</span> resolution = <span class="tok-key">await</span> <span class="tok-fn">resolveRpslsRound</span>(choice, computer)
+
+  <span class="tok-fn">setGame</span>((current) =&gt; ({
+    ...current,
+    playerScore: current.playerScore + (resolution.result === <span class="tok-str">'win'</span> ? <span class="tok-num">1</span> : <span class="tok-num">0</span>),
+    history: [nextRound, ...current.history].<span class="tok-fn">slice</span>(<span class="tok-num">0</span>, <span class="tok-num">12</span>),
+  }))
+}</pre>
+        </div>
+
+        <div class="explain-grid">
+          <div class="explain"><strong>Guard clause</strong><p>Impide jugar durante otra ronda o después de finalizar la partida.</p></div>
+          <div class="explain"><strong>550 ms</strong><p>Hace visible el estado “La CPU está eligiendo” sin alterar las reglas.</p></div>
+          <div class="explain"><strong>setGame(current)</strong><p>Usa siempre el estado más reciente, importante ante actualizaciones asíncronas.</p></div>
+          <div class="explain"><strong>slice(0, 12)</strong><p>Limita la memoria persistida aunque la partida libre sea muy larga.</p></div>
+        </div>
+
+        <h3>Prueba el mismo algoritmo</h3>
+        <div class="demo" id="demo">
+          <div class="demo-score">
+            <div><span>Tú</span><strong id="demo-player-score">0</strong></div>
+            <div><span>Empates</span><strong id="demo-ties">0</strong></div>
+            <div><span>CPU</span><strong id="demo-cpu-score">0</strong></div>
+          </div>
+          <div class="demo-arena">
+            <div class="demo-choice"><small>Tu elección</small><b id="demo-player">·</b></div>
+            <div class="demo-result" id="demo-result">Preparado</div>
+            <div class="demo-choice"><small>CPU</small><b id="demo-cpu">·</b></div>
+          </div>
+          <div class="demo-buttons" id="demo-buttons"></div>
+        </div>
+
+        <div class="quiz" data-answer="c" data-explanation="El historial se crea con la ronda nueva delante y después se recorta a un máximo de 12 elementos.">
+          <p>¿Qué evita que el historial crezca sin límite?</p>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="a">Django borra rondas</button>
+            <button class="quiz-option" data-value="b">El navegador se recarga</button>
+            <button class="quiz-option" data-value="c">slice(0, 12)</button>
+          </div>
+          <p class="quiz-feedback" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="chapter" id="persistencia">
+        <div class="chapter-head">
+          <span class="chapter-number">05 / PERSISTENCIA</span>
+          <h2>La partida sobrevive a una recarga</h2>
+          <p>El juego usa <code>localStorage</code>, una base clave-valor del navegador. No necesita una tabla en PostgreSQL porque no comparte la partida con otros usuarios.</p>
+        </div>
+
+        <div class="code-window">
+          <div class="window-bar"><span>frontend/app/games/page.tsx · hidratación</span><button class="copy-button">Copiar</button></div>
+          <pre><span class="tok-fn">useEffect</span>(() =&gt; {
+  <span class="tok-key">try</span> {
+    <span class="tok-key">const</span> saved = window.localStorage.<span class="tok-fn">getItem</span>(STORAGE_KEY)
+    <span class="tok-key">if</span> (saved) <span class="tok-fn">setGame</span>(<span class="tok-fn">normalizeSavedGame</span>(JSON.<span class="tok-fn">parse</span>(saved)))
+  } <span class="tok-key">catch</span> {
+    window.localStorage.<span class="tok-fn">removeItem</span>(STORAGE_KEY)
+  }
+  <span class="tok-fn">setHasHydrated</span>(<span class="tok-key">true</span>)
+}, [])
+
+<span class="tok-fn">useEffect</span>(() =&gt; {
+  <span class="tok-key">if</span> (hasHydrated) localStorage.<span class="tok-fn">setItem</span>(STORAGE_KEY, JSON.<span class="tok-fn">stringify</span>(game))
+}, [game, hasHydrated])</pre>
+        </div>
+
+        <div class="callout danger">
+          <strong>No se confía ciegamente en el navegador</strong>
+          <p><code>normalizeSavedGame</code> verifica tipos, valores positivos, modos permitidos y nombres de jugadas. Si el JSON está roto, se elimina. Así se evita el error anterior de intentar leer <code>label</code> de una jugada inexistente.</p>
+        </div>
+
+        <div class="quiz" data-answer="b" data-explanation="La normalización protege el renderizado frente a datos antiguos, manipulados o incompletos.">
+          <p>¿Para qué sirve <code>normalizeSavedGame</code>?</p>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="a">Para autenticar al usuario con 42</button>
+            <button class="quiz-option" data-value="b">Para validar los datos recuperados antes de renderizarlos</button>
+            <button class="quiz-option" data-value="c">Para elegir la jugada de la CPU</button>
+          </div>
+          <p class="quiz-feedback" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="chapter" id="interfaz">
+        <div class="chapter-head">
+          <span class="chapter-number">06 / INTERFAZ</span>
+          <h2>Cómo React y CSS representan la partida</h2>
+          <p>La página muestra el estado real: botones bloqueados mientras la CPU decide, resultado anunciado con <code>aria-live</code>, marcador estable y diálogo accesible al terminar.</p>
+        </div>
+
+        <div class="code-window">
+          <div class="window-bar"><span>frontend/app/games/page.tsx · final de partida</span><button class="copy-button">Copiar</button></div>
+          <pre>{matchWinner &amp;&amp; (
+  &lt;<span class="tok-type">WinnerDialog</span>
+    winner={matchWinner}
+    score={`${game.playerScore} - ${game.cpuScore}`}
+    onRematch={() =&gt; <span class="tok-fn">resetMatch</span>()}
+  /&gt;
+)}</pre>
+        </div>
+
+        <div class="code-window" style="margin-top:1rem">
+          <div class="window-bar"><span>frontend/app/globals.css · arena adaptable</span><button class="copy-button">Copiar</button></div>
+          <pre><span class="tok-com">/* Escritorio: jugador | resultado | CPU */</span>
+.game-arena {
+  display: grid;
+  grid-template-columns: minmax(<span class="tok-num">0</span>, <span class="tok-num">1fr</span>) minmax(<span class="tok-num">9rem</span>, <span class="tok-num">.8fr</span>) minmax(<span class="tok-num">0</span>, <span class="tok-num">1fr</span>);
+}
+
+<span class="tok-key">@media</span> (max-width: <span class="tok-num">640px</span>) {
+  .game-choices { grid-template-columns: repeat(<span class="tok-num">3</span>, minmax(<span class="tok-num">0</span>, <span class="tok-num">1fr</span>)); }
+  .games-detail-grid { grid-template-columns: <span class="tok-num">1fr</span>; }
+}</pre>
+        </div>
+
+        <div class="explain-grid">
+          <div class="explain"><strong>role="dialog"</strong><p>Identifica semánticamente la ventana del ganador.</p></div>
+          <div class="explain"><strong>aria-modal="true"</strong><p>Informa que el diálogo requiere atención antes de continuar.</p></div>
+          <div class="explain"><strong>CSS Grid</strong><p>Mantiene dimensiones estables para que los símbolos no muevan el tablero.</p></div>
+          <div class="explain"><strong>Media query</strong><p>Reorganiza controles y paneles en pantallas pequeñas.</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a" data-explanation="La condición corta evita montar el diálogo hasta que exista player o cpu como ganador.">
+          <p>¿Cuándo se renderiza <code>WinnerDialog</code>?</p>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="a">Cuando matchWinner contiene un ganador</button>
+            <button class="quiz-option" data-value="b">Después de cada empate</button>
+            <button class="quiz-option" data-value="c">Al entrar en /games</button>
+          </div>
+          <p class="quiz-feedback" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="chapter" id="migraciones">
+        <div class="chapter-head">
+          <span class="chapter-number">07 / DJANGO</span>
+          <h2>Por qué hacía falta una migración de unión</h2>
+          <p>Dos ramas de trabajo crearon migraciones con el mismo número 0016 y dependencias distintas. Ambas son válidas, pero Django necesita un único punto final para saber el orden del historial.</p>
+        </div>
+
+        <div class="migration-map" aria-label="Diagrama de unión de migraciones">
+          <div class="migration-branch">
+            <div class="migration-node">0016_campususer_last_active_time</div>
+            <div class="migration-node">añade estado de actividad</div>
+          </div>
+          <div class="migration-join">→</div>
+          <div class="migration-branch">
+            <div class="migration-node" style="border-left-color:var(--green)">0017_merge_online_status_projects_evaluations</div>
+            <div class="migration-node">nuevo nodo final común</div>
+          </div>
+          <div class="migration-branch">
+            <div class="migration-node">0016_merge_projects_evaluations</div>
+            <div class="migration-node">une proyectos y evaluaciones</div>
+          </div>
+          <div class="migration-join">→</div>
+          <div class="migration-branch">
+            <div class="migration-node" style="border-left-color:var(--green)">operations = []</div>
+            <div class="migration-node">no modifica tablas ni datos</div>
+          </div>
+        </div>
+
+        <div class="code-window">
+          <div class="window-bar"><span>backend/sync/migrations/0017_merge_online_status_projects_evaluations.py</span><button class="copy-button">Copiar</button></div>
+          <pre><span class="tok-key">from</span> django.db <span class="tok-key">import</span> migrations
+
+<span class="tok-key">class</span> <span class="tok-type">Migration</span>(migrations.Migration):
+  dependencies = [
+    (<span class="tok-str">'sync'</span>, <span class="tok-str">'0016_campususer_last_active_time'</span>),
+    (<span class="tok-str">'sync'</span>, <span class="tok-str">'0016_merge_projects_evaluations'</span>),
+  ]
+  operations = []</pre>
+        </div>
+
+        <div class="callout">
+          <strong>Una migración de merge no es un merge de Git</strong>
+          <p>Git combina archivos. Esta migración combina dos caminos del grafo histórico de Django. <code>operations = []</code> significa que no ejecuta SQL adicional.</p>
+        </div>
+
+        <div class="quiz" data-answer="c" data-explanation="La migración solo declara que ambos nodos 0016 son requisitos del nuevo punto final.">
+          <p>¿Qué cambia en la base de datos <code>operations = []</code>?</p>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="a">Borra una tabla duplicada</button>
+            <button class="quiz-option" data-value="b">Copia usuarios</button>
+            <button class="quiz-option" data-value="c">Nada; únicamente une el grafo de migraciones</button>
+          </div>
+          <p class="quiz-feedback" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="chapter" id="pruebas">
+        <div class="chapter-head">
+          <span class="chapter-number">08 / VERIFICACIÓN</span>
+          <h2>Cómo sabemos que funciona</h2>
+          <p>Se comprueban capas distintas: estilo y tipos, compilación de Next.js, respuesta HTTP y tests del backend.</p>
+        </div>
+
+        <div class="code-window">
+          <div class="window-bar"><span>Makefile · prueba no interactiva</span><button class="copy-button" data-copy="make test">Copiar</button></div>
+          <pre>back-test:
+  $(DOCKER_COMPOSE) run --rm backend python manage.py test --noinput
+
+test: back-test</pre>
+        </div>
+        <p class="lead"><code>--noinput</code> evita que Django se detenga preguntando si puede borrar una base de pruebas antigua. Esto hace que el comando sea reproducible en terminal y CI.</p>
+
+        <table class="check-table">
+          <thead><tr><th>Comprobación</th><th>Qué valida</th><th>Resultado</th></tr></thead>
+          <tbody>
+            <tr><td><code>npx eslint ...</code></td><td>Archivos del juego y navegación</td><td class="ok">Correcto</td></tr>
+            <tr><td><code>npm run build</code></td><td>TypeScript y ruta estática /games</td><td class="ok">Correcto</td></tr>
+            <tr><td><code>make test</code></td><td>8 pruebas Django y grafo de migraciones</td><td class="ok">Correcto</td></tr>
+            <tr><td><code>GET /games</code></td><td>Servidor de desarrollo</td><td class="ok">HTTP 200</td></tr>
+            <tr><td>Lint completo</td><td>Todo el repositorio frontend</td><td class="pending">10 errores anteriores fuera del juego</td></tr>
+          </tbody>
+        </table>
+
+        <div class="quiz" data-answer="b" data-explanation="--noinput elimina preguntas interactivas y permite ejecutar la prueba de forma automática.">
+          <p>¿Por qué se añadió <code>--noinput</code> a las pruebas?</p>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="a">Para ignorar tests que fallan</button>
+            <button class="quiz-option" data-value="b">Para evitar preguntas que bloquean la ejecución automática</button>
+            <button class="quiz-option" data-value="c">Para no crear la base de pruebas</button>
+          </div>
+          <p class="quiz-feedback" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="chapter" id="defensa">
+        <div class="chapter-head">
+          <span class="chapter-number">09 / DEFENSA</span>
+          <h2>Cómo explicar esta implementación</h2>
+          <p>Una defensa clara empieza por el alcance, sigue el recorrido de una jugada y termina con decisiones técnicas y pruebas.</p>
+        </div>
+
+        <div class="callout">
+          <strong>Resumen de 60 segundos</strong>
+          <p>“Añadimos un juego individual RPSLS en la ruta /games. Las diez relaciones ganadoras están declaradas una sola vez y json-rules-engine las evalúa. React controla la ronda, la puntuación y la revancha; localStorage conserva la partida y una función normalizadora protege frente a datos inválidos. La CPU usa crypto.getRandomValues. La interfaz es responsive y accesible. Además, una migración vacía une dos ramas del grafo de Django, y make test funciona sin interacción. No hay chat ni multijugador en esta rama.”</p>
+        </div>
+
+        <dl class="glossary">
+          <div><dt>App Router</dt><dd>Sistema de rutas de Next.js basado en carpetas dentro de app.</dd></div>
+          <div><dt>Hook</dt><dd>Función de React que añade estado, efectos o referencias a un componente.</dd></div>
+          <div><dt>Hidratación</dt><dd>Momento en que React activa en el navegador el HTML generado.</dd></div>
+          <div><dt>localStorage</dt><dd>Almacenamiento persistente del navegador asociado al origen.</dd></div>
+          <div><dt>Motor de reglas</dt><dd>Evalúa hechos contra condiciones declaradas y emite eventos.</dd></div>
+          <div><dt>Migración merge</dt><dd>Nodo que reúne varias ramas del grafo de migraciones Django.</dd></div>
+          <div><dt>Estado inmutable</dt><dd>Se crea un objeto nuevo en vez de modificar directamente el anterior.</dd></div>
+          <div><dt>Guard clause</dt><dd>Retorno temprano que impide ejecutar una operación inválida.</dd></div>
+          <div><dt>Responsive</dt><dd>Diseño que reorganiza su estructura según el espacio disponible.</dd></div>
+        </dl>
+
+        <div class="quiz" data-answer="a" data-explanation="Esta rama está limitada intencionalmente al modo local contra CPU; el multijugador se desarrollará con el módulo de chat en otra rama.">
+          <p>¿Qué afirmación describe correctamente el alcance actual?</p>
+          <div class="quiz-options">
+            <button class="quiz-option" data-value="a">Juego contra CPU, sin chat ni multijugador</button>
+            <button class="quiz-option" data-value="b">Partidas online mediante WebSockets</button>
+            <button class="quiz-option" data-value="c">Invitaciones privadas desde el chat</button>
+          </div>
+          <p class="quiz-feedback" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <footer>
+        Guía autocontenida de AEDLPH. Se puede abrir como archivo local; no requiere servidor, librerías externas ni conexión a Internet.
+      </footer>
+    </div>
+  </main>
+
+  <script>
+    const quizState = new Set()
+    const totalQuizzes = document.querySelectorAll('.quiz').length
+
+    function updateQuizMeter() {
+      const count = quizState.size
+      document.getElementById('quiz-progress').style.width = `${(count / totalQuizzes) * 100}%`
+      document.getElementById('quiz-score').textContent = `${count} de ${totalQuizzes} preguntas correctas`
+    }
+
+    document.querySelectorAll('.quiz').forEach((quiz, quizIndex) => {
+      const answer = quiz.dataset.answer
+      const feedback = quiz.querySelector('.quiz-feedback')
+      quiz.querySelectorAll('.quiz-option').forEach((button) => {
+        button.addEventListener('click', () => {
+          quiz.querySelectorAll('.quiz-option').forEach((option) => option.classList.remove('correct', 'incorrect'))
+          if (button.dataset.value === answer) {
+            button.classList.add('correct')
+            feedback.textContent = `Correcto. ${quiz.dataset.explanation}`
+            quizState.add(quizIndex)
+          } else {
+            button.classList.add('incorrect')
+            feedback.textContent = 'No es esa. Revisa el fragmento justo encima y prueba otra vez.'
+            quizState.delete(quizIndex)
+          }
+          updateQuizMeter()
+        })
+      })
+    })
+
+    async function copyText(text) {
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(text)
+          return
+        } catch {
+          // file:// pages may not receive clipboard permission.
+        }
+      }
+      const area = document.createElement('textarea')
+      area.value = text
+      area.style.position = 'fixed'
+      area.style.opacity = '0'
+      document.body.appendChild(area)
+      area.select()
+      document.execCommand('copy')
+      area.remove()
+    }
+
+    document.querySelectorAll('.copy-button').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const text = button.dataset.copy || button.closest('.code-window, .terminal')?.querySelector('pre')?.innerText
+        if (!text) return
+        await copyText(text)
+        const previous = button.textContent
+        button.textContent = 'Copiado'
+        window.setTimeout(() => { button.textContent = previous }, 1200)
+      })
+    })
+
+    const sections = [...document.querySelectorAll('.chapter, .hero')]
+    const navLinks = [...document.querySelectorAll('.sidebar nav a')]
+    function updateReadingState() {
+      const root = document.documentElement
+      const max = root.scrollHeight - window.innerHeight
+      document.getElementById('reading-progress').style.width = `${max > 0 ? (window.scrollY / max) * 100 : 0}%`
+      let current = sections[0]?.id
+      sections.forEach((section) => {
+        if (section.getBoundingClientRect().top <= 140) current = section.id
+      })
+      navLinks.forEach((link) => link.classList.toggle('active', link.getAttribute('href') === `#${current}`))
+    }
+    window.addEventListener('scroll', updateReadingState, { passive: true })
+    updateReadingState()
+
+    const choices = [
+      { id: 'rock', label: 'Piedra', symbol: '🪨' },
+      { id: 'paper', label: 'Papel', symbol: '📄' },
+      { id: 'scissors', label: 'Tijera', symbol: '✂️' },
+      { id: 'lizard', label: 'Lagarto', symbol: '🦎' },
+      { id: 'spock', label: 'Spock', symbol: '🖖' },
+    ]
+    const wins = {
+      'scissors:paper': 'Tijera corta Papel',
+      'paper:rock': 'Papel cubre Piedra',
+      'rock:lizard': 'Piedra aplasta Lagarto',
+      'lizard:spock': 'Lagarto envenena Spock',
+      'spock:scissors': 'Spock rompe Tijera',
+      'scissors:lizard': 'Tijera decapita Lagarto',
+      'lizard:paper': 'Lagarto se come Papel',
+      'paper:spock': 'Papel refuta Spock',
+      'spock:rock': 'Spock vaporiza Piedra',
+      'rock:scissors': 'Piedra aplasta Tijera',
+    }
+    const demoScore = { player: 0, cpu: 0, ties: 0 }
+    const demoButtons = document.getElementById('demo-buttons')
+    choices.forEach((choice) => {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.innerHTML = `<span>${choice.symbol}</span>${choice.label}`
+      button.addEventListener('click', () => playDemo(choice))
+      demoButtons.appendChild(button)
+    })
+
+    function playDemo(player) {
+      const cpu = choices[crypto.getRandomValues(new Uint32Array(1))[0] % choices.length]
+      document.getElementById('demo-player').textContent = player.symbol
+      document.getElementById('demo-cpu').textContent = cpu.symbol
+      let result
+      if (player.id === cpu.id) {
+        demoScore.ties += 1
+        result = 'Empate'
+      } else if (wins[`${player.id}:${cpu.id}`]) {
+        demoScore.player += 1
+        result = wins[`${player.id}:${cpu.id}`]
+      } else {
+        demoScore.cpu += 1
+        result = wins[`${cpu.id}:${player.id}`]
+      }
+      document.getElementById('demo-result').textContent = result
+      document.getElementById('demo-player-score').textContent = demoScore.player
+      document.getElementById('demo-cpu-score').textContent = demoScore.cpu
+      document.getElementById('demo-ties').textContent = demoScore.ties
+    }
+  </script>
+</body>
+</html>
