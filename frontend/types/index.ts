@@ -26,6 +26,7 @@ export interface UserDetails {
 	coalitionRank: number | null
 	campusRank: number | null
 	achievements?: string | unknown
+	active: boolean
 }
 
 export interface PointsHistoryEntry {

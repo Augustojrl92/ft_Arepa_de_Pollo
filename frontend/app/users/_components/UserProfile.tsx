@@ -61,6 +61,13 @@ export function UserProfile({
 				</div>
 				<p className={`coalition-badge ${profile.coalition} capitalize mb-4`}>{profile.coalition}</p>
 				<h1 className="text-4xl font-black tracking-tight md:text-5xl">{profile.name}</h1>
+				<div className="mt-3 flex items-center gap-2 text-sm text-text-secondary">
+					<span
+						aria-hidden="true"
+						className={`h-2.5 w-2.5 rounded-full ${profile.online ? 'bg-green-400' : 'bg-gray-400'}`}
+					/>
+					<span>{profile.online ? 'En línea' : 'Desconectado'}</span>
+				</div>
 				<div className="mt-5 flex flex-wrap items-center justify-center gap-3">
 					{isOwnProfile ? (
 						<>

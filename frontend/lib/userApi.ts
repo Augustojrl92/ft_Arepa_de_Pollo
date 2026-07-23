@@ -16,6 +16,7 @@ type UserDetailsResponse = {
 	coalition_rank: number | null;
 	general_rank: number | null;
 	achievements: unknown; // Placeholder for achievements data, adjust type as needed
+	active?: boolean;
 }
 
 type FriendEntryResponse = {
@@ -141,6 +142,7 @@ export async function fetchUserDetails(login: string): Promise<UserDetails> {
 		coalitionRank: payload.coalition_rank,
 		campusRank: payload.general_rank,
 		achievements: payload.achievements,
+		active: Boolean(payload.active),
 	};
 }
 

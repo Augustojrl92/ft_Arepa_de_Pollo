@@ -1,4 +1,12 @@
-import type { Achievement, Ally, IncomingAllyRequest, ProfilePreferences, RankingPerPage } from './types'
+import type {
+	Achievement,
+	Ally,
+	DailyChallenge,
+	GamificationProfile,
+	IncomingAllyRequest,
+	ProfilePreferences,
+	RankingPerPage,
+} from './types'
 
 export const allowedPerPage: RankingPerPage[] = [10, 25, 50, 100]
 
@@ -76,3 +84,40 @@ export const mockAchievements: Achievement[] = [
 	},
 ]
 
+export const mockGamification: {
+	profile: GamificationProfile
+	dailyChallenges: DailyChallenge[]
+} = {
+	profile: {
+		xp: 175,
+		level: 2,
+		levelXp: 75,
+		nextLevelXp: 100,
+	},
+	dailyChallenges: [
+		{
+			code: 'visit_app',
+			title: 'Entrar en AEDLPH',
+			progress: 1,
+			target: 1,
+			xpReward: 10,
+			completed: true,
+		},
+		{
+			code: 'visit_profile',
+			title: 'Visitar dos perfiles',
+			progress: 1,
+			target: 2,
+			xpReward: 20,
+			completed: false,
+		},
+		{
+			code: 'play_rounds',
+			title: 'Jugar tres rondas',
+			progress: 2,
+			target: 3,
+			xpReward: 30,
+			completed: false,
+		},
+	],
+}

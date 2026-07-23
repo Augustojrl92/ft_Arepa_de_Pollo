@@ -6,6 +6,7 @@ import { useTheme } from 'next-themes'
 import { useAuthStore, useCoalitionStore, useUserStore } from '@/hooks'
 import { UserAchievements } from '../_components/UserAchievements'
 import { UserAllies } from '../_components/UserAllies'
+import { GamificationPanel } from '../_components/GamificationPanel'
 import { UserConfigurationModal } from '../_components/UserConfigurationModal'
 import { UserProfile } from '../_components/UserProfile'
 import { defaultPreferences, mockAchievements } from '../_components/mockData'
@@ -87,6 +88,11 @@ export default function UserDetailPage({
 	useEffect(() => {
 		if (login && !isOwnProfile) {
 			void getUserDetails(login)
+			const intervalId = window.setInterval(() => {
+				void getUserDetails(login)
+			}, 30_000)
+
+			return () => window.clearInterval(intervalId)
 		}
 	}, [getUserDetails, isOwnProfile, login])
 
@@ -116,6 +122,7 @@ export default function UserDetailPage({
 				evalPoints: user.evalPoints ?? 0,
 				campusRank: user.campusUserRank ?? null,
 				coalitionRank: user.coalitionUserRank ?? null,
+				online: true,
 			}
 		}
 
@@ -132,6 +139,7 @@ export default function UserDetailPage({
 				evalPoints: 0,
 				campusRank: fetchedUser.campusRank ?? null,
 				coalitionRank: fetchedUser.coalitionRank ?? null,
+				online: fetchedUser.active,
 			}
 		}
 
@@ -235,6 +243,7 @@ export default function UserDetailPage({
 						: undefined
 				}
 			/>
+			{isOwnProfile && <GamificationPanel />}
 			<section className="grid gap-6 px-6 lg:grid-cols-2">
 				{isOwnProfile && (
 					<>
