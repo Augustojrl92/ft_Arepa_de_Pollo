@@ -24,6 +24,11 @@ export function UserAllies({ currentLogin }: UserAlliesProps) {
 
 	useEffect(() => {
 		void getMyFriends()
+		const intervalId = window.setInterval(() => {
+			void getMyFriends()
+		}, 30_000)
+
+		return () => window.clearInterval(intervalId)
 	}, [getMyFriends])
 
 	const allies = useMemo(() => friends?.friends ?? [], [friends?.friends])
@@ -131,7 +136,11 @@ export function UserAllies({ currentLogin }: UserAlliesProps) {
 										<p className="truncate text-sm font-bold mb-1">{ally.login}</p>
 										<p className="truncate text-xs text-text-secondary">{ally.displayName}</p>
 									</div>
-									<span className="h-2.5 w-2.5 rounded-full bg-green-400" />
+									<span
+										title={ally.active ? 'En línea' : 'Desconectado'}
+										aria-label={ally.active ? 'En línea' : 'Desconectado'}
+										className={`h-2.5 w-2.5 rounded-full ${ally.active ? 'bg-green-400' : 'bg-gray-400'}`}
+									/>
 								</div>
 							</Link>
 						))}

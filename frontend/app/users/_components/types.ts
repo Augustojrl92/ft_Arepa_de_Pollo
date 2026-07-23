@@ -50,4 +50,21 @@ export type UserProfileView = {
 	evalPoints: number
 	campusRank?: number | null
 	coalitionRank?: number | null
+	online: boolean
+}
+
+export type GamificationProfile = {
+	xp: number
+	level: number
+	levelXp: number
+	nextLevelXp: number
+}
+
+export type DailyChallenge = {
+	code: string
+	title: string
+	progress: number
+	target: number
+	xpReward: number
+	completed: boolean
 }

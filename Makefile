@@ -101,6 +101,9 @@ back-superuser:
 back-shell:
 	$(DOCKER_COMPOSE) run --rm backend python manage.py shell
 
+back-test:
+	$(DOCKER_COMPOSE) run --rm backend python manage.py test --noinput
+
 back-syncapi:
 	$(DOCKER_COMPOSE) exec -T backend python manage.py sync_campus_users --mode=$(MODE)
 
