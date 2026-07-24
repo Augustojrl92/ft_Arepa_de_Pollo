@@ -1,4 +1,5 @@
 from django.db import models
+from sync.models import CampusUser
 
 # Create your models here.
 class Message(models.Model):
