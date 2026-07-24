@@ -64,10 +64,3 @@ class UserAchievement(models.Model):
 	# If not null it is completed and no extra check with the achievement is needed
 	completion_date = models.DateTimeField(null=True)
 
-class Message(models.Model):
-	sender = models.ForeignKey(CampusUser, on_delete=models.CASCADE)
-	receiver = models.ForeignKey(CampusUser, on_delete=models.CASCADE)
-
-	message = models.TextField(null=False)
-	date_time = models.DateTimeField(null=False)
-

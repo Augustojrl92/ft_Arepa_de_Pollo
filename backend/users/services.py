@@ -310,18 +310,3 @@ def get_achivements_for(login) -> list[UserAchievement] | None:
 		print('Add the check function inside User/models.py->Achievement.__init__()', end='')
 		print(', the file User/achievement_functions.py exists to hold these functions.')
 	return achievements_of_user
-
-'''Return list[{sender, message, datetime}]'''
-def get_messages_between(login1: str, login2: str) -> list[{str, str, datetime}] | None:
-	if login1 == login2:
-		return None
-	user1 = CampusUser.objects.filter(login=login1)
-	user2 = CampusUser.objects.filter(login=login2)
-
-	message_rows = list(Message.objects.filter((Q(sender=user1) & Q(receiver=user2)) | (Q(sender=user2) & Q(receiver=user1))).iterator())
-	output = [{row.sender, row.message, row.date_time} for row in message_rows]
-	return output
-
-def message_sent(sender_login: str, receiver_login: str, message: str):
-	to_add = Message(sender=sender_login, receiver=receiver_login, message=message, date_time=datetime.now())
-	to_add.save()

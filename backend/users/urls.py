@@ -26,5 +26,4 @@ urlpatterns = [
 	path('preferences/', UserPreferencesView.as_view(), name='user-preferences'),
 	path('preferences/avatar/', UserAvatarView.as_view(), name='user-avatar'),
 	path('achievements/<str:login>', UserAchievementsView.as_view(), name='user-achievements')
-    path('messages_with/<str:other_login>', MessagesView.as_view(), name='messages_with')
 ]
