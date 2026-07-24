@@ -1,7 +1,12 @@
-from channels.generic.websocket import AsyncWebsocketConsumer
 import json
+from datetime import datetime
+
 from django.contrib.auth.models import User
+from channels.generic.websocket import AsyncWebsocketConsumer
 from asgiref.sync import sync_to_async
+
+from sync.models import CampusUser
+from .models import Message
 
 class DirectChatConsumer(AsyncWebsocketConsumer):
     
@@ -33,9 +38,19 @@ class DirectChatConsumer(AsyncWebsocketConsumer):
             await self.send_friends_list()
 
     async def handle_chat_message(self, data):
+        sender_login = self.user.get_username()
+        sender_user = CampusUser.objects.filter(login=sender_login).first()
+
+        recipient_login = data.get('to_user_login')
+        recipient_user = CampusUser.objects.filter(login=recipient_login).first()
+        if sender_user == None or recipient_login == None:
+            return
+
         to_user_id = data.get('to_user_id')
         message = data.get('message')
         timestamp = data.get('timestamp')
+
+        Message(sender=sender_user, receiver=recipient_user, message=message, date_time=datetime.now()).save()
         
         recipient_group_name = f'user_{to_user_id}'
         
