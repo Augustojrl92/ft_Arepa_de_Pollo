@@ -58,8 +58,9 @@ class Achievement(models.Model):
 
 class UserAchievement(models.Model):
 	user = models.ForeignKey(CampusUser, on_delete=models.CASCADE)
-	achievement = models.OneToOneField(Achievement, on_delete=models.CASCADE)
+	achievement = models.ForeignKey(Achievement, on_delete=models.CASCADE)
 	progress = models.PositiveIntegerField(default=0)
 
 	# If not null it is completed and no extra check with the achievement is needed
 	completion_date = models.DateTimeField(null=True)
+

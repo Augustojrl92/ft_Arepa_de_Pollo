@@ -4,11 +4,12 @@ from time import time
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Q
+from django.db.models import Q
 
 from django.contrib.auth.models import User
 
 from sync.models import CampusUser
-from .models import FriendsList, Achievement, UserAchievement
+from .models import FriendsList, Achievement, UserAchievement, Message
 from .achievement_functions import set_up_achievements
 
 time_until_inactivity = 2 * 60

@@ -9,5 +9,5 @@ fi
 # Start cron daemon
 cron
 
-# Start Django development server
-exec python manage.py runserver 0.0.0.0:8000
+# Start Django with Daphne (ASGI) for Channels support
+exec daphne -b 0.0.0.0 -p 8000 config.asgi:application
