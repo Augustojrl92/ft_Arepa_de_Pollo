@@ -8,7 +8,21 @@ import Header from "@/components/Header"
 import Footer from "@/components/Footer"
 import { useAuthStore, useCoalitionStore, useUserStore } from "@/hooks"
 
-const PUBLIC_ROUTES = ["/login", "/status", "/offline", "/privacy", "/terms"]
+// Reachable without a session. The auth routes must be here or a logged-out
+// visitor is bounced to /login before they can register or follow an emailed
+// link; privacy and terms must be here because the project requires them to be
+// accessible to anyone.
+const PUBLIC_ROUTES = [
+	"/login",
+	"/register",
+	"/verify-email",
+	"/reset-password",
+	"/reset-password/confirm",
+	"/privacy",
+	"/terms",
+	"/status",
+	"/offline",
+]
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
 	const router = useRouter()

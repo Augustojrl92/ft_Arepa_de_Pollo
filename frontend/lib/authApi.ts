@@ -4,6 +4,7 @@ const AUTH_BASE_URL = `${API_URL}/api/auth`
 type ApiErrorPayload = {
 	error?: string
 	detail?: string
+	[field: string]: unknown
 }
 
 export class ApiHttpError extends Error {
@@ -19,10 +20,87 @@ export class ApiHttpError extends Error {
 const getErrorMessage = async (response: Response, fallbackMessage: string) => {
 	const payload = await response.json().catch(() => null) as ApiErrorPayload | null
 
-	return payload?.error ?? payload?.detail ?? fallbackMessage
+	if (payload?.error || payload?.detail) {
+		return payload.error ?? payload.detail as string
+	}
+
+	// DRF serializer errors arrive keyed by field, e.g. {password: ["too short"]}.
+	// Surface the first one so validation feedback is not swallowed.
+	if (payload && typeof payload === "object") {
+		for (const value of Object.values(payload)) {
+			if (Array.isArray(value) && typeof value[0] === "string") {
+				return value[0]
+			}
+			if (typeof value === "string") {
+				return value
+			}
+		}
+	}
+
+	return fallbackMessage
 }
 
 export const getLoginUrl = () => `${AUTH_BASE_URL}/42/login/`
+
+const postJson = async <T>(path: string, body: unknown, fallbackMessage: string) => {
+	const response = await fetch(`${AUTH_BASE_URL}${path}`, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		credentials: "include",
+		body: JSON.stringify(body),
+	})
+
+	if (!response.ok) {
+		throw new ApiHttpError(await getErrorMessage(response, fallbackMessage), response.status)
+	}
+
+	return response.json() as Promise<T>
+}
+
+type DetailPayload = { detail: string }
+
+export const postRegister = (email: string, password: string, passwordConfirm: string) =>
+	postJson<DetailPayload>(
+		"/register/",
+		{ email, password, password_confirm: passwordConfirm },
+		"No se ha podido completar el registro",
+	)
+
+export const postEmailLogin = (email: string, password: string) =>
+	postJson<DetailPayload>("/login/", { email, password }, "No se ha podido iniciar sesión")
+
+export const postVerifyEmail = (uid: string, token: string) =>
+	postJson<DetailPayload>("/verify-email/", { uid, token }, "No se ha podido verificar el email")
+
+export const postPasswordResetRequest = (email: string) =>
+	postJson<DetailPayload>("/password/reset/", { email }, "No se ha podido enviar el email de recuperación")
+
+export const postPasswordResetConfirm = (
+	uid: string,
+	token: string,
+	newPassword: string,
+	newPasswordConfirm: string,
+) =>
+	postJson<DetailPayload>(
+		"/password/reset/confirm/",
+		{ uid, token, new_password: newPassword, new_password_confirm: newPasswordConfirm },
+		"No se ha podido cambiar la contraseña",
+	)
+
+export const postSetPassword = (
+	newPassword: string,
+	newPasswordConfirm: string,
+	currentPassword?: string,
+) =>
+	postJson<DetailPayload>(
+		"/password/set/",
+		{
+			new_password: newPassword,
+			new_password_confirm: newPasswordConfirm,
+			...(currentPassword ? { current_password: currentPassword } : {}),
+		},
+		"No se ha podido guardar la contraseña",
+	)
 
 let refreshInFlight: Promise<void> | null = null
 

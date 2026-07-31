@@ -8,3 +8,4 @@ djangorestframework-simplejwt
 django-crontab
 requests
 Pillow
+argon2-cffi>=23.1,<24.0
