@@ -41,6 +41,7 @@ export interface FriendEntry {
 	login: string
 	displayName: string
 	avatarUrl: string
+	active: boolean
 }
 
 export interface FriendsPayload {

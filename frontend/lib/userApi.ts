@@ -24,6 +24,7 @@ type FriendEntryResponse = {
 	login: string;
 	display_name: string;
 	avatar_url: string;
+	active: boolean;
 }
 
 type FriendsPayloadResponse = {
@@ -103,6 +104,7 @@ const toFriendsPayload = (payload: FriendsPayloadResponse): FriendsPayload => ({
 		login: friend.login,
 		displayName: friend.display_name,
 		avatarUrl: friend.avatar_url,
+		active: friend.active,
 	})),
 	pendingReceived: payload.pending_received.map((friend) => ({
 		userId: friend.user_id,
@@ -110,6 +112,7 @@ const toFriendsPayload = (payload: FriendsPayloadResponse): FriendsPayload => ({
 		login: friend.login,
 		displayName: friend.display_name,
 		avatarUrl: friend.avatar_url,
+		active: friend.active,
 	})),
 	pendingSent: payload.pending_sent.map((friend) => ({
 		userId: friend.user_id,
@@ -117,6 +120,7 @@ const toFriendsPayload = (payload: FriendsPayloadResponse): FriendsPayload => ({
 		login: friend.login,
 		displayName: friend.display_name,
 		avatarUrl: friend.avatar_url,
+		active: friend.active,
 	})),
 });
 
@@ -154,6 +158,12 @@ export async function fetchMyPendingFriendRequests(): Promise<FriendsPayload> {
 	}, 'Failed to fetch pending friend requests');
 
 	return toFriendsPayload(payload);
+}
+
+export async function sendHeartbeat(): Promise<void> {
+	await authFetchJson<{ ok: boolean }>(`${USER_BASE_URL}heartbeat/`, {
+		method: 'POST',
+	}, 'Failed to send heartbeat');
 }
 
 export async function createFriendRequest(login: string): Promise<FriendsPayload> {
