@@ -106,8 +106,9 @@ def _serialize_friend_entry(friend_list, request=None):
 	fallback_avatar_url = campus_user.avatar_url if campus_user else ''
 	avatar_url = _resolve_avatar_url(owner, fallback_avatar_url, request=request)
 
-	login = getattr(campus_user, "login", None)
-	active = time() - User.objects.filter(username=login).first().last_active_time < time_until_inactivity
+	login = getattr(campus_user, 'login', None)
+	last_active_time = getattr(campus_user, 'last_active_time', 0) if campus_user is not None else 0
+	active = (time() - last_active_time) < time_until_inactivity if last_active_time else False
 
 	return {
 		'user_id': owner.id,

@@ -1,8 +1,12 @@
+from time import time
+
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from sync.models import CampusUser
 
 from .models import UserPreferences
 from .services import (
@@ -72,6 +76,22 @@ class FriendsMeView(APIView):
 	def get(self, request):
 		payload = get_or_create_friends_payload_for_user(request.user, request=request)
 		return Response(payload, status=status.HTTP_200_OK)
+
+
+class UserHeartbeatView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def post(self, request):
+		user = request.user
+		campus_user = getattr(user, 'campus_user_profile', None)
+		login = getattr(campus_user, 'login', None) or user.username
+
+		campus_user = CampusUser.objects.filter(login=login).first()
+		if campus_user is not None:
+			campus_user.last_active_time = int(time())
+			campus_user.save(update_fields=['last_active_time'])
+
+		return Response({'ok': True}, status=status.HTTP_200_OK)
 
 
 class FriendsRequestView(APIView):
