@@ -253,7 +253,7 @@ export const useUserStore = create<UserState>()(
 				if (document.visibilityState !== 'hidden') {
 					void sendHeartbeat()
 				}
-			}, 20000)
+			}, 60_000)
 
 			heartbeatWindow.__userHeartbeat = intervalId
 			heartbeatWindow.__heartbeatVisibilityHandler = handleVisibilityChange

@@ -163,8 +163,13 @@ export async function fetchMyPendingFriendRequests(): Promise<FriendsPayload> {
 }
 
 export async function sendHeartbeat(): Promise<void> {
+	const login = window.localStorage.getItem('auth-login')
 	await authFetchJson<{ ok: boolean }>(`${USER_BASE_URL}heartbeat/`, {
 		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({ login: login ?? '' }),
 	}, 'Failed to send heartbeat');
 }
 
