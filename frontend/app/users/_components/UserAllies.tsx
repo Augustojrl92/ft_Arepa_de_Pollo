@@ -131,7 +131,7 @@ export function UserAllies({ currentLogin }: UserAlliesProps) {
 										<p className="truncate text-sm font-bold mb-1">{ally.login}</p>
 										<p className="truncate text-xs text-text-secondary">{ally.displayName}</p>
 									</div>
-									<span className="h-2.5 w-2.5 rounded-full bg-green-400" />
+									<span className={`h-2.5 w-2.5 rounded-full ${ally.active ? 'bg-green-400' : 'bg-gray-600'}`} />
 								</div>
 							</Link>
 						))}
