@@ -6,6 +6,8 @@ from .views import (
 	FriendsPendingView,
 	FriendsRelationView,
 	FriendsRequestView,
+ 	UserMeAccountView,
+ 	UserMeExportView,
 	UserAvatarView,
 	UserDetailView,
 	UserHeartbeatView,
@@ -16,6 +18,8 @@ from .views import (
 
 urlpatterns = [
 	path('details/', UserDetailView.as_view(), name='user-details'),
+	path('me/export/', UserMeExportView.as_view(), name='user-me-export'),
+	path('me/', UserMeAccountView.as_view(), name='user-me-account'),
 	path('heartbeat/', UserHeartbeatView.as_view(), name='user-heartbeat'),
 	path('points-history/', UserPointsHistoryView.as_view(), name='user-points-history'),
 	path('friends/', FriendsRelationView.as_view(), name='friends-relation'),

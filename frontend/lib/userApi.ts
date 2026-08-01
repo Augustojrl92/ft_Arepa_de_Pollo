@@ -1,5 +1,5 @@
 import { FriendsPayload, UserDetails } from '@/types';
-import { ApiHttpError, authFetchJson } from './authApi';
+import { ApiHttpError, authFetch, authFetchJson } from './authApi';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 const USER_BASE_URL = `${API_URL}/api/users/`;
@@ -87,6 +87,11 @@ type UserPointsHistoryResponse = {
 	}[];
 }
 
+type UserExportResult = {
+	blob: Blob;
+	filename: string;
+}
+
 const toRankingPerPage = (value: number): 10 | 25 | 50 | 100 => {
 	if (value === 10 || value === 25 || value === 50 || value === 100) {
 		return value;
@@ -125,6 +130,25 @@ const toFriendsPayload = (payload: FriendsPayloadResponse): FriendsPayload => ({
 		active: friend.active,
 	})),
 });
+
+const parseAttachmentFilename = (contentDisposition: string | null) => {
+	if (!contentDisposition) {
+		return `aedlph-data-export-${Date.now()}.json`
+	}
+
+	const filenameMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i)
+	const rawFilename = filenameMatch?.[1] ?? filenameMatch?.[2]
+
+	if (!rawFilename) {
+		return `aedlph-data-export-${Date.now()}.json`
+	}
+
+	try {
+		return decodeURIComponent(rawFilename)
+	} catch {
+		return rawFilename
+	}
+}
 
 export async function fetchUserDetails(login: string): Promise<UserDetails> {
 	const payload = await authFetchJson<UserDetailsResponse>(`${USER_BASE_URL}details/?login=${encodeURIComponent(login)}`, {
@@ -322,4 +346,21 @@ export async function fetchUserPointsHistory(login: string) {
 			campusRank: entry.campus_rank,
 		})),
 	};
+}
+
+export async function exportMyData(): Promise<UserExportResult> {
+	const response = await authFetch(`${USER_BASE_URL}me/export/`, {
+		method: 'GET',
+	}, 'Failed to export user data')
+
+	return {
+		blob: await response.blob(),
+		filename: parseAttachmentFilename(response.headers.get('content-disposition')),
+	}
+}
+
+export async function deleteMyAccount(): Promise<{ detail: string }> {
+	return authFetchJson<{ detail: string }>(`${USER_BASE_URL}me/`, {
+		method: 'DELETE',
+	}, 'Failed to delete user account')
 }
