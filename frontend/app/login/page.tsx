@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 
 import { usePathname } from 'next/navigation';
+import Link from "next/link"
 
 import CardContainer from "@/components/CardContainer"
 import { getLoginUrl } from "@/lib/authApi"
@@ -93,6 +94,21 @@ export default function Login() {
 				<p className="text-xs text-text-secondary text-center">
 					Acceso limitado a estudiantes de <a href="https://www.42madrid.com/" target="_blank" className="text-accent hover:underline">42 Madrid</a>
 				</p>
+				<nav className="flex items-center gap-1 p-1 text-xs text-accent">
+					<Link
+						href="/privacy"
+						className="px-2 py-1.5 sm:px-3 transition-all duration-200 hover:underline"
+					>
+						Privacy Policy
+					</Link>
+					<div className="h-3 w-px bg-border/60 shrink-0" aria-hidden="true" />
+					<Link
+						href="/terms"
+						className="px-2 py-1.5 sm:px-3 transition-all duration-200 hover:underline"
+					>
+						Terms of Service
+					</Link>
+				</nav>
 			</div>
 		</section>
 	)

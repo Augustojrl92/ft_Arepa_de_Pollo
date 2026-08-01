@@ -8,7 +8,7 @@ import Header from "@/components/Header"
 import Footer from "@/components/Footer"
 import { useAuthStore, useCoalitionStore, useUserStore } from "@/hooks"
 
-const PUBLIC_ROUTES = ["/login", "/status", "/offline"]
+const PUBLIC_ROUTES = ["/login", "/status", "/offline", "/privacy", "/terms"]
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
 	const router = useRouter()

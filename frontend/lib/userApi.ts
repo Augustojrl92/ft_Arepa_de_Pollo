@@ -1,5 +1,5 @@
 import { FriendsPayload, UserDetails } from '@/types';
-import { authFetchJson } from './authApi';
+import { ApiHttpError, authFetchJson } from './authApi';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 const USER_BASE_URL = `${API_URL}/api/users/`;
@@ -166,13 +166,20 @@ export async function fetchMyPendingFriendRequests(): Promise<FriendsPayload> {
 
 export async function sendHeartbeat(): Promise<void> {
 	const login = window.localStorage.getItem('auth-login')
-	await authFetchJson<{ ok: boolean }>(`${USER_BASE_URL}heartbeat/`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify({ login: login ?? '' }),
-	}, 'Failed to send heartbeat');
+
+	try {
+		await authFetchJson<{ ok: boolean }>(`${USER_BASE_URL}heartbeat/`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ login: login ?? '' }),
+		}, 'Failed to send heartbeat');
+	} catch (error) {
+		if (error instanceof ApiHttpError && (error.status === 401 || error.status === 400)) {
+			return
+		}
+	}
 }
 
 export async function searchFriendRequestUsers(query: string): Promise<Array<{ login: string; displayName: string; avatarUrl: string }>> {
