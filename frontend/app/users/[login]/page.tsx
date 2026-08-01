@@ -122,7 +122,6 @@ export default function UserDetailPage({
 				evalPoints: user.evalPoints ?? 0,
 				campusRank: user.campusUserRank ?? null,
 				coalitionRank: user.coalitionUserRank ?? null,
-				online: true,
 			}
 		}
 
@@ -140,6 +139,7 @@ export default function UserDetailPage({
 				campusRank: fetchedUser.campusRank ?? null,
 				coalitionRank: fetchedUser.coalitionRank ?? null,
 				online: fetchedUser.active,
+				hasAccount: fetchedUser.hasAccount ?? true,
 			}
 		}
 

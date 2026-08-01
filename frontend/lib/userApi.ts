@@ -17,6 +17,7 @@ type UserDetailsResponse = {
 	general_rank: number | null;
 	achievements: unknown; // Placeholder for achievements data, adjust type as needed
 	active?: boolean;
+	has_account: boolean;
 }
 
 type FriendEntryResponse = {
@@ -143,6 +144,7 @@ export async function fetchUserDetails(login: string): Promise<UserDetails> {
 		campusRank: payload.general_rank,
 		achievements: payload.achievements,
 		active: Boolean(payload.active),
+		hasAccount: payload.has_account
 	};
 }
 
@@ -171,6 +173,18 @@ export async function sendHeartbeat(): Promise<void> {
 		},
 		body: JSON.stringify({ login: login ?? '' }),
 	}, 'Failed to send heartbeat');
+}
+
+export async function searchFriendRequestUsers(query: string): Promise<Array<{ login: string; displayName: string; avatarUrl: string }>> {
+	const payload = await authFetchJson<{ results: Array<{ login: string; display_name: string; avatar_url: string }> }>(`${USER_BASE_URL}friends/requests/?q=${encodeURIComponent(query)}`, {
+		method: 'GET',
+	}, 'Failed to search users');
+
+	return payload.results.map((result) => ({
+		login: result.login,
+		displayName: result.display_name,
+		avatarUrl: result.avatar_url,
+	}))
 }
 
 export async function createFriendRequest(login: string): Promise<FriendsPayload> {

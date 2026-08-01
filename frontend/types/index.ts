@@ -27,6 +27,7 @@ export interface UserDetails {
 	campusRank: number | null
 	achievements?: string | unknown
 	active: boolean
+	hasAccount: boolean
 }
 
 export interface PointsHistoryEntry {

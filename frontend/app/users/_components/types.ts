@@ -50,7 +50,8 @@ export type UserProfileView = {
 	evalPoints: number
 	campusRank?: number | null
 	coalitionRank?: number | null
-	online: boolean
+	online?: boolean
+	hasAccount?: boolean
 }
 
 export type GamificationProfile = {
