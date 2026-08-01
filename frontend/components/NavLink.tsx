@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 const navigation = [
 	{ title: 'Leaderboard', href: '/leaderboard' },
 	{ title: 'Coalitions', href: '/coalitions' },
-	{ title: 'Juegos', href: '/games' },
+	{ title: 'PPTLS', href: '/games' },
 	{ title: 'Status', href: '/status' },
 ];
 
