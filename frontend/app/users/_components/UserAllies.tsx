@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useUserStore } from '@/hooks'
+import { searchFriendRequestUsers } from '@/lib/userApi'
 
 type UserAlliesProps = {
 	currentLogin: string
@@ -21,6 +22,8 @@ export function UserAllies({ currentLogin }: UserAlliesProps) {
 	const [allyTab, setAllyTab] = useState<'allies' | 'sent' | 'received'>('allies')
 	const [requestLoginInput, setRequestLoginInput] = useState('')
 	const [requestMessage, setRequestMessage] = useState<string | null>(null)
+	const [searchResults, setSearchResults] = useState<Array<{ login: string; displayName: string; avatarUrl: string }>>([])
+	const [isSearching, setIsSearching] = useState(false)
 
 	useEffect(() => {
 		void getMyFriends()
@@ -34,6 +37,45 @@ export function UserAllies({ currentLogin }: UserAlliesProps) {
 	const allies = useMemo(() => friends?.friends ?? [], [friends?.friends])
 	const sentRequests = useMemo(() => friends?.pendingSent ?? [], [friends?.pendingSent])
 	const incomingRequests = useMemo(() => friends?.pendingReceived ?? [], [friends?.pendingReceived])
+
+	useEffect(() => {
+		const query = requestLoginInput.trim()
+		if (query.length < 2) {
+			setSearchResults([])
+			setIsSearching(false)
+			return
+		}
+
+		let isCancelled = false
+		setSearchResults([])
+		setIsSearching(true)
+
+		const delayId = window.setTimeout(() => {
+			if (isCancelled) {
+				return
+			}
+
+			void searchFriendRequestUsers(query).then((results) => {
+				if (!isCancelled) {
+					setSearchResults(results)
+				}
+			}).catch(() => {
+				if (!isCancelled) {
+					setSearchResults([])
+				}
+			}).finally(() => {
+				if (!isCancelled) {
+					setIsSearching(false)
+				}
+			})
+		}, 1_000)
+
+		return () => {
+			isCancelled = true
+			window.clearTimeout(delayId)
+			setIsSearching(false)
+		}
+	}, [requestLoginInput])
 
 	const createAllyRequest = async () => {
 		const login = requestLoginInput.trim().toLowerCase()
@@ -61,6 +103,41 @@ export function UserAllies({ currentLogin }: UserAlliesProps) {
 		try {
 			await sendFriendRequest(login)
 			setRequestLoginInput('')
+			setSearchResults([])
+			setRequestMessage('Solicitud enviada correctamente.')
+			setAllyTab('sent')
+		} catch {
+			setRequestMessage('No se pudo enviar la solicitud.')
+		}
+	}
+
+	const handleSelectSuggestion = async (login: string) => {
+		const normalizedLogin = login.trim().toLowerCase()
+
+		if (normalizedLogin.length < 2) {
+			setRequestMessage('Introduce un login valido.')
+			return
+		}
+
+		if (normalizedLogin === currentLogin.toLowerCase()) {
+			setRequestMessage('No puedes enviarte una solicitud a ti mismo.')
+			return
+		}
+
+		if (allies.some((ally) => ally.login.toLowerCase() === normalizedLogin)) {
+			setRequestMessage('Ese usuario ya es tu aliado.')
+			return
+		}
+
+		if (sentRequests.some((request) => request.login.toLowerCase() === normalizedLogin)) {
+			setRequestMessage('Ya tienes una solicitud pendiente para ese login.')
+			return
+		}
+
+		try {
+			await sendFriendRequest(normalizedLogin)
+			setRequestLoginInput('')
+			setSearchResults([])
 			setRequestMessage('Solicitud enviada correctamente.')
 			setAllyTab('sent')
 		} catch {
@@ -178,19 +255,13 @@ export function UserAllies({ currentLogin }: UserAlliesProps) {
 								</div>
 							</Link>
 						))}
-						<div className="mb-4 rounded-xl border border-border bg-surface/40 p-3">
-							<p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">Nueva solicitud</p>
-							<div className="mt-2 flex gap-2">
-								<input
-									type="text"
-									value={requestLoginInput}
-									onChange={(event) => {
-										setRequestLoginInput(event.target.value)
-										setRequestMessage(null)
-									}}
-									placeholder="login del usuario"
-									className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
-								/>
+
+						<div className="rounded-xl border border-border bg-surface/40 p-3">
+							<div className="flex items-center justify-between gap-3">
+								<div>
+									<p className="text-sm font-semibold">Buscar usuario</p>
+									<p className="text-xs text-text-secondary">Escribe un login y envía una solicitud directamente.</p>
+								</div>
 								<button
 									type="button"
 									onClick={createAllyRequest}
@@ -198,6 +269,47 @@ export function UserAllies({ currentLogin }: UserAlliesProps) {
 								>
 									Solicitar
 								</button>
+							</div>
+							<div className="mt-3 flex flex-col gap-2">
+								<input
+									type="text"
+									value={requestLoginInput}
+									onChange={(event) => {
+										setRequestLoginInput(event.target.value)
+										setRequestMessage(null)
+									}}
+									placeholder="Escribe el login del usuario"
+									className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm"
+								/>
+								<div className="min-h-10 rounded-lg border border-dashed border-border/70 bg-card/40 p-2">
+									{requestLoginInput.trim().length < 2 ? (
+										<p className="text-xs text-text-secondary">Escribe al menos 2 letras para ver sugerencias.</p>
+									) : isSearching ? (
+										<p className="text-xs text-text-secondary">Buscando usuarios...</p>
+									) : searchResults.length === 0 ? (
+										<p className="text-xs text-text-secondary">No se encontraron usuarios.</p>
+									) : (
+										<div className="space-y-2">
+											{searchResults.map((result) => (
+												<button
+													type="button"
+													key={result.login}
+													onClick={() => void handleSelectSuggestion(result.login)}
+													className="flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2 text-left hover:bg-surface/60"
+												>
+													<div className="flex min-w-0 items-center gap-3">
+														<img src={result.avatarUrl} alt={result.login} className="h-8 w-8 rounded-full object-cover" />
+														<div className="min-w-0">
+															<p className="truncate text-sm font-semibold">{result.login}</p>
+															<p className="truncate text-xs text-text-secondary">{result.displayName}</p>
+														</div>
+													</div>
+													<span className="text-xs font-semibold text-(--coalition-color)">Enviar</span>
+												</button>
+											))}
+										</div>
+									)}
+								</div>
 							</div>
 							{requestMessage && <p className="mt-2 text-xs text-text-secondary">{requestMessage}</p>}
 						</div>
