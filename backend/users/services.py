@@ -1,15 +1,21 @@
 from datetime import datetime
+import json
+import logging
 from time import time
 
+from django.conf import settings
+from django.contrib.auth.models import User
+from django.core.mail import send_mail
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Q
-
-from django.contrib.auth.models import User
+from django.utils import timezone
 
 from sync.models import CampusUser
 from .models import FriendsList, Achievement, UserAchievement
 from .achievement_functions import set_up_achievements
+
+logger = logging.getLogger(__name__)
 
 time_until_inactivity = 2 * 60
 
@@ -136,6 +142,124 @@ def get_or_create_friends_payload_for_user(user, request=None):
 		'pending_received': [_serialize_friend_entry(friend_list, request=request) for friend_list in received_qs],
 		'pending_sent': [_serialize_friend_entry(friend_list, request=request) for friend_list in sent_qs],
 	}
+
+
+def _serialize_user_achievements_for_export(campus_user):
+	achievements = (
+		UserAchievement.objects.filter(user=campus_user)
+		.select_related('achievement')
+		.order_by('achievement__name')
+	)
+
+	return [
+		{
+			'name': item.achievement.name,
+			'description': item.achievement.description,
+			'progress': item.progress,
+			'completion_points': item.achievement.completion_points,
+			'completion_date': item.completion_date.isoformat() if item.completion_date else None,
+		}
+		for item in achievements
+	]
+
+
+def build_user_gdpr_export(user, request=None):
+	campus_user = getattr(user, 'campus_user_profile', None) or CampusUser.objects.filter(django_user=user).first()
+	preferences = getattr(user, 'preferences', None)
+	friends_payload = get_or_create_friends_payload_for_user(user, request=request)
+	points_history = []
+	if campus_user is not None:
+		points_history = [
+			{
+				'date': snapshot.snapshot_date.isoformat(),
+				'points': snapshot.coalition_user_score,
+				'coalition_rank': snapshot.coalition_user_rank,
+				'campus_rank': snapshot.campus_user_rank,
+			}
+			for snapshot in campus_user.score_snapshots.order_by('snapshot_date')
+		]
+
+	return {
+		'generated_at': timezone.now().isoformat(),
+		'account': {
+			'id': user.id,
+			'username': user.username,
+			'email': user.email,
+			'last_login': user.last_login.isoformat() if user.last_login else None,
+			'date_joined': user.date_joined.isoformat() if user.date_joined else None,
+		},
+		'campus_profile': {
+			'id': campus_user.id if campus_user else None,
+			'intra_id': campus_user.intra_id if campus_user else None,
+			'user_id': campus_user.user_id if campus_user else None,
+			'login': campus_user.login if campus_user else None,
+			'email': campus_user.email if campus_user else None,
+			'display_name': campus_user.display_name if campus_user else None,
+			'avatar_url': campus_user.avatar_url if campus_user else None,
+			'level': str(campus_user.level) if campus_user else None,
+			'wallet': campus_user.wallet if campus_user else None,
+			'correction_points': campus_user.correction_points if campus_user else None,
+			'coalition_id': campus_user.coalition_id if campus_user else None,
+			'coalition_name': campus_user.coalition_name if campus_user else None,
+			'coalition_slug': campus_user.coalition_slug if campus_user else None,
+			'coalition_user_score': campus_user.coalition_user_score if campus_user else None,
+			'coalition_rank': campus_user.coalition_rank if campus_user else None,
+			'general_rank': campus_user.general_rank if campus_user else None,
+			'evaluations_done_total': campus_user.evaluations_done_total if campus_user else None,
+			'evaluations_done_current_season': campus_user.evaluations_done_current_season if campus_user else None,
+			'is_active': campus_user.is_active if campus_user else None,
+		},
+		'preferences': {
+			'items_per_page': preferences.items_per_page if preferences else None,
+			'show_sensitive_data': preferences.show_sensitive_data if preferences else None,
+			'theme_mode': preferences.theme_mode if preferences else None,
+			'receive_notifications': preferences.receive_notifications if preferences else None,
+			'custom_username': preferences.custom_username if preferences else None,
+			'has_custom_avatar': bool(preferences and preferences.custom_avatar),
+		},
+		'friends': friends_payload,
+		'points_history': points_history,
+		'achievements': _serialize_user_achievements_for_export(campus_user) if campus_user else [],
+	}
+
+
+def send_gdpr_confirmation_email(user, operation_label, extra_lines=None):
+	recipient = (user.email or '').strip()
+	if not recipient:
+		campus_user = getattr(user, 'campus_user_profile', None) or CampusUser.objects.filter(django_user=user).first()
+		recipient = (getattr(campus_user, 'email', '') or '').strip()
+
+	if not recipient:
+		logger.warning('Skipping GDPR confirmation email for user_id=%s because no recipient email exists.', user.id)
+		return False
+
+	subject = f'AEDLPH {operation_label}'
+	message_lines = [
+		f'Hello {user.username},',
+		'',
+		f'Your request related to {operation_label.lower()} has been processed.',
+	]
+	if extra_lines:
+		message_lines.extend([''] + list(extra_lines))
+	message_lines.extend([
+		'',
+		'This message was generated automatically by AEDLPH.',
+	])
+
+	send_mail(
+		subject,
+		'\n'.join(message_lines),
+		settings.DEFAULT_FROM_EMAIL,
+		[recipient],
+		fail_silently=False,
+	)
+	return True
+
+
+def delete_user_account(user):
+	with transaction.atomic():
+		user.delete()
+	return True
 
 
 def get_pending_friend_requests_payload_for_user(user, request=None):

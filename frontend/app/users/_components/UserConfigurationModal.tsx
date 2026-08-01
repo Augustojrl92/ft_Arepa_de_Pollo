@@ -1,6 +1,7 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
 import type { ProfilePreferences, RankingPerPage } from './types'
 import { X } from 'lucide-react'
+import CustomButton from '@/components/CustomButton'
 
 type UserPreferencesModalProps = {
 	isOpen: boolean
@@ -14,6 +15,9 @@ type UserPreferencesModalProps = {
 	onSave: (nextPreferences: ProfilePreferences) => Promise<void> | void
 	onUploadAvatar?: (file: File) => Promise<void>
 	onRemoveAvatar?: () => Promise<void>
+	onExportData?: () => Promise<void> | void
+	isExporting?: boolean
+	onRequestDeleteAccount?: () => void
 }
 
 export function UserConfigurationModal({
@@ -28,6 +32,9 @@ export function UserConfigurationModal({
 	onSave,
 	onUploadAvatar,
 	onRemoveAvatar,
+	onExportData,
+	isExporting = false,
+	onRequestDeleteAccount,
 }: UserPreferencesModalProps) {
 	const [draftPreferences, setDraftPreferences] = useState<ProfilePreferences>(preferences)
 	const [selectedFileName, setSelectedFileName] = useState<string | null>(null)
@@ -187,6 +194,40 @@ export function UserConfigurationModal({
 									<span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${draftPreferences.notificationsEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
 								</button>
 							</div>
+						</div>
+					</div>
+
+					<div className="rounded-xl border border-border bg-surface/40 p-3">
+						<div className="space-y-2">
+							<p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">GDPR</p>
+							<p className="text-sm font-semibold text-text">Export and account removal</p>
+							<p className="text-xs leading-6 text-text-secondary">
+								Download a copy of your stored data or start the permanent account deletion flow.
+							</p>
+						</div>
+						<div className="mt-3 flex flex-wrap gap-2">
+							<CustomButton
+								type="button"
+								variant="accent"
+								size="sm"
+								onClick={() => {
+									if (onExportData) {
+										void onExportData()
+									}
+								}}
+								disabled={!onExportData || isExporting}
+							>
+								{isExporting ? 'Exporting...' : 'Export My Data'}
+							</CustomButton>
+							<CustomButton
+								type="button"
+								variant="danger"
+								size="sm"
+								onClick={onRequestDeleteAccount}
+								disabled={!onRequestDeleteAccount}
+							>
+								Delete Account
+							</CustomButton>
 						</div>
 					</div>
 				</div>

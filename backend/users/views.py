@@ -1,5 +1,9 @@
+import json
+import logging
+
 from time import time
 
+from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
@@ -12,17 +16,23 @@ from .models import UserPreferences
 from .services import (
 	_serialize_user_details,
 	_serialize_user_points_history,
+	build_user_gdpr_export,
 	FriendsRequestError,
 	accept_friend_request,
+	delete_user_account,
 	get_or_create_friends_payload_for_user,
 	get_pending_friend_requests_payload_for_user,
 	remove_friend,
 	reject_friend_request,
 	send_friend_request,
 	search_users_for_friend_requests,
+	send_gdpr_confirmation_email,
 	withdraw_friend_request,
 	get_achivements_for,
 )
+
+
+logger = logging.getLogger(__name__)
 
 # Create your views here.
 
@@ -271,6 +281,33 @@ class UserPreferencesView(APIView):
 
 		preferences.save(update_fields=list(updates.keys()))
 		return Response(self._serialize_preferences(request, preferences), status=status.HTTP_200_OK)
+
+
+class UserMeExportView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def get(self, request):
+		payload = build_user_gdpr_export(request.user, request=request)
+
+		filename = f"aedlph-data-export-{request.user.username}.json"
+		response = HttpResponse(
+			json.dumps(payload, ensure_ascii=False, indent=2),
+			content_type='application/json; charset=utf-8',
+		)
+		response['Content-Disposition'] = f'attachment; filename="{filename}"'
+		return response
+
+
+class UserMeAccountView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def delete(self, request):
+		user = request.user
+		delete_user_account(user)
+		return Response(
+			{'detail': 'Account deleted successfully'},
+			status=status.HTTP_200_OK,
+		)
 
 
 class UserAvatarView(APIView):

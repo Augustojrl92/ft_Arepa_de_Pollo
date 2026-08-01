@@ -1,12 +1,14 @@
 'use client'
 
 import { type CSSProperties, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
 
 import { useAuthStore, useCoalitionStore, useUserStore } from '@/hooks'
 import { UserAchievements } from '../_components/UserAchievements'
 import { UserAllies } from '../_components/UserAllies'
 import { GamificationPanel } from '../_components/GamificationPanel'
+import { UserDeleteAccountModal } from '../_components/UserDeleteAccountModal'
 import { UserConfigurationModal } from '../_components/UserConfigurationModal'
 import { UserProfile } from '../_components/UserProfile'
 import { defaultPreferences, mockAchievements } from '../_components/mockData'
@@ -19,6 +21,7 @@ export default function UserDetailPage({
 }: {
 	params: Promise<{ login: string }>
 }) {
+	const router = useRouter()
 	const { user, logout, setSession } = useAuthStore()
 	const {
 		user: fetchedUser,
@@ -43,6 +46,8 @@ export default function UserDetailPage({
 		removeFriend,
 		uploadAvatar,
 		removeAvatar,
+		exportMyData,
+		deleteMyAccount,
 	} = useUserStore()
 	const { coalitions } = useCoalitionStore()
 	const { setTheme } = useTheme()
@@ -50,6 +55,9 @@ export default function UserDetailPage({
 	const [login, setLogin] = useState<string | null>(null)
 	const [preferences, setPreferences] = useState<ProfilePreferences>(defaultPreferences)
 	const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+	const [isExportingData, setIsExportingData] = useState(false)
+	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+	const [isDeletingAccount, setIsDeletingAccount] = useState(false)
 
 	useEffect(() => {
 		params.then((p) => {
@@ -162,6 +170,39 @@ export default function UserDetailPage({
 	const coalitionStyle = {
 		'--coalition-color': coalitionColor,
 	} as CSSProperties
+
+	const handleExportData = async () => {
+		setIsExportingData(true)
+		try {
+			const { blob, filename } = await exportMyData()
+			const objectUrl = window.URL.createObjectURL(blob)
+			const anchor = document.createElement('a')
+			anchor.href = objectUrl
+			anchor.download = filename
+			document.body.appendChild(anchor)
+			anchor.click()
+			anchor.remove()
+			window.URL.revokeObjectURL(objectUrl)
+		} finally {
+			setIsExportingData(false)
+		}
+	}
+
+	const handleDeleteAccount = async () => {
+		if (!login) {
+			return
+		}
+
+		setIsDeletingAccount(true)
+		try {
+			await deleteMyAccount()
+			await logout()
+			router.replace('/login?deleted=1')
+		} finally {
+			setIsDeletingAccount(false)
+			setIsDeleteModalOpen(false)
+		}
+	}
 
 	const normalizedLevel = Math.max(profile?.level ?? 0, 0)
 	const currentLevel = Math.floor(normalizedLevel)
@@ -296,8 +337,20 @@ export default function UserDetailPage({
 							})
 						}
 					}}
+					onExportData={() => void handleExportData()}
+					isExporting={isExportingData}
+					onRequestDeleteAccount={() => setIsDeleteModalOpen(true)}
 				/>
 			)}
+			{isOwnProfile && login ? (
+				<UserDeleteAccountModal
+					isOpen={isDeleteModalOpen}
+					login={login}
+					isSubmitting={isDeletingAccount}
+					onClose={() => setIsDeleteModalOpen(false)}
+					onConfirm={handleDeleteAccount}
+				/>
+			) : null}
 		</div>
 	)
 }

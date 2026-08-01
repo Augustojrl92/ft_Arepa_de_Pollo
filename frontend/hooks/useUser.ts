@@ -3,6 +3,8 @@
 import { create } from "zustand"
 import {
 	createFriendRequest,
+	deleteMyAccount,
+	exportMyData,
 	fetchMyPreferences,
 	fetchMyFriends,
 	fetchMyPendingFriendRequests,
@@ -46,6 +48,8 @@ interface UserState {
 	removeAvatar: () => Promise<string>
 	startHeartbeat: () => void
 	getRelationshipStateByLogin: (login: string) => FriendRequestState
+	exportMyData: () => Promise<{ blob: Blob; filename: string }>
+	deleteMyAccount: () => Promise<void>
 }
 
 export const useUserStore = create<UserState>()(
@@ -208,6 +212,12 @@ export const useUserStore = create<UserState>()(
 				set({ avatarError: message, isAvatarLoading: false })
 				throw err
 			}
+		},
+
+		exportMyData: async () => exportMyData(),
+
+		deleteMyAccount: async () => {
+			await deleteMyAccount()
 		},
 
 		startHeartbeat: () => {
