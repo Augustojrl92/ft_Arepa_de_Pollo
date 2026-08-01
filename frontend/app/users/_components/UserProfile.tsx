@@ -59,6 +59,7 @@ export function UserProfile({
 						LVL {profile.level.toFixed(2)}
 					</div>
 				</div>
+				<h2 className={`text-xl font-light mb-3`}>{profile.login}</h2>
 				<p className={`coalition-badge ${profile.coalition} capitalize mb-4`}>{profile.coalition}</p>
 				<h1 className="text-4xl font-black tracking-tight md:text-5xl">{profile.name}</h1>
 				{!isOwnProfile && relationshipState === 'friends' && (
@@ -105,7 +106,7 @@ export function UserProfile({
 								</div>
 							)}
 
-							{console.log("profile: ",profile)}
+							{console.log("profile: ", profile)}
 							{relationshipState === 'none' && !isOwnProfile && profile.hasAccount && (
 								<CustomButton
 									type="button"
@@ -189,7 +190,7 @@ export function UserProfile({
 						</div>
 						<div className="h-2 rounded-full bg-card">
 							<div className="h-full rounded-full bg-(--coalition-color)" style={{ width: `${levelProgress}%` }} />
-							
+
 						</div>
 					</div>
 				</div>
