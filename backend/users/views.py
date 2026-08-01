@@ -19,6 +19,7 @@ from .services import (
 	remove_friend,
 	reject_friend_request,
 	send_friend_request,
+	search_users_for_friend_requests,
 	withdraw_friend_request,
 	get_achivements_for,
 )
@@ -108,6 +109,11 @@ class UserHeartbeatView(APIView):
 
 class FriendsRequestView(APIView):
 	permission_classes = [IsAuthenticated]
+
+	def get(self, request):
+		query = request.query_params.get('q', '')
+		results = search_users_for_friend_requests(request.user, query)
+		return Response({'results': results}, status=status.HTTP_200_OK)
 
 	def post(self, request):
 		to_login = request.data.get('login')

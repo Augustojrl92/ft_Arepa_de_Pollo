@@ -173,6 +173,36 @@ def _resolve_target_user_by_login(login):
 	return target_user
 
 
+def search_users_for_friend_requests(current_user, query):
+	if not query or len(query.strip()) < 2:
+		return []
+
+	normalized_query = query.strip().lower()
+	friends_list, _ = FriendsList.objects.get_or_create(owner=current_user)
+	blocked_user_ids = set(friends_list.friends.values_list('owner_id', flat=True))
+	blocked_user_ids.update(friends_list.friends_requests_sent.values_list('owner_id', flat=True))
+	blocked_user_ids.update(friends_list.friends_requests_received.values_list('owner_id', flat=True))
+
+	base_qs = (
+		CampusUser.objects
+		.select_related('django_user')
+		.filter(django_user__isnull=False)
+		.filter(login__icontains=normalized_query)
+		.exclude(django_user_id=current_user.id)
+		.exclude(django_user_id__in=blocked_user_ids)
+		.order_by('login')
+	)[:10]
+
+	return [
+		{
+			'login': campus_user.login,
+			'display_name': campus_user.display_name or campus_user.login,
+			'avatar_url': campus_user.avatar_url,
+		}
+		for campus_user in base_qs
+	]
+
+
 def send_friend_request(from_user, to_login):
 	to_user = _resolve_target_user_by_login(to_login)
 	if from_user.id == to_user.id:
