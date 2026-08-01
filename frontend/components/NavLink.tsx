@@ -19,7 +19,7 @@ export default function NavLink() {
 			<Link href="/">
 				<h1 className={`text-xl font-bold ${isActive('/') ? 'text-accent' : ''}`}>AEDLPH</h1>
 			</Link>
-			<ul className="flex min-w-0 items-center gap-1 overflow-x-auto md:gap-2">
+			<ul className="flex min-w-0 items-center gap-1 md:gap-2">
 				{navigation.map((item, i) => (
 					<li key={i}>
 						<Link className={`nav-item whitespace-nowrap text-sm md:text-base ${isActive(item.href) ? 'active' : ''}`} href={item.href}>{item.title}</Link>
