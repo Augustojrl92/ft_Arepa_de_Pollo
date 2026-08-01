@@ -65,11 +65,16 @@ export const authFetch = async (
 	})
 
 	if (response.status === 401) {
-		await refreshAccessToken()
-		response = await fetch(url, {
-			...init,
-			credentials: "include",
-		})
+		try {
+			await refreshAccessToken()
+			response = await fetch(url, {
+				...init,
+				credentials: "include",
+			})
+		} catch (error) {
+			const message = error instanceof Error ? error.message : fallbackMessage
+			throw new ApiHttpError(message, 401)
+		}
 	}
 
 	if (!response.ok) {
