@@ -16,6 +16,7 @@ type UserDetailsResponse = {
 	coalition_rank: number | null;
 	general_rank: number | null;
 	achievements: unknown; // Placeholder for achievements data, adjust type as needed
+	active?: boolean;
 }
 
 type FriendEntryResponse = {
@@ -24,6 +25,7 @@ type FriendEntryResponse = {
 	login: string;
 	display_name: string;
 	avatar_url: string;
+	active?: boolean;
 }
 
 type FriendsPayloadResponse = {
@@ -103,6 +105,7 @@ const toFriendsPayload = (payload: FriendsPayloadResponse): FriendsPayload => ({
 		login: friend.login,
 		displayName: friend.display_name,
 		avatarUrl: friend.avatar_url,
+		active: Boolean(friend.active),
 	})),
 	pendingReceived: payload.pending_received.map((friend) => ({
 		userId: friend.user_id,
@@ -110,6 +113,7 @@ const toFriendsPayload = (payload: FriendsPayloadResponse): FriendsPayload => ({
 		login: friend.login,
 		displayName: friend.display_name,
 		avatarUrl: friend.avatar_url,
+		active: Boolean(friend.active),
 	})),
 	pendingSent: payload.pending_sent.map((friend) => ({
 		userId: friend.user_id,
@@ -117,6 +121,7 @@ const toFriendsPayload = (payload: FriendsPayloadResponse): FriendsPayload => ({
 		login: friend.login,
 		displayName: friend.display_name,
 		avatarUrl: friend.avatar_url,
+		active: Boolean(friend.active),
 	})),
 });
 
@@ -137,6 +142,7 @@ export async function fetchUserDetails(login: string): Promise<UserDetails> {
 		coalitionRank: payload.coalition_rank,
 		campusRank: payload.general_rank,
 		achievements: payload.achievements,
+		active: Boolean(payload.active),
 	};
 }
 
