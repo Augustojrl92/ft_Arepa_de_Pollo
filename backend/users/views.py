@@ -1,8 +1,12 @@
+from time import time
+
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from sync.models import CampusUser
 
 from .models import UserPreferences
 from .services import (
@@ -15,6 +19,7 @@ from .services import (
 	remove_friend,
 	reject_friend_request,
 	send_friend_request,
+	search_users_for_friend_requests,
 	withdraw_friend_request,
 	get_achivements_for,
 )
@@ -74,8 +79,41 @@ class FriendsMeView(APIView):
 		return Response(payload, status=status.HTTP_200_OK)
 
 
+class UserHeartbeatView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def post(self, request):
+		user = request.user
+		payload_login = (request.data.get('login') or '').strip()
+		login_candidates = []
+
+		if payload_login:
+			login_candidates.append(payload_login)
+
+		campus_user = getattr(user, 'campus_user_profile', None)
+		if campus_user and getattr(campus_user, 'login', None):
+			login_candidates.append(campus_user.login)
+		login_candidates.append(user.username)
+
+		for candidate in login_candidates:
+			if not candidate:
+				continue
+			campus_user = CampusUser.objects.filter(login=candidate).first()
+			if campus_user is not None:
+				campus_user.last_active_time = int(time())
+				campus_user.save(update_fields=['last_active_time'])
+				break
+
+		return Response({'ok': True}, status=status.HTTP_200_OK)
+
+
 class FriendsRequestView(APIView):
 	permission_classes = [IsAuthenticated]
+
+	def get(self, request):
+		query = request.query_params.get('q', '')
+		results = search_users_for_friend_requests(request.user, query)
+		return Response({'results': results}, status=status.HTTP_200_OK)
 
 	def post(self, request):
 		to_login = request.data.get('login')

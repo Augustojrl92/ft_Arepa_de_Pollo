@@ -59,15 +59,18 @@ export function UserProfile({
 						LVL {profile.level.toFixed(2)}
 					</div>
 				</div>
+				<h2 className={`text-xl font-light mb-3`}>{profile.login}</h2>
 				<p className={`coalition-badge ${profile.coalition} capitalize mb-4`}>{profile.coalition}</p>
 				<h1 className="text-4xl font-black tracking-tight md:text-5xl">{profile.name}</h1>
-				<div className="mt-3 flex items-center gap-2 text-sm text-text-secondary">
-					<span
-						aria-hidden="true"
-						className={`h-2.5 w-2.5 rounded-full ${profile.online ? 'bg-green-400' : 'bg-gray-400'}`}
-					/>
-					<span>{profile.online ? 'En línea' : 'Desconectado'}</span>
-				</div>
+				{!isOwnProfile && relationshipState === 'friends' && (
+					<div className="mt-3 flex items-center gap-2 text-sm text-text-secondary">
+						<span
+							aria-hidden="true"
+							className={`h-2.5 w-2.5 rounded-full ${profile.online ? 'bg-green-400' : 'bg-gray-400'}`}
+						/>
+						<span>{profile.online ? 'En línea' : 'Desconectado'}</span>
+					</div>
+				)}
 				<div className="mt-5 flex flex-wrap items-center justify-center gap-3">
 					{isOwnProfile ? (
 						<>
@@ -103,7 +106,8 @@ export function UserProfile({
 								</div>
 							)}
 
-							{relationshipState === 'none' && (
+							{console.log("profile: ", profile)}
+							{relationshipState === 'none' && !isOwnProfile && profile.hasAccount && (
 								<CustomButton
 									type="button"
 									variant="coalition"
@@ -186,7 +190,7 @@ export function UserProfile({
 						</div>
 						<div className="h-2 rounded-full bg-card">
 							<div className="h-full rounded-full bg-(--coalition-color)" style={{ width: `${levelProgress}%` }} />
-							
+
 						</div>
 					</div>
 				</div>

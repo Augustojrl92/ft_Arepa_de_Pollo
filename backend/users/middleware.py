@@ -15,33 +15,26 @@ class OnlineStatusMiddleware:
 		self.get_response = get_response
 
 	def __call__(self, request):
-		# Django's AuthenticationMiddleware populates `request.user` from the session.
-		# DRF authentication (JWT in cookies) runs later during view handling, so
-		# `request.user` may be Anonymous here even if a valid JWT cookie is present.
-		user = getattr(request, 'user', None)
+		user = None
 
-		if not (user and getattr(user, 'is_authenticated', False)):
-			# Try DRF JWT authentication (cookie or Authorization header)
-			try:
-				auth = CookieJWTAuthentication()
-				auth_result = auth.authenticate(request)
-				if auth_result is not None:
-					user, validated_token = auth_result
-					# attach authenticated user to the request for downstream middleware
-					request.user = user
-			except Exception:
-				# Authentication failed or no token present — proceed as anonymous
-				user = getattr(request, 'user', None)
+		try:
+			auth = CookieJWTAuthentication()
+			auth_result = auth.authenticate(request)
+			if auth_result is not None:
+				jwt_user, _validated_token = auth_result
+				if jwt_user and getattr(jwt_user, 'is_authenticated', False):
+					user = jwt_user
+					request.user = jwt_user
+		except Exception as e:
+			print(f"[online-status-middleware] Error authenticating user: {e}")
 
-		if getattr(request, 'user', None) and request.user.is_authenticated:
-			user = request.user
+		if user and getattr(user, 'is_authenticated', False):
 			campus_user = getattr(user, "campus_user_profile", None)
 			login = getattr(campus_user, "login", None) or user.username
 
 			campus_user = CampusUser.objects.filter(login=login).first()
 			if campus_user:
 				campus_user.last_active_time = int(time())
-				# Persist last_active_time without wrapping in transaction here
 				campus_user.save(update_fields=['last_active_time'])
 
 		response = self.get_response(request)

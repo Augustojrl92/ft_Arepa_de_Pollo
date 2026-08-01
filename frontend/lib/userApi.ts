@@ -17,6 +17,7 @@ type UserDetailsResponse = {
 	general_rank: number | null;
 	achievements: unknown; // Placeholder for achievements data, adjust type as needed
 	active?: boolean;
+	has_account: boolean;
 }
 
 type FriendEntryResponse = {
@@ -25,7 +26,7 @@ type FriendEntryResponse = {
 	login: string;
 	display_name: string;
 	avatar_url: string;
-	active?: boolean;
+	active: boolean;
 }
 
 type FriendsPayloadResponse = {
@@ -105,7 +106,7 @@ const toFriendsPayload = (payload: FriendsPayloadResponse): FriendsPayload => ({
 		login: friend.login,
 		displayName: friend.display_name,
 		avatarUrl: friend.avatar_url,
-		active: Boolean(friend.active),
+		active: friend.active,
 	})),
 	pendingReceived: payload.pending_received.map((friend) => ({
 		userId: friend.user_id,
@@ -113,7 +114,7 @@ const toFriendsPayload = (payload: FriendsPayloadResponse): FriendsPayload => ({
 		login: friend.login,
 		displayName: friend.display_name,
 		avatarUrl: friend.avatar_url,
-		active: Boolean(friend.active),
+		active: friend.active,
 	})),
 	pendingSent: payload.pending_sent.map((friend) => ({
 		userId: friend.user_id,
@@ -121,7 +122,7 @@ const toFriendsPayload = (payload: FriendsPayloadResponse): FriendsPayload => ({
 		login: friend.login,
 		displayName: friend.display_name,
 		avatarUrl: friend.avatar_url,
-		active: Boolean(friend.active),
+		active: friend.active,
 	})),
 });
 
@@ -143,6 +144,7 @@ export async function fetchUserDetails(login: string): Promise<UserDetails> {
 		campusRank: payload.general_rank,
 		achievements: payload.achievements,
 		active: Boolean(payload.active),
+		hasAccount: payload.has_account
 	};
 }
 
@@ -160,6 +162,29 @@ export async function fetchMyPendingFriendRequests(): Promise<FriendsPayload> {
 	}, 'Failed to fetch pending friend requests');
 
 	return toFriendsPayload(payload);
+}
+
+export async function sendHeartbeat(): Promise<void> {
+	const login = window.localStorage.getItem('auth-login')
+	await authFetchJson<{ ok: boolean }>(`${USER_BASE_URL}heartbeat/`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({ login: login ?? '' }),
+	}, 'Failed to send heartbeat');
+}
+
+export async function searchFriendRequestUsers(query: string): Promise<Array<{ login: string; displayName: string; avatarUrl: string }>> {
+	const payload = await authFetchJson<{ results: Array<{ login: string; display_name: string; avatar_url: string }> }>(`${USER_BASE_URL}friends/requests/?q=${encodeURIComponent(query)}`, {
+		method: 'GET',
+	}, 'Failed to search users');
+
+	return payload.results.map((result) => ({
+		login: result.login,
+		displayName: result.display_name,
+		avatarUrl: result.avatar_url,
+	}))
 }
 
 export async function createFriendRequest(login: string): Promise<FriendsPayload> {

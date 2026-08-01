@@ -140,6 +140,7 @@ export default function UserDetailPage({
 				campusRank: fetchedUser.campusRank ?? null,
 				coalitionRank: fetchedUser.coalitionRank ?? null,
 				online: fetchedUser.active,
+				hasAccount: fetchedUser.hasAccount ?? true,
 			}
 		}
 

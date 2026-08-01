@@ -13,6 +13,7 @@ import {
 	updateMyPreferences,
 	uploadMyAvatar,
 	withdrawFriendRequest,
+	sendHeartbeat,
 } from "@/lib/userApi"
 import { FriendsPayload, UserDetails } from "@/types"
 import type { ProfilePreferences } from "@/app/users/_components/types"
@@ -43,6 +44,7 @@ interface UserState {
 	removeFriend: (login: string) => Promise<void>
 	uploadAvatar: (file: File) => Promise<string>
 	removeAvatar: () => Promise<string>
+	startHeartbeat: () => void
 	getRelationshipStateByLogin: (login: string) => FriendRequestState
 }
 
@@ -206,6 +208,59 @@ export const useUserStore = create<UserState>()(
 				set({ avatarError: message, isAvatarLoading: false })
 				throw err
 			}
+		},
+
+		startHeartbeat: () => {
+			if (typeof window === 'undefined') {
+				return
+			}
+
+			const heartbeatWindow = window as Window & {
+				__userHeartbeat?: number
+				__heartbeatVisibilityHandler?: () => void
+				__heartbeatBeforeUnloadHandler?: () => void
+			}
+
+			const stopHeartbeat = () => {
+				if (heartbeatWindow.__userHeartbeat) {
+					window.clearInterval(heartbeatWindow.__userHeartbeat)
+					heartbeatWindow.__userHeartbeat = undefined
+				}
+
+				if (heartbeatWindow.__heartbeatVisibilityHandler) {
+					document.removeEventListener('visibilitychange', heartbeatWindow.__heartbeatVisibilityHandler)
+					heartbeatWindow.__heartbeatVisibilityHandler = undefined
+				}
+
+				if (heartbeatWindow.__heartbeatBeforeUnloadHandler) {
+					window.removeEventListener('beforeunload', heartbeatWindow.__heartbeatBeforeUnloadHandler)
+					heartbeatWindow.__heartbeatBeforeUnloadHandler = undefined
+				}
+			}
+
+			stopHeartbeat()
+
+			const handleVisibilityChange = () => {
+				if (document.visibilityState === 'hidden') {
+					stopHeartbeat()
+					return
+				}
+
+				void sendHeartbeat()
+			}
+
+			const intervalId = window.setInterval(() => {
+				if (document.visibilityState !== 'hidden') {
+					void sendHeartbeat()
+				}
+			}, 60_000)
+
+			heartbeatWindow.__userHeartbeat = intervalId
+			heartbeatWindow.__heartbeatVisibilityHandler = handleVisibilityChange
+			heartbeatWindow.__heartbeatBeforeUnloadHandler = stopHeartbeat
+
+			document.addEventListener('visibilitychange', handleVisibilityChange)
+			window.addEventListener('beforeunload', stopHeartbeat)
 		},
 
 		getRelationshipStateByLogin: (login) => {

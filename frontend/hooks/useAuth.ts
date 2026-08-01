@@ -29,19 +29,29 @@ export const useAuthStore = create<AuthState>()(
       error: null,
       hasHydrated: false,
 
-      setSession: ({ user }) =>
+      setSession: ({ user }) => {
+        if (typeof window !== "undefined" && user.login) {
+          window.localStorage.setItem("auth-login", user.login)
+        }
+
         set({
           user,
           status: "authenticated",
           error: null,
-        }),
+        })
+      },
 
-      clearSession: () =>
+      clearSession: () => {
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem("auth-login")
+        }
+
         set({
           user: null,
           status: "unauthenticated",
           error: null,
-        }),
+        })
+      },
 
       logout: async () => {
         try {
@@ -73,6 +83,10 @@ export const useAuthStore = create<AuthState>()(
               error: null,
             })
             return
+          }
+
+          if (typeof window !== "undefined" && profile.login) {
+            window.localStorage.setItem("auth-login", profile.login)
           }
 
           set({

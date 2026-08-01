@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import AuthLayout from "@/components/AuthLayout";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import { HeartbeatProvider } from "@/components/HeartbeatProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -33,9 +34,11 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <ServiceWorkerRegistration />
-          <Suspense fallback={<main className="aedlph-container flex-1">{children}</main>}>
-            <AuthLayout>{children}</AuthLayout>
-          </Suspense>
+          <HeartbeatProvider>
+            <Suspense fallback={<main className="aedlph-container flex-1">{children}</main>}>
+              <AuthLayout>{children}</AuthLayout>
+            </Suspense>
+          </HeartbeatProvider>
         </ThemeProvider>
       </body>
     </html>

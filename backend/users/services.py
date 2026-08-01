@@ -106,8 +106,9 @@ def _serialize_friend_entry(friend_list, request=None):
 	fallback_avatar_url = campus_user.avatar_url if campus_user else ''
 	avatar_url = _resolve_avatar_url(owner, fallback_avatar_url, request=request)
 
-	login = getattr(campus_user, "login", None)
-	active = time() - User.objects.filter(username=login).first().last_active_time < time_until_inactivity
+	login = getattr(campus_user, 'login', None)
+	last_active_time = getattr(campus_user, 'last_active_time', 0) if campus_user is not None else 0
+	active = (time() - last_active_time) < time_until_inactivity if last_active_time else False
 
 	return {
 		'user_id': owner.id,
@@ -170,6 +171,36 @@ def _resolve_target_user_by_login(login):
 		raise FriendsRequestError('Target user not found', 404)
 
 	return target_user
+
+
+def search_users_for_friend_requests(current_user, query):
+	if not query or len(query.strip()) < 2:
+		return []
+
+	normalized_query = query.strip().lower()
+	friends_list, _ = FriendsList.objects.get_or_create(owner=current_user)
+	blocked_user_ids = set(friends_list.friends.values_list('owner_id', flat=True))
+	blocked_user_ids.update(friends_list.friends_requests_sent.values_list('owner_id', flat=True))
+	blocked_user_ids.update(friends_list.friends_requests_received.values_list('owner_id', flat=True))
+
+	base_qs = (
+		CampusUser.objects
+		.select_related('django_user')
+		.filter(django_user__isnull=False)
+		.filter(login__icontains=normalized_query)
+		.exclude(django_user_id=current_user.id)
+		.exclude(django_user_id__in=blocked_user_ids)
+		.order_by('login')
+	)[:10]
+
+	return [
+		{
+			'login': campus_user.login,
+			'display_name': campus_user.display_name or campus_user.login,
+			'avatar_url': campus_user.avatar_url,
+		}
+		for campus_user in base_qs
+	]
 
 
 def send_friend_request(from_user, to_login):
