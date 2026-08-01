@@ -5,6 +5,7 @@ import {
 	Clock3Icon,
 	Gamepad2Icon,
 	HistoryIcon,
+	RefreshCwIcon,
 	RotateCcwIcon,
 	ScaleIcon,
 	SwordsIcon,
@@ -14,6 +15,7 @@ import {
 	XIcon,
 } from 'lucide-react'
 import Image from 'next/image'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useAuthStore } from '@/hooks/useAuth'
@@ -131,24 +133,30 @@ function RulesPanel() {
 	)
 }
 
-function WinnerDialog({ title, score, onRematch, pending = false }: {
+function WinnerPanel({ title, score, onRematch, onReload, pending = false }: {
 	title: string
 	score: string
 	onRematch: () => void
+	onReload: () => void
 	pending?: boolean
 }) {
 	return (
-		<div className="game-winner-backdrop">
-			<section className="game-winner-dialog" role="dialog" aria-modal="true" aria-labelledby="game-winner-title">
-				<div className="game-winner-trophy"><TrophyIcon size={34} /></div>
+		<section className="game-winner-panel" role="status" aria-live="polite" aria-labelledby="game-winner-title">
+			<div className="game-winner-trophy"><TrophyIcon size={30} /></div>
+			<div className="game-winner-copy">
 				<p>Partida finalizada</p>
 				<h2 id="game-winner-title">{title}</h2>
 				<strong>{score}</strong>
+			</div>
+			<div className="game-winner-actions">
 				<button type="button" onClick={onRematch} disabled={pending}>
 					<RotateCcwIcon size={18} /> {pending ? 'Invitacion enviada' : 'Revancha'}
 				</button>
-			</section>
-		</div>
+				<button type="button" className="is-secondary" onClick={onReload}>
+					<RefreshCwIcon size={18} /> Recargar pagina
+				</button>
+			</div>
+		</section>
 	)
 }
 
@@ -237,7 +245,9 @@ function SoloGame() {
 				</div>
 				<div className="game-player-choice"><span>CPU</span><div>{cpuChoice ? CHOICE_DETAILS[cpuChoice].symbol : isPlaying ? '?' : '·'}</div><strong>{cpuChoice ? CHOICE_DETAILS[cpuChoice].label : 'Esperando'}</strong></div>
 			</div>
-			<ChoiceButtons disabled={isPlaying || Boolean(matchWinner)} selected={playerChoice} onChoice={(choice) => void playRound(choice)} />
+			{matchWinner
+				? <WinnerPanel title={matchWinner === 'player' ? 'Has ganado' : 'La CPU ha ganado'} score={`${game.playerScore} - ${game.cpuScore}`} onRematch={() => resetMatch()} onReload={() => window.location.reload()} />
+				: <ChoiceButtons disabled={isPlaying} selected={playerChoice} onChoice={(choice) => void playRound(choice)} />}
 			<div className="games-detail-grid">
 				<section className="game-panel" aria-labelledby="history-title">
 					<h2 id="history-title"><HistoryIcon size={18} /> Historial</h2>
@@ -245,7 +255,6 @@ function SoloGame() {
 				</section>
 				<RulesPanel />
 			</div>
-			{matchWinner && <WinnerDialog title={matchWinner === 'player' ? 'Has ganado' : 'La CPU ha ganado'} score={`${game.playerScore} - ${game.cpuScore}`} onRematch={() => resetMatch()} />}
 		</>
 	)
 }
@@ -291,7 +300,9 @@ function MultiplayerArena({ match, currentUserId, onMove, onRematch, onForfeit, 
 				<div className={`game-result ${latest ? `is-${result}` : ''}`}><ScaleIcon size={28} className={submitted && !rivalSubmitted ? 'game-thinking' : ''} /><strong>{finished ? 'Partida finalizada' : submitted && !rivalSubmitted ? `Esperando a ${rival.display_name}` : rivalSubmitted && !submitted ? `${rival.display_name} ya eligio` : latest ? resultCopy[result] : `Ronda ${match.current_round?.number ?? 1}`}</strong></div>
 				<div className="game-player-choice"><span>Ultima jugada rival</span><div>{rivalLatestChoice ? CHOICE_DETAILS[rivalLatestChoice].symbol : rivalSubmitted ? '✓' : '·'}</div><strong>{rivalLatestChoice ? CHOICE_DETAILS[rivalLatestChoice].label : rivalSubmitted ? 'Eleccion guardada' : 'Esperando'}</strong></div>
 			</div>
-			<ChoiceButtons disabled={busy || submitted || finished} selected={null} onChoice={onMove} />
+			{finished
+				? <WinnerPanel title={match.winner_user_id === currentUserId ? 'Has ganado' : `${rival.display_name} ha ganado`} score={`${myScore} - ${rivalScore}`} onRematch={onRematch} onReload={() => window.location.reload()} pending={busy} />
+				: <ChoiceButtons disabled={busy || submitted} selected={null} onChoice={onMove} />}
 			<div className="games-detail-grid">
 				<section className="game-panel">
 					<h2><HistoryIcon size={18} /> Historial compartido</h2>
@@ -305,7 +316,6 @@ function MultiplayerArena({ match, currentUserId, onMove, onRematch, onForfeit, 
 				</section>
 				<RulesPanel />
 			</div>
-			{finished && <WinnerDialog title={match.winner_user_id === currentUserId ? 'Has ganado' : `${rival.display_name} ha ganado`} score={`${myScore} - ${rivalScore}`} onRematch={onRematch} pending={busy} />}
 		</>
 	)
 }
@@ -392,15 +402,20 @@ function FriendsGame() {
 }
 
 export default function GamesPage() {
-	const [view, setView] = useState<GameView>('solo')
+	const router = useRouter()
+	const searchParams = useSearchParams()
+	const view: GameView = searchParams.get('view') === 'friends' ? 'friends' : 'solo'
+	const selectView = (nextView: GameView) => {
+		router.replace(nextView === 'friends' ? '/games?view=friends' : '/games', { scroll: false })
+	}
 	return (
 		<section className="games-page py-7">
 			<header className="games-titlebar">
-				<div><p className="games-eyebrow"><Gamepad2Icon size={16} /> Juegos</p><h1>Piedra, Papel, Tijera, Lagarto, Spock</h1></div>
+				<div><p className="games-eyebrow"><Gamepad2Icon size={16} /> Juego</p><h1>PPTLS</h1></div>
 			</header>
 			<div className="games-kind-switch" aria-label="Tipo de rival">
-				<button type="button" className={view === 'solo' ? 'is-active' : ''} onClick={() => setView('solo')}><Gamepad2Icon size={18} /> Contra CPU</button>
-				<button type="button" className={view === 'friends' ? 'is-active' : ''} onClick={() => setView('friends')}><UsersIcon size={18} /> Entre amigos</button>
+				<button type="button" className={view === 'solo' ? 'is-active' : ''} onClick={() => selectView('solo')}><Gamepad2Icon size={18} /> Contra CPU</button>
+				<button type="button" className={view === 'friends' ? 'is-active' : ''} onClick={() => selectView('friends')}><UsersIcon size={18} /> Entre amigos</button>
 			</div>
 			{view === 'solo' ? <SoloGame /> : <FriendsGame />}
 		</section>

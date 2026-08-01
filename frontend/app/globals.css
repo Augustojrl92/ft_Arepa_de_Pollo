@@ -815,34 +815,22 @@ html.dark {
     text-align: right;
   }
 
-  .game-winner-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 10003;
+  .game-winner-panel {
+    min-height: 7.5rem;
     display: grid;
-    place-items: center;
-    padding: 1rem;
-    background: rgb(0 0 0 / 72%);
-    backdrop-filter: blur(4px);
-  }
-
-  .game-winner-dialog {
-    width: min(100%, 24rem);
-    display: flex;
-    flex-direction: column;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 0.75rem;
+    gap: 1rem;
+    margin: 1.25rem 0 2rem;
     border: 1px solid var(--color-border);
     border-radius: 8px;
-    padding: 1.6rem;
-    background: var(--color-surface);
-    box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 45%);
-    text-align: center;
+    padding: 1rem 1.15rem;
+    background: color-mix(in srgb, var(--color-accent) 8%, var(--color-card));
   }
 
   .game-winner-trophy {
-    width: 4rem;
-    height: 4rem;
+    width: 3.5rem;
+    height: 3.5rem;
     display: grid;
     place-items: center;
     border: 1px solid #facc15;
@@ -850,22 +838,35 @@ html.dark {
     color: #facc15;
   }
 
-  .game-winner-dialog p {
+  .game-winner-copy {
+    min-width: 0;
+  }
+
+  .game-winner-copy p {
     color: var(--color-text-secondary);
     font-size: 0.72rem;
     font-weight: 800;
     text-transform: uppercase;
   }
 
-  .game-winner-dialog h2 {
+  .game-winner-copy h2 {
+    margin-top: 0.15rem;
+    font-size: 1.15rem;
+  }
+
+  .game-winner-copy > strong {
+    display: block;
+    margin-top: 0.15rem;
     font-size: 1.35rem;
   }
 
-  .game-winner-dialog > strong {
-    font-size: 1.8rem;
+  .game-winner-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
   }
 
-  .game-winner-dialog button {
+  .game-winner-panel button {
     min-width: 10rem;
     min-height: 2.75rem;
     display: inline-flex;
@@ -881,7 +882,18 @@ html.dark {
     cursor: pointer;
   }
 
-  .game-winner-dialog button:disabled {
+  .game-winner-panel button.is-secondary {
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text);
+  }
+
+  .game-winner-panel button.is-secondary:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .game-winner-panel button:disabled {
     cursor: wait;
     opacity: 0.65;
   }
@@ -1206,6 +1218,18 @@ html.dark {
 
     .game-friend-row > button svg {
       color: var(--color-text);
+    }
+
+    .game-winner-actions {
+      grid-template-columns: 1fr;
+    }
+
+    .game-winner-panel {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .game-winner-panel .game-winner-actions {
+      grid-column: 1 / -1;
     }
   }
 }
