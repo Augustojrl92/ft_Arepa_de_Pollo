@@ -23,6 +23,7 @@ from .views import api_root, health_check, server_message, status_check
 from authentication import urls as auth_urls
 from coalitions import urls as coalition_urls
 from users import urls as user_urls
+from games import urls as game_urls
 
 urlpatterns = [
     path('', api_root, name='api-root'),
@@ -33,6 +34,7 @@ urlpatterns = [
     path('api/auth/', include(auth_urls)),
     path('api/coalitions/', include(coalition_urls)),
     path('api/users/', include(user_urls)),
+    path('api/games/', include(game_urls)),
 ]
 
 if settings.DEBUG:

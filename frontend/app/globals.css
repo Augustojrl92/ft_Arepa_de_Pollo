@@ -461,6 +461,52 @@ html.dark {
     letter-spacing: 0;
   }
 
+  .games-titlebar h2 {
+    margin-top: 0.25rem;
+    font-size: 1.1rem;
+    line-height: 1.25;
+    font-weight: 800;
+  }
+
+  .games-subtitlebar {
+    margin-top: 1.5rem;
+    padding-bottom: 0.85rem;
+  }
+
+  .games-kind-switch {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: min(100%, 27rem);
+    margin: 1.25rem auto 0;
+    border: 1px solid var(--color-border);
+    border-radius: 7px;
+    overflow: hidden;
+  }
+
+  .games-kind-switch button {
+    min-height: 2.8rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 0;
+    border-right: 1px solid var(--color-border);
+    background: var(--color-card);
+    color: var(--color-text-secondary);
+    font-size: 0.82rem;
+    font-weight: 750;
+    cursor: pointer;
+  }
+
+  .games-kind-switch button:last-child {
+    border-right: 0;
+  }
+
+  .games-kind-switch button.is-active {
+    background: var(--color-accent);
+    color: #042d2e;
+  }
+
   .games-eyebrow {
     display: inline-flex;
     align-items: center;
@@ -835,6 +881,271 @@ html.dark {
     cursor: pointer;
   }
 
+  .game-winner-dialog button:disabled {
+    cursor: wait;
+    opacity: 0.65;
+  }
+
+  .game-live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--color-text-secondary);
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  .game-live-badge > span {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 0 3px rgb(74 222 128 / 16%);
+  }
+
+  .game-match-commands {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  .game-match-commands > button {
+    min-height: 2.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 0.4rem 0.7rem;
+    background: transparent;
+    color: #fb7185;
+    font-size: 0.72rem;
+    font-weight: 750;
+    cursor: pointer;
+  }
+
+  .game-match-commands > button:hover:not(:disabled) {
+    border-color: #fb7185;
+  }
+
+  .game-multiplayer-score {
+    margin-top: 1.25rem;
+  }
+
+  .game-multiplayer-score span {
+    max-width: 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .game-lobby-grid {
+    display: grid;
+    grid-template-columns: minmax(17rem, 0.8fr) minmax(20rem, 1.2fr);
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+  }
+
+  .game-invitations,
+  .game-friends-panel {
+    min-height: 20rem;
+  }
+
+  .game-invitation-row,
+  .game-friend-row {
+    min-height: 4.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .game-invitation-row:first-of-type,
+  .game-friend-row:first-child {
+    border-top: 0;
+  }
+
+  .game-invitation-row > div:first-child {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .game-invitation-row strong,
+  .game-invitation-row span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .game-invitation-row span {
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+  }
+
+  .game-row-actions {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .game-row-actions button {
+    width: 2.35rem;
+    height: 2.35rem;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--color-border);
+    border-radius: 50%;
+    background: transparent;
+    color: #fb7185;
+    cursor: pointer;
+  }
+
+  .game-row-actions button.is-accept {
+    color: #4ade80;
+  }
+
+  .game-row-actions button:hover:not(:disabled) {
+    border-color: currentColor;
+  }
+
+  .game-cancel-invite,
+  .game-friend-row > button {
+    min-height: 2.35rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 0.45rem 0.75rem;
+    background: transparent;
+    color: var(--color-text);
+    font-size: 0.75rem;
+    font-weight: 750;
+    cursor: pointer;
+  }
+
+  .game-friend-row > button:hover:not(:disabled) {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .game-cancel-invite:disabled,
+  .game-friend-row > button:disabled,
+  .game-row-actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  .game-panel-heading {
+    min-height: 2.5rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .game-small-segment {
+    display: grid;
+    grid-template-columns: repeat(2, 3rem);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .game-small-segment button {
+    min-height: 1.9rem;
+    border: 0;
+    border-right: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 0.7rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .game-small-segment button:last-child {
+    border-right: 0;
+  }
+
+  .game-small-segment button.is-active {
+    background: var(--color-accent);
+    color: #042d2e;
+  }
+
+  .game-friend-identity {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .game-friend-identity > img,
+  .game-friend-identity > span {
+    width: 2.5rem;
+    height: 2.5rem;
+    flex: 0 0 2.5rem;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--color-surface);
+    object-fit: cover;
+    font-weight: 800;
+  }
+
+  .game-friend-identity > div {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .game-friend-identity strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.82rem;
+  }
+
+  .game-friend-identity small {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--color-text-secondary);
+    font-size: 0.68rem;
+  }
+
+  .game-friend-identity i {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: var(--color-text-secondary);
+  }
+
+  .game-friend-identity i.is-online {
+    background: #4ade80;
+  }
+
+  .game-error {
+    margin-top: 1rem;
+    border-left: 3px solid #fb7185;
+    padding: 0.75rem 1rem;
+    background: rgb(251 113 133 / 10%);
+    color: #fb7185;
+    font-size: 0.8rem;
+    font-weight: 650;
+  }
+
+  .game-auth-required {
+    min-height: 14rem;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    color: var(--color-text-secondary);
+    text-align: center;
+  }
+
   @media (max-width: 640px) {
     .nav-item {
       padding-inline: 0.55rem;
@@ -875,6 +1186,26 @@ html.dark {
 
     .games-detail-grid {
       grid-template-columns: 1fr;
+    }
+
+    .game-lobby-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .game-panel-heading {
+      align-items: center;
+    }
+
+    .game-friend-row > button {
+      width: 2.5rem;
+      padding-inline: 0;
+      overflow: hidden;
+      color: transparent;
+      gap: 0;
+    }
+
+    .game-friend-row > button svg {
+      color: var(--color-text);
     }
   }
 }

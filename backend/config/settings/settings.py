@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'sync',
     'coalitions',
     'users',
+    'games',
     'cron_scheduler',
 ]
 
