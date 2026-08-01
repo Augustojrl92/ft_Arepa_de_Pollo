@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/hooks';
-import { Bell, LogOut } from 'lucide-react'
+import { LogOut } from 'lucide-react'
+import GameNotifications from '@/components/GameNotifications';
 
 export default function NavProfile() {
 	const pathname = usePathname();
@@ -18,7 +19,7 @@ export default function NavProfile() {
 				<span className="text-sm">Season 1 Active</span>
 			</div>
 			<div className="w-px h-8 bg-border"></div>
-			<Bell />
+			<GameNotifications />
 			<Link href={userProfilePath}>
 				<img className={`w-10 h-10 rounded-full bg-border object-cover ${isActive ? 'border-2 border-card-hover ring ring-accent' : ''}`} src={user?.avatar} alt={`Avatar of ${user?.username}`}/>
 			</Link>
