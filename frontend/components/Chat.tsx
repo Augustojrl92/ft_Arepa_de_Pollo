@@ -2,6 +2,8 @@
 
 import { ArrowLeftIcon, MessageCircleIcon, PlusIcon, XIcon } from "lucide-react";
 import { useMemo, useState, useRef, useEffect } from "react";
+import { fetchMessagesWith } from "@/lib/chatApi";
+import { useAuthStore } from "@/hooks";
 
 type ChatMessage = {
 	id: number;
@@ -13,6 +15,7 @@ type ChatMessage = {
 type ChatConversation = {
 	id: number;
 	name: string;
+	login: string;
 	status: string;
 	lastMessage: string;
 	lastTime: string;
@@ -22,6 +25,7 @@ type ChatConversation = {
 type ChatUser = {
 	id: number;
 	name: string;
+	login: string;
 	status: string;
 };
 
@@ -35,7 +39,7 @@ type ChatWindowProps = {
 	onOpenNewChat: () => void;
 	newMessage: string;
 	onNewMessageChange: (value: string) => void;
-	onSendMessage: (to_user_id: number, message: string) => void;
+	onSendMessage: (to_user_id: number, to_user_login: string, message: string) => void;
 };
 
 function NewChatModal({
@@ -58,8 +62,8 @@ function NewChatModal({
 	}
 
 	return (
-		<div className="new-chat-modal-overlay">
-			<div className="new-chat-modal">
+		<div className="new-chat-modal-overlay" role="presentation">
+			<div className="new-chat-modal" role="dialog" aria-modal="true" aria-label="Iniciar nuevo chat">
 				<div className="new-chat-modal-header">
 					<strong>Iniciar nuevo chat</strong>
 					<button type="button" className="new-chat-modal-close" onClick={onClose} aria-label="Cerrar nueva conversación">
@@ -85,6 +89,7 @@ function NewChatModal({
 							<div>
 								<strong>{user.name}</strong>
 								<div className="chat-list-status">{user.status}</div>
+								<div className="text-sm text-text-secondary">{user.login}</div>
 							</div>
 						</button>
 					))}
@@ -160,7 +165,7 @@ function ChatWindow({
 							/>
 							<button type="button" className="chat-send-button" onClick={() => {
 								if (selectedConversation && newMessage.trim()) {
-									onSendMessage(selectedConversation.id, newMessage);
+									onSendMessage(selectedConversation.id, selectedConversation.login, newMessage);
 									onNewMessageChange("");
 								}
 							}}>
@@ -196,6 +201,8 @@ function ChatWindow({
 }
 
 export default function Chat() {
+	const { user } = useAuthStore();
+	const myLogin = user?.login;
 	const [open, setOpen] = useState(false);
 	const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
 	const [conversations, setConversations] = useState<ChatConversation[]>([]);
@@ -205,90 +212,105 @@ export default function Chat() {
 	const [friends, setFriends] = useState<ChatUser[]>([]);
 	const socketRef = useRef<WebSocket | null>(null);
 
-    useEffect(() => {
-		const token = localStorage.getItem("access_token");
-		const chatSocket = new WebSocket(
-  							`ws://localhost:8000/ws/chat/?token=${token}`
-						);
+	useEffect(() => {
+		console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAA")
+		let isCleaningUp = false;
+		const chatSocket = new WebSocket(`ws://localhost:8000/ws/chat/`);
 		socketRef.current = chatSocket;
 
-		chatSocket.onopen = () => {
-			console.log('Conectado al chat WebSocket');
-		};
-
-		chatSocket.onmessage = (event) => {
+		chatSocket.onopen = () => console.log('Conectado al chat WebSocket');
+			chatSocket.onmessage = (event) => {
+		try {
 			const data = JSON.parse(event.data);
-			
+
+			if (data.type === 'friends_list') {
+				const friendsList = data.friends?.friends ?? [];  // <- nota el .friends anidado
+				const mappedFriends: ChatUser[] = friendsList.map((friend: any) => ({
+					id: friend.user_id,
+					name: friend.display_name,
+					login: friend.login,
+					status: friend.active ? 'En línea' : 'Desconectado',
+				}));
+				setFriends(mappedFriends);
+			}
+
 			if (data.type === 'message') {
-				console.log(`${data.from_username}: ${data.message}`);
-				// Actualizar la conversación con el mensaje recibido
-				setConversations((prev) =>
-					prev.map((conv) => {
-						if (conv.id === data.from_user_id) {
-							return {
-								...conv,
-								messages: [
-									...conv.messages,
-									{
-										id: conv.messages.length + 1,
-										author: 'friend',
-										text: data.message,
-										time: new Date(data.timestamp).toLocaleTimeString(),
-									},
-								],
-								lastMessage: data.message,
-								lastTime: new Date(data.timestamp).toLocaleTimeString(),
-							};
-						}
-						return conv;
-					})
-				);
-			} else if (data.type === 'friends_list') {
-				console.log('Amigos:', data.friends);
-				// Convertir datos de amigos a formato ChatUser
-				if (data.friends && data.friends.friends) {
-					const friendUsers: ChatUser[] = data.friends.friends.map((friend: any) => ({
-						id: friend.user_id || friend.id,
-						name: friend.login || friend.name,
-						status: friend.status || 'Offline',
-					}));
-					setFriends(friendUsers);
-				}
-			} else if (data.type === 'status_update') {
-				// Actualizar estado de un amigo
+				setConversations((prev) => {
+					const exists = prev.some((conv) => conv.id === data.from_user_id);
+					const newMessage: ChatMessage = {
+						id: Date.now(),
+						author: 'friend',
+						text: data.message,
+						time: new Date(data.timestamp).toLocaleTimeString(),
+					};
+
+					if (exists) {
+						return prev.map((conv) =>
+							conv.id === data.from_user_id
+								? {
+									...conv,
+									messages: [...conv.messages, newMessage],
+									lastMessage: data.message,
+									lastTime: newMessage.time,
+								}
+								: conv
+						);
+					}
+
+					return [
+						{
+							id: data.from_user_id,
+							name: data.from_username,
+							login: data.from_username,
+							status: 'En línea',
+							lastMessage: data.message,
+							lastTime: newMessage.time,
+							messages: [newMessage],
+						},
+						...prev,
+					];
+				});
+				return;
+			}
+
+			if (data.type === 'status_update') {
 				setFriends((prev) =>
-					prev.map((friend) => {
-						if (friend.id === data.user_id) {
-							return { ...friend, status: data.status };
-						}
-						return friend;
-					})
+					prev.map((friend) =>
+						friend.id === data.user_id
+							? { ...friend, status: data.status === 'online' ? 'En línea' : 'Desconectado' }
+							: friend
+					)
 				);
 			}
-		};
-
+		} catch (err) {
+			console.error('Error parsing WS message:', err);
+		}
+	};
 		chatSocket.onerror = (error) => {
+			if (isCleaningUp) return; // ignora el error esperado del cleanup de StrictMode
 			console.error('Error WebSocket:', error);
 		};
+		chatSocket.onclose = (event) => console.log('Desconectado del chat', event.code, event.reason);
 
-		chatSocket.onclose = () => {
-			console.log('Desconectado del chat');
-		};
-
-		// Cleanup: desconectar al desmontar
 		return () => {
-			chatSocket.close();
+			isCleaningUp = true;
+			if (chatSocket.readyState === WebSocket.OPEN || chatSocket.readyState === WebSocket.CONNECTING) {
+				chatSocket.close();
+			}
 		};
 	}, []);
 
-	const filteredUsers = useMemo(
-		() =>
-			friends.filter((user) =>
-				user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				user.status.toLowerCase().includes(searchTerm.toLowerCase()),
-			),
-		[searchTerm, friends],
-	);
+	const filteredUsers = useMemo(() => {
+		const normalizedTerm = searchTerm.trim().toLowerCase();
+		if (!normalizedTerm) {
+			return friends;
+		}
+
+		return friends.filter((user) => {
+			const haystack = `${user.name} ${user.login} ${user.status}`.toLowerCase();
+			return haystack.includes(normalizedTerm);
+		});
+	}, [searchTerm, friends]);
 
 	const handleClose = () => {
 		setOpen(false);
@@ -297,37 +319,83 @@ export default function Chat() {
 		setNewMessage("");
 	};
 
-	const handleStartConversation = (user: ChatUser) => {
-		const existing = conversations.find((conversation) => conversation.name === user.name);
-		if (existing) {
-			setSelectedConversationId(existing.id);
-		} else {
-			const nextId = Math.max(0, ...conversations.map((conversation) => conversation.id)) + 1;
-			const newConversation: ChatConversation = {
-				id: nextId,
-				name: user.name,
-				status: user.status,
-				lastMessage: "",
-				lastTime: "Ahora",
-				messages: [],
-			};
-			setConversations((prev) => [...prev, newConversation]);
-			setSelectedConversationId(nextId);
-		}
+	const handleStartConversation = async (chatUser: ChatUser) => {
+		const existing = conversations.find(
+			(conversation) => conversation.id === chatUser.id || conversation.login === chatUser.login
+		);
 		setIsNewChatOpen(false);
 		setSearchTerm("");
-	};
 
-	const handleSendMessage = (to_user_id: number, message: string) => {
+		if (existing) {
+			await handleSelectConversation(existing.id);
+			return;
+		}
+		const newConversation: ChatConversation = {
+			id: chatUser.id,
+			name: chatUser.name,
+			login: chatUser.login,
+			status: chatUser.status,
+			lastMessage: "",
+			lastTime: "Ahora",
+			messages: [],
+		};
+
+		setConversations((prev) => [newConversation, ...prev]);
+		setSelectedConversationId(chatUser.id);
+		try {
+			const history = await fetchMessagesWith(chatUser.login);
+			if (history.length === 0) return;
+
+			const mappedMessages: ChatMessage[] = history.map((row, index) => ({
+				id: index,
+				author: row.sender_login === myLogin ? 'me' : 'friend',
+				text: row.message,
+				time: new Date(row.date_time).toLocaleTimeString(),
+			}));
+
+			setConversations((prev) =>
+				prev.map((c) =>
+					c.id === chatUser.id ? { ...c, messages: mappedMessages } : c
+				)
+			);
+		} catch (err) {
+			console.error('Error cargando historial:', err);
+		}
+	};
+	const handleSelectConversation = async (conversationId: number) => {
+		setSelectedConversationId(conversationId);
+
+		const conv = conversations.find((c) => c.id === conversationId);
+		if (!conv || conv.messages.length > 0) return; // ya cargado
+
+		try {
+			const history = await fetchMessagesWith(conv.login);
+			const mappedMessages: ChatMessage[] = history.map((row, index) => ({
+				id: index,
+				author: row.sender_login === myLogin ? 'me' : 'friend',
+				text: row.message,
+				time: new Date(row.date_time).toLocaleTimeString(),
+			}));
+
+			setConversations((prev) =>
+				prev.map((c) =>
+					c.id === conversationId ? { ...c, messages: mappedMessages } : c
+				)
+			);
+		} catch (err) {
+			console.error('Error cargando historial:', err);
+		}
+	};
+	const handleSendMessage = (to_user_id: number, to_user_login: string, message: string) => {
 		if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
 			socketRef.current.send(JSON.stringify({
 				type: 'chat_message',
 				to_user_id: to_user_id,
+				to_user_login: to_user_login,
 				message: message,
 				timestamp: new Date().toISOString()
 			}));
 
-			// Agregar el mensaje a la conversación local
 			setConversations((prev) =>
 				prev.map((conv) => {
 					if (conv.id === to_user_id) {
@@ -367,7 +435,7 @@ export default function Chat() {
 				open={open}
 				onClose={handleClose}
 				selectedConversationId={selectedConversationId}
-				onSelectConversation={setSelectedConversationId}
+				onSelectConversation={handleSelectConversation}
 				onBack={() => setSelectedConversationId(null)}
 				conversations={conversations}
 				onOpenNewChat={() => setIsNewChatOpen(true)}

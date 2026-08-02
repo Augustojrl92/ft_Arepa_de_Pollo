@@ -321,6 +321,8 @@ html.dark {
     gap: 0.55rem;
   }
 
+
+  
   .chat-new-button {
     width: 2rem;
     height: 2rem;
@@ -340,6 +342,174 @@ html.dark {
     transform: scale(1.05);
   }
 
+  .new-chat-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10002;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .new-chat-modal {
+    width: min(100%, 420px);
+    max-height: min(90vh, 620px);
+    overflow: hidden;
+    border-radius: 20px;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+    background: var(--color-card);
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+    color: var(--color-text);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .new-chat-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.1rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
+  }
+
+  .new-chat-modal-close {
+    width: 2rem;
+    height: 2rem;
+    border: 0;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .new-chat-modal-close:hover {
+    background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  }
+
+  .new-chat-modal-description {
+    padding: 0 1.1rem 0.75rem;
+    color: var(--color-text-secondary);
+    font-size: 0.95rem;
+  }
+
+  .new-chat-search {
+    margin: 0 1.1rem 0.9rem;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-card) 90%, transparent);
+    color: var(--color-text);
+    padding: 0.75rem 0.9rem;
+  }
+
+  .new-chat-search:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
+
+  .new-chat-user-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0 1.1rem 1.1rem;
+    overflow-y: auto;
+  }
+
+  .new-chat-user-item {
+    width: 100%;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--color-card) 88%, transparent);
+    padding: 0.85rem 0.95rem;
+    text-align: left;
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .new-chat-user-item:hover {
+    border-color: color-mix(in srgb, var(--color-accent) 60%, transparent);
+    background: color-mix(in srgb, var(--color-accent) 10%, var(--color-card));
+  }
+
+  .new-chat-empty {
+    padding: 0.75rem 0;
+    color: var(--color-text-secondary);
+  }
+  .chat-thread-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+  .chat-thread {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.25rem;
+  }
+  .chat-composer {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.6rem;
+    padding: 0.75rem;
+    border-top: 1px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
+  }
+
+  .chat-composer textarea {
+    flex: 1;
+    min-width: 0;
+    resize: none;
+    min-height: 2.75rem;
+    max-height: 6rem;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-card) 90%, transparent);
+    color: var(--color-text);
+    padding: 0.6rem 0.85rem;
+    font-size: 0.9rem;
+    line-height: 1.35;
+    font-family: inherit;
+  }
+
+  .chat-composer textarea::placeholder {
+    color: var(--color-text-secondary);
+  }
+
+  .chat-composer textarea:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 25%, transparent);
+  }
+
+  .chat-send-button {
+    flex-shrink: 0;
+    height: 2.75rem;
+    padding: 0 1.1rem;
+    border: 0;
+    border-radius: 12px;
+    background: var(--color-accent);
+    color: #042d2e;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  .chat-send-button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  .chat-send-button:active {
+    transform: translateY(0);
+  }
   .chat-body {
     flex: 1;
     padding: 0.75rem;

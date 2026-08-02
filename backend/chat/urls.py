@@ -1,8 +1,6 @@
-
 from django.urls import path
 from .views import MessagesView
 
-
 urlpatterns = [
-	path('details/', MessagesView.as_view(), name='user-details'),
+	path('messages/<str:other_login>/', MessagesView.as_view(), name='chat-messages'),
 ]

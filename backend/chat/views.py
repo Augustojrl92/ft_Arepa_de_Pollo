@@ -1,10 +1,30 @@
-
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.shortcuts import render
 
-from services import get_messages_between
+from .services import get_messages_between, get_conversations_for_user
 
-# Create your views here.
+def _resolve_my_login(request):
+	campus_user = getattr(request.user, 'campus_user_profile', None)
+	return getattr(campus_user, 'login', None) or request.user.username
+
+class ConversationsListView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def get(self, request):
+		my_login = _resolve_my_login(request)
+		conversations = get_conversations_for_user(my_login)
+		return Response({'conversations': conversations}, status=status.HTTP_200_OK)
+
 class MessagesView(APIView):
-	def get(self, req, other_login: str):
-		pass
+	permission_classes = [IsAuthenticated]
+
+	def get(self, request, other_login: str):
+		my_login = getattr(getattr(request.user, 'campus_user_profile', None), 'login', None) or request.user.username
+
+		messages = get_messages_between(my_login, other_login)
+		if messages is None:
+			return Response({'error': 'Conversation not found'}, status=status.HTTP_404_NOT_FOUND)
+
+		return Response({'messages': messages}, status=status.HTTP_200_OK)
