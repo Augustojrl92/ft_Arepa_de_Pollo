@@ -75,6 +75,25 @@ CSRF_TRUSTED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
+# ── HTTPS ────────────────────────────────────────────────────────────────────
+# TLS is terminated by the nginx proxy, so Django only ever sees plain HTTP on
+# the internal network. Without this it would consider every request insecure:
+# request.is_secure() would be False, redirects would be built as http://, and
+# it would refuse to set cookies marked Secure.
+#
+# Safe only because nothing but the proxy can reach this container — the app
+# ports are not published — so the header cannot be spoofed from outside.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+# Redundant with the proxy's own 80 -> 443 redirect, but it means the app is
+# still correct if it is ever put behind a different front end.
+SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True').lower() == 'true'
+
+# Cookies must never travel over plain HTTP.
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -209,7 +228,7 @@ CRONJOBS = [
 ]
 
 # Cron runs with a minimal environment; load .env variables explicitly for each job.
-CRONTAB_COMMAND_PREFIX = '[ -f /app/.env ] && set -a && . /app/.env && set +a; PYTHONUNBUFFERED=1'
+CRONTAB_COMMAND_PREFIX = '[ -f /etc/aedlph.env ] && set -a && . /etc/aedlph.env && set +a; PYTHONUNBUFFERED=1'
 
 # Pipe cron job output to the container stdout/stderr so `make back-logs` can display it.
 CRONTAB_COMMAND_SUFFIX = '>> /proc/1/fd/1 2>> /proc/1/fd/2'

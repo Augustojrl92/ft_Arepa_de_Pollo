@@ -3,14 +3,18 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
-    ports:
-      - "3000:3000"
+    # Deliberately not published: the proxy is the only way in, so there is no
+    # plain-HTTP port left for a browser to reach.
+    expose:
+      - "3000"
     volumes:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      # Empty means "same origin" — the browser calls /api/... on whatever host
+      # it loaded the page from, so this never needs updating per machine.
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-}
     restart: always
 
   db:
@@ -63,13 +67,16 @@ services:
       context: ./backend
       dockerfile: Dockerfile.dev
     env_file:
-      - ./backend/.env
-    environment:
-      CHANNEL_REDIS_URL: ${CHANNEL_REDIS_URL:-redis://redis:6379/0}
+      - ./.env
     volumes:
       - ./backend:/app
-    ports:
-      - "8000:8000"
+      # Cron runs with a bare environment and sources this to get what the web
+      # process receives via env_file. Mounted outside /app because /app is
+      # itself a bind mount.
+      - ./.env:/etc/aedlph.env:ro
+    # Not published either — reachable only through the proxy.
+    expose:
+      - "8000"
     depends_on:
       db:
         condition: service_healthy
@@ -95,7 +102,24 @@ services:
       db:
         condition: service_healthy
     restart: always
+  # Terminates TLS and is the single entry point. Everything else talks plain
+  # HTTP on the internal network only, which the subject allows.
+  proxy:
+    build:
+      context: ./nginx
+    ports:
+      - "443:443"
+    environment:
+      # Add the machine's LAN IP here when testing from another computer, e.g.
+      #   TLS_SAN=DNS:localhost,IP:127.0.0.1,IP:10.19.200.165
+      TLS_SAN: ${TLS_SAN:-DNS:localhost,IP:127.0.0.1}
+    volumes:
+      - tls_certs:/etc/nginx/certs
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
 
 volumes:
   postgres_data:
-  redis_data:
+  tls_certs:
