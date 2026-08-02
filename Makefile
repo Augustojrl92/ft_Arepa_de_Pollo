@@ -45,20 +45,22 @@ else \
 fi
 endef
 
-# Helper: stop selected services only if any of the important services are running
-# We consider frontend, backend, db, or public_api as the key services for full-stop (OR)
+# Helper: stop every service the compose file defines, not a hardcoded list.
+# The list used to be written out by hand and drifted three times — once when
+# public_api was added, again with redis, again with proxy — each time leaving
+# services running after a "stop everything". Asking compose cannot go stale.
 define stop_all_if_running
-@# Check frontend/backend/db/public_api and stop only those actually running (simple OR check)
-@running=""; \
-for svc in frontend backend db public_api; do \
+@svcs="$$($(DOCKER_COMPOSE) config --services 2>/dev/null | tr '\n' ' ')"; \
+running=""; \
+for svc in $$svcs; do \
   $(DOCKER) ps --filter "label=com.docker.compose.service=$$svc" -q | grep -q . && running="$$running $$svc" || true; \
 done; \
 if [ -n "$$running" ]; then \
-	echo "Stopping selected services:$$running"; \
+	echo "Stopping:$$running"; \
 	$(DOCKER_COMPOSE) stop $$running; \
-	echo "Stopped selected services:$$running"; \
+	echo "Stopped:$$running"; \
 else \
-	echo "no selected services running (frontend/backend/db/public_api), skipping stop"; \
+	echo "nothing running out of:$$svcs"; \
 fi
 endef
 
@@ -82,18 +84,18 @@ front-logs:
 
 # ─── Backend ───────────────────────────────────────────────────────────────────
 back-up:
-	$(DOCKER_COMPOSE) up -d --build backend db
+	$(DOCKER_COMPOSE) up -d --build backend db redis
 
 back-stop:
-	$(call stop_if_running,backend db)
+	$(call stop_if_running,backend db redis)
 
 back-down:
-	$(DOCKER_COMPOSE) rm -sf $(BACK_RM_VOLUMES) backend db
+	$(DOCKER_COMPOSE) rm -sf $(BACK_RM_VOLUMES) backend db redis
 
 back-re: back-down back-up
 
 back-logs:
-	$(DOCKER_COMPOSE) logs -f backend db
+	$(DOCKER_COMPOSE) logs -f backend db redis
 
 back-migrate:
 	$(DOCKER_COMPOSE) run --rm backend python manage.py migrate
