@@ -388,7 +388,7 @@ function FriendsGame() {
 		void refresh()
 		void fetchMyFriends().then((payload) => setFriends(payload.friends ?? [])).catch(() => setFriends([]))
 		return subscribeGameSocket({
-			onEvent: () => void refresh(),
+			onEvent: (event) => { if (event.type === 'game.event') void refresh() },
 			onStatus: setSocketStatus,
 		})
 	}, [refresh])

@@ -1,9 +1,23 @@
+from unittest.mock import patch
+
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from sync.models import CampusUser, CampusUserScoreSnapshot
+from users.models import FriendsList
+from users.services import send_friend_request
+
+
+TEST_CHANNEL_LAYERS = {
+	'default': {
+		'BACKEND': 'channels.layers.InMemoryChannelLayer',
+	},
+}
+TEST_SIMPLE_JWT = {
+	'SIGNING_KEY': 'tests-only-signing-key-with-more-than-32-bytes',
+}
 
 
 class UserPointsHistoryViewTests(TestCase):
@@ -58,3 +72,75 @@ class UserPointsHistoryViewTests(TestCase):
 				{'date': '2026-04-09', 'points': 1500, 'coalition_rank': 3, 'campus_rank': 10},
 			],
 		)
+
+
+@override_settings(
+	CHANNEL_LAYERS=TEST_CHANNEL_LAYERS,
+	SECRET_KEY='tests-only-secret-key-with-more-than-32-bytes',
+	SIMPLE_JWT=TEST_SIMPLE_JWT,
+)
+class FriendRealtimeEventTests(TestCase):
+	def setUp(self):
+		self.sender = self._create_user('sender', 501)
+		self.receiver = self._create_user('receiver', 502)
+		FriendsList.objects.create(owner=self.sender)
+		FriendsList.objects.create(owner=self.receiver)
+		self._authenticate(self.sender)
+
+	def _create_user(self, login, intra_id):
+		user = User.objects.create_user(username=login, password='secret123')
+		now = timezone.now()
+		CampusUser.objects.create(
+			django_user=user,
+			intra_id=intra_id,
+			user_id=intra_id,
+			level=1,
+			login=login,
+			email=f'{login}@example.com',
+			display_name=login.title(),
+			avatar_url='',
+			coalition_id=1,
+			coalitions_user_id=intra_id,
+			coalition_name='Test',
+			coalition_slug='test',
+			coalition_user_score=0,
+			coalition_rank=1,
+			general_rank=1,
+			created_at=now,
+			updated_at=now,
+		)
+		return user
+
+	def _authenticate(self, user):
+		token = str(RefreshToken.for_user(user).access_token)
+		self.client.defaults['HTTP_AUTHORIZATION'] = f'Bearer {token}'
+
+	@patch('users.views.broadcast_friend_event')
+	def test_sending_request_notifies_both_users(self, broadcast):
+		response = self.client.post(
+			'/api/users/friends/requests/',
+			{'login': 'receiver'},
+			content_type='application/json',
+		)
+
+		self.assertEqual(response.status_code, 201)
+		users, event_name, actor = broadcast.call_args.args
+		self.assertEqual({user.id for user in users}, {self.sender.id, self.receiver.id})
+		self.assertEqual(event_name, 'friend.request.created')
+		self.assertEqual(actor.id, self.sender.id)
+
+	@patch('users.views.broadcast_friend_event')
+	def test_accepting_request_notifies_both_users(self, broadcast):
+		send_friend_request(self.sender, 'receiver')
+		self._authenticate(self.receiver)
+		response = self.client.patch(
+			'/api/users/friends/requests/',
+			{'login': 'sender', 'action': 'accept'},
+			content_type='application/json',
+		)
+
+		self.assertEqual(response.status_code, 200)
+		users, event_name, actor = broadcast.call_args.args
+		self.assertEqual({user.id for user in users}, {self.sender.id, self.receiver.id})
+		self.assertEqual(event_name, 'friend.request.accepted')
+		self.assertEqual(actor.id, self.receiver.id)

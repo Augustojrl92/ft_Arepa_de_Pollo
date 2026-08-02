@@ -235,7 +235,7 @@ Implementation highlights:
 - JWT authentication from the existing HttpOnly access-token cookie.
 - A private channel group for each authenticated user.
 - Redis-backed channel layers for multi-process event delivery.
-- Real-time invitation, acceptance, move, forfeit, and rematch events.
+- Real-time invitation, acceptance, move, forfeit, rematch, and friendship events.
 - Heartbeats and exponential client reconnection.
 - No private move choices are included in WebSocket event payloads.
 

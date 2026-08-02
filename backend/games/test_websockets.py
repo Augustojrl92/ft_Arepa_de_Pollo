@@ -7,7 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from config.asgi import application
 
-from .events import game_user_group
+from config.realtime import user_realtime_group
 
 
 TEST_CHANNEL_LAYERS = {
@@ -68,8 +68,41 @@ class GameWebSocketTests(TransactionTestCase):
 			}
 			channel_layer = get_channel_layer()
 			await channel_layer.group_send(
-				game_user_group(self.user.id),
-				{'type': 'game_event', 'payload': payload},
+				user_realtime_group(self.user.id),
+				{'type': 'realtime_event', 'payload': payload},
+			)
+
+			self.assertEqual(await communicator.receive_json_from(), payload)
+			await communicator.disconnect()
+
+		async_to_sync(scenario)()
+
+	def test_authenticated_user_receives_friend_events(self):
+		token = str(RefreshToken.for_user(self.user).access_token)
+
+		async def scenario():
+			communicator = WebsocketCommunicator(
+				application,
+				'/ws/games/',
+				headers=[
+					(b'origin', b'http://localhost:3000'),
+					(b'cookie', f'access_token={token}'.encode()),
+				],
+			)
+			connected, _detail = await communicator.connect()
+			self.assertTrue(connected)
+			await communicator.receive_json_from()
+
+			payload = {
+				'type': 'friend.event',
+				'event': 'friend.request.created',
+				'actor_login': 'sender',
+				'occurred_at': '2026-08-02T12:00:00Z',
+			}
+			channel_layer = get_channel_layer()
+			await channel_layer.group_send(
+				user_realtime_group(self.user.id),
+				{'type': 'realtime_event', 'payload': payload},
 			)
 
 			self.assertEqual(await communicator.receive_json_from(), payload)
