@@ -8,10 +8,8 @@ import Header from "@/components/Header"
 import Footer from "@/components/Footer"
 import { useAuthStore, useCoalitionStore, useUserStore } from "@/hooks"
 
-// Reachable without a session. The auth routes must be here or a logged-out
-// visitor is bounced to /login before they can register or follow an emailed
-// link; privacy and terms must be here because the project requires them to be
-// accessible to anyone.
+const GUEST_ROUTE = "/guest"
+
 const PUBLIC_ROUTES = [
 	"/login",
 	"/register",
@@ -45,6 +43,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 	const isAuthenticated = status === "authenticated"
 	const isPublicRoute = PUBLIC_ROUTES.includes(pathname)
 	const hasAuthHint = searchParams.get("auth") === "1"
+	// A guest holds a real session but no campus entitlement, so every campus
+	// endpoint answers 403. Confining them to /guest keeps the app from firing
+	// requests that can only fail.
+	const isGuest = isAuthenticated && user?.role === "guest"
+	const isGuestRoute = pathname === GUEST_ROUTE
 
 	useEffect(() => {
 		if (!hasHydrated || hasInitializedRef.current) {
@@ -79,6 +82,17 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 		}
 
 		if (isAuthenticated && pathname === "/login") {
+			router.replace(isGuest ? GUEST_ROUTE : "/")
+			return
+		}
+
+		if (isGuest && !isGuestRoute) {
+			router.replace(GUEST_ROUTE)
+			return
+		}
+
+		// Students and admins have no business on the guest screen.
+		if (isAuthenticated && !isGuest && isGuestRoute) {
 			router.replace("/")
 			return
 		}
@@ -86,19 +100,19 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 		if (!isAuthenticated && !isPublicRoute) {
 			router.replace("/login")
 		}
-	}, [hasAuthHint, isAuthenticated, isPublicRoute, isReady, pathname, router])
+	}, [hasAuthHint, isAuthenticated, isGuest, isGuestRoute, isPublicRoute, isReady, pathname, router])
 
 	useEffect(() => {
-		if (!isReady || !isAuthenticated || hasInitializedCoalitionsRef.current) {
+		if (!isReady || !isAuthenticated || isGuest || hasInitializedCoalitionsRef.current) {
 			return
 		}
 
 		hasInitializedCoalitionsRef.current = true
 		void getCoalitions()
-	}, [getCoalitions, isAuthenticated, isReady])
+	}, [getCoalitions, isAuthenticated, isGuest, isReady])
 
 	useEffect(() => {
-		if (!isReady || !isAuthenticated || hasInitializedPreferencesRef.current) {
+		if (!isReady || !isAuthenticated || isGuest || hasInitializedPreferencesRef.current) {
 			return
 		}
 
@@ -112,7 +126,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 			.catch(() => {
 				// Keep default theme/per-page when preferences endpoint is temporarily unavailable.
 			})
-	}, [getMyPreferences, isAuthenticated, isReady, setTheme])
+	}, [getMyPreferences, isAuthenticated, isGuest, isReady, setTheme])
 
 	useEffect(() => {
 		if (isAuthenticated) {
@@ -149,6 +163,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 	}
 
 	if (!isAuthenticated) {
+		return <main className="aedlph-container flex-1">{children}</main>
+	}
+
+	// No Header/Footer for guests: their nav would link to pages they cannot open.
+	if (isGuest) {
 		return <main className="aedlph-container flex-1">{children}</main>
 	}
 

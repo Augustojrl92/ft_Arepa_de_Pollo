@@ -58,6 +58,25 @@ def send_password_reset_email(user):
 	)
 
 
+def send_account_deleted_email(recipient, label):
+	"""Confirm that an account was removed.
+
+	Sent after the deletion has committed, and takes the address as an argument
+	rather than a user, because by then there is no row left to read it from.
+	"""
+	_send(
+		'Your AEDLPH account has been deleted',
+		(
+			f'The AEDLPH account for {label} has been deleted.\n\n'
+			'Everything tied to it is gone: your profile, preferences, friends and\n'
+			'any link to your 42 identity. This cannot be undone.\n\n'
+			'You are welcome to sign up again at any time with this address.\n\n'
+			'If you did not request this, reply to this message so we can look into it.\n'
+		),
+		recipient,
+	)
+
+
 def send_existing_account_email(user):
 	"""Sent when someone tries to register an address that already has an account.
 

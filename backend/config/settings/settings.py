@@ -72,6 +72,18 @@ CSRF_TRUSTED_ORIGINS = [
     if origin.strip()
 ]
 
+# Extra origins for LAN testing, e.g. CORS_EXTRA_ORIGINS=http://10.19.200.165:3000
+CORS_ALLOWED_ORIGINS += [
+    origin.strip()
+    for origin in os.getenv("CORS_EXTRA_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
+# Testing escape hatch. Safe to combine with credentials: django-cors-headers
+# echoes the requesting origin rather than sending "*" when credentials are
+# allowed, which browsers require. Must stay False in production.
+CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "False").lower() == "true"
+
 CORS_ALLOW_CREDENTIALS = True
 
 MIDDLEWARE = [
@@ -235,7 +247,7 @@ CRONJOBS = [
 ]
 
 # Cron runs with a minimal environment; load .env variables explicitly for each job.
-CRONTAB_COMMAND_PREFIX = '[ -f /app/.env ] && set -a && . /app/.env && set +a; PYTHONUNBUFFERED=1'
+CRONTAB_COMMAND_PREFIX = '[ -f /etc/aedlph.env ] && set -a && . /etc/aedlph.env && set +a; PYTHONUNBUFFERED=1'
 
 # Pipe cron job output to the container stdout/stderr so `make back-logs` can display it.
 CRONTAB_COMMAND_SUFFIX = '>> /proc/1/fd/1 2>> /proc/1/fd/2'

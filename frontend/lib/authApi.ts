@@ -42,6 +42,10 @@ const getErrorMessage = async (response: Response, fallbackMessage: string) => {
 
 export const getLoginUrl = () => `${AUTH_BASE_URL}/42/login/`
 
+// Attaching a 42 identity to the signed-in account. This is what turns a guest
+// into a campus user; it is not a way to sign in.
+export const getLink42Url = () => `${AUTH_BASE_URL}/42/link/`
+
 const postJson = async <T>(path: string, body: unknown, fallbackMessage: string) => {
 	const response = await fetch(`${AUTH_BASE_URL}${path}`, {
 		method: "POST",
@@ -66,11 +70,24 @@ export const postRegister = (email: string, password: string, passwordConfirm: s
 		"No se ha podido completar el registro",
 	)
 
+export const postVerifyEmail = (uid: string, token: string) =>
+	postJson<DetailPayload>("/verify-email/", { uid, token }, "No se ha podido confirmar el email")
+
+export const deleteAccount = async () => {
+	const response = await fetch(`${AUTH_BASE_URL}/account/`, {
+		method: "DELETE",
+		credentials: "include",
+	})
+
+	if (!response.ok) {
+		throw new ApiHttpError(await getErrorMessage(response, "No se ha podido eliminar la cuenta"), response.status)
+	}
+
+	return true
+}
+
 export const postEmailLogin = (email: string, password: string) =>
 	postJson<DetailPayload>("/login/", { email, password }, "No se ha podido iniciar sesión")
-
-export const postVerifyEmail = (uid: string, token: string) =>
-	postJson<DetailPayload>("/verify-email/", { uid, token }, "No se ha podido verificar el email")
 
 export const postPasswordResetRequest = (email: string) =>
 	postJson<DetailPayload>("/password/reset/", { email }, "No se ha podido enviar el email de recuperación")

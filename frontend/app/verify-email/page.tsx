@@ -32,7 +32,7 @@ export default function VerifyEmail() {
 		const token = params.get("token")
 
 		if (!uid || !token) {
-			setError("El enlace de verificación está incompleto.")
+			setError("El enlace de confirmación está incompleto.")
 			setState("error")
 			return
 		}
@@ -40,16 +40,14 @@ export default function VerifyEmail() {
 		void (async () => {
 			try {
 				await postVerifyEmail(uid, token)
-				// Verification signs the user in, so hydrate the store before
-				// leaving — otherwise AuthLayout bounces them back to /login.
+				// Confirming signs the user in, so hydrate the store before leaving
+				// or AuthLayout bounces them back to /login.
 				await initializeAuth()
 				setState("success")
 				router.replace("/?auth=1")
 			} catch (verifyError) {
 				setError(
-					verifyError instanceof Error
-						? verifyError.message
-						: "No se ha podido verificar el email",
+					verifyError instanceof Error ? verifyError.message : "No se ha podido confirmar el email",
 				)
 				setState("error")
 			}
@@ -58,7 +56,7 @@ export default function VerifyEmail() {
 
 	if (state === "error") {
 		return (
-			<AuthShell title="Enlace no válido" subtitle="No hemos podido verificar tu email.">
+			<AuthShell title="Enlace no válido" subtitle="No hemos podido confirmar tu email.">
 				<p className="text-sm text-red-500 text-center">{error}</p>
 				<p className="text-sm text-text-secondary text-center">
 					El enlace caduca a las 24 horas y solo puede usarse una vez. Si ya lo habías usado,
@@ -73,11 +71,11 @@ export default function VerifyEmail() {
 
 	return (
 		<AuthShell
-			title={state === "success" ? "Email verificado" : "Verificando tu email"}
+			title={state === "success" ? "Email confirmado" : "Confirmando tu email"}
 			subtitle={state === "success" ? "Entrando..." : "Un momento."}
 		>
 			<p className="text-sm text-text-secondary text-center animate-pulse">
-				{state === "success" ? "Redirigiendo a tu panel..." : "Comprobando el enlace..."}
+				{state === "success" ? "Redirigiendo..." : "Comprobando el enlace..."}
 			</p>
 		</AuthShell>
 	)

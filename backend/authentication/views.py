@@ -1,5 +1,7 @@
+import logging
 import os
 import secrets
+from datetime import datetime, timedelta
 
 import requests
 from requests import RequestException
@@ -26,8 +28,12 @@ from coalitions.services import _get_sync_user_ranks, _serialize_simple_coalitio
 from sync.models import CampusUser
 from users.models import UserPreferences
 
-from .emails import send_existing_account_email, send_password_reset_email, send_verification_email
-from .models import RegistrationInvite
+from .emails import (
+	send_account_deleted_email,
+	send_existing_account_email,
+	send_password_reset_email,
+	send_verification_email,
+)
 from .serializers import (
 	LoginSerializer,
 	PasswordResetConfirmSerializer,
@@ -36,11 +42,19 @@ from .serializers import (
 	SetPasswordSerializer,
 	VerifyEmailSerializer,
 )
+
+from .permissions import role_for
 from .tokens import email_verification_token_generator
+
+logger = logging.getLogger(__name__)
 
 # Create your views here.
 
-def _build_42_authorize_url(request):
+# How long a completed 42 authorisation stays usable for finishing a signup.
+REGISTRATION_GRANT_TTL_SECONDS = 10 * 60
+
+
+def _build_42_authorize_url(request, purpose='login'):
 	client_id = os.getenv('FT_CLIENT_ID')
 	redirect_uri = os.getenv('FT_REDIRECT_URI')
 	base_url = os.getenv('FT_API_BASE_URL', 'https://api.intra.42.fr').rstrip('/')
@@ -53,6 +67,9 @@ def _build_42_authorize_url(request):
 
 	state = secrets.token_urlsafe(32)
 	request.session['oauth42_state'] = state
+	# Remembered so the callback knows whether this round trip was a sign-in or
+	# the identity check that gates a signup.
+	request.session['oauth42_purpose'] = purpose
 
 	params = {
 		'client_id': client_id,
@@ -192,6 +209,20 @@ class OAuth42LoginView(APIView):
 			return error_response
 		return redirect(auth_url)
 
+
+# Upgrades a guest account: sends the signed-in user through 42 so their campus
+# identity can be attached. This is an entitlement step, not a login.
+class OAuth42LinkView(APIView):
+	permission_classes = [IsAuthenticated]
+
+	def get(self, request):
+		auth_url, _state, error_response = _build_42_authorize_url(request, purpose='link')
+		if error_response:
+			return error_response
+		request.session['link_user_id'] = request.user.pk
+		return redirect(auth_url)
+
+
 # Handles the callback from 42 OAuth and creates/updates the user and profile
 class OAuth42CallbackView(APIView):
 	permission_classes = [AllowAny]
@@ -200,6 +231,9 @@ class OAuth42CallbackView(APIView):
 		frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000').rstrip('/')
 
 		def _redirect_with_error(message):
+			# Without this the only trace of a failed login is a bare 302 in the
+			# access log, which says nothing about which check rejected it.
+			logger.warning('42 OAuth callback rejected: %s', message)
 			params = urlencode({'error': message})
 			return redirect(f"{frontend_url}/login/?{params}")
 
@@ -264,6 +298,39 @@ class OAuth42CallbackView(APIView):
 		if not madrid_campus:
 			return _redirect_with_error('not_in_madrid_campus')
 
+		purpose = request.session.pop('oauth42_purpose', 'login')
+
+		def _redirect_link_error(message):
+			# A failed link leaves the guest signed in, so send them back to their
+			# own screen rather than to /login, which would look like a logout.
+			logger.warning('42 link rejected: %s', message)
+			return redirect(f"{frontend_url}/guest?{urlencode({'error': message})}")
+
+		if purpose == 'link':
+			# Attaching a campus identity to the guest account that started this.
+			link_user_id = request.session.pop('link_user_id', None)
+			target = User.objects.filter(pk=link_user_id).first() if link_user_id else None
+
+			if target is None:
+				return _redirect_link_error('link_session_expired')
+
+			claimed = CampusUser.objects.filter(login=login).exclude(django_user=None).first()
+			if claimed is not None and claimed.django_user_id != target.pk:
+				return _redirect_link_error('campus_identity_already_linked')
+
+			if User.objects.filter(username=login).exclude(pk=target.pk).exists():
+				return _redirect_link_error('campus_identity_already_linked')
+
+			# The rest of the app keys off username, so adopt the 42 login now
+			# that it is proven. Guests are stored under their email, which can
+			# never collide with a login because it contains "@".
+			target.username = login
+			target.save(update_fields=['username'])
+
+			_upsert_campus_user_from_42_payload(target, user_42)
+			logger.info('Linked campus identity %s to account %s', login, target.pk)
+			return redirect(f"{frontend_url}/?linked=1")
+
 		user, _created = User.objects.get_or_create(
             username=login,
             defaults={"email": email},
@@ -271,7 +338,13 @@ class OAuth42CallbackView(APIView):
 
 		updated_fields = []
 
-		if email and user.email != email:
+		# The email on the account is the handle its owner signs in with, and they
+		# chose it. 42's profile address is not authoritative over it: overwriting
+		# would silently lock the owner out of password login, since that lookup is
+		# by email. Only fill it in when the account has none — an account created
+		# by this callback. The 42 address is kept on CampusUser.email regardless,
+		# which is what the profile endpoint prefers, so nothing is lost.
+		if email and not user.email:
 			user.email = email
 			updated_fields.append("email")
 
@@ -280,6 +353,26 @@ class OAuth42CallbackView(APIView):
 		if not user.is_active:
 			user.is_active = True
 			updated_fields.append("is_active")
+
+			# SECURITY: anyone who knows a campus email can submit a registration
+			# for it. That creates an inactive account holding *their* password,
+			# which is harmless only while the account stays inactive. Activating
+			# it here would hand the account to whoever filled in that form.
+			#
+			# 42 has proven who this person is; the unverified password has
+			# proven nothing. Discard it. The real owner can set one from
+			# Settings, which is the `has_password_set` path.
+			user.set_unusable_password()
+			if "password" not in updated_fields:
+				updated_fields.append("password")
+
+		# get_or_create leaves password='', which Django reports as a *usable*
+		# password even though nothing can match it. Record the absence
+		# explicitly so "has this account got a password?" has a truthful answer.
+		if not user.password:
+			user.set_unusable_password()
+			if "password" not in updated_fields:
+				updated_fields.append("password")
 
 		if updated_fields:
 			user.save(update_fields=updated_fields)
@@ -300,7 +393,20 @@ class UserProfileView(APIView):
 		campus_user = CampusUser.objects.filter(django_user=user).first()
 
 		if campus_user is None:
-			return Response({'error': 'Profile not found'}, status=status.HTTP_404_NOT_FOUND)
+			# A guest: the account exists but no campus identity is attached, so
+			# there is no campus data to report. Returning a shell rather than a
+			# 404 lets the frontend render the "link your 42 account" state
+			# instead of treating the session as broken.
+			return Response(
+				{
+					'user_id': user.id,
+					'username': user.username,
+					'email': user.email,
+					'role': role_for(user),
+					'display_name': user.email,
+				},
+				status=status.HTTP_200_OK,
+			)
 
 		campus_rank = _get_sync_user_ranks(campus_user)
 		coalition_summary = _serialize_simple_coalitions(campus_user.coalition_slug) if campus_user.coalition_slug else None
@@ -328,7 +434,8 @@ class UserProfileView(APIView):
 			'coalition': campus_user.coalition_slug or None,
 			'coalition_points': campus_user.coalition_user_score,
 			'coalition_user_rank': campus_user.coalition_rank,
-			'campus_user_rank': campus_rank
+			'campus_user_rank': campus_rank,
+			'role': role_for(user),
 		}
 		return Response(data, status=status.HTTP_200_OK)
 
@@ -446,6 +553,15 @@ def _user_from_uidb64(uidb64):
 
 
 class RegisterView(APIView):
+	"""Create a guest account from an email and a password. 42 is not involved.
+
+	The account this produces can reach nothing: it exists, it can sign in, and
+	from there it can either attach a 42 identity or delete itself. That is why
+	registering with somebody else's address is harmless — confirming an email
+	proves control of a mailbox, which entitles you to a guest account and
+	nothing more.
+	"""
+
 	permission_classes = [AllowAny]
 	throttle_scope = 'auth_register'
 
@@ -457,36 +573,25 @@ class RegisterView(APIView):
 		password = serializer.validated_data['password']
 		generic = Response({'detail': GENERIC_REGISTER_DETAIL}, status=status.HTTP_202_ACCEPTED)
 
-		campus_user, invite = _resolve_registration_campus_user(email)
-		if campus_user is None:
-			return generic
-
-		existing = (
-			User.objects.filter(username=campus_user.login).first()
-			or User.objects.filter(email__iexact=email).first()
-		)
-
+		existing = User.objects.filter(email__iexact=email).first()
 		if existing is not None:
-			# An unauthenticated request must never modify an account that
-			# already exists, otherwise anyone knowing an address could lock its
-			# owner out. Tell the owner by email instead.
-			if existing.email:
-				send_existing_account_email(existing)
+			# Never modify an existing account from an unauthenticated endpoint.
+			logger.info('Registration attempted for existing account %s', existing.pk)
+			send_existing_account_email(existing)
 			return generic
 
 		with transaction.atomic():
-			user = User(username=campus_user.login, email=email, is_active=False)
+			# Stored under the email: it contains "@", so it can never collide
+			# with a 42 login. Linking later renames it to the real login.
+			user = User(username=email, email=email, is_active=False)
 			user.set_password(password)
 			user.save()
 
-			campus_user.django_user = user
-			campus_user.save(update_fields=['django_user'])
+			# Inside the transaction so an undeliverable link rolls the account
+			# back instead of stranding an unconfirmable one.
+			send_verification_email(user)
 
-			if invite is not None:
-				invite.used_at = timezone.now()
-				invite.save(update_fields=['used_at'])
-
-		send_verification_email(user)
+		logger.info('Guest registration pending confirmation for %s', email)
 		return generic
 
 
@@ -503,7 +608,7 @@ class VerifyEmailView(APIView):
 
 		if user is None or not email_verification_token_generator.check_token(user, token):
 			return Response(
-				{'error': 'This verification link is invalid or has expired.'},
+				{'error': 'This confirmation link is invalid or has expired.'},
 				status=status.HTTP_400_BAD_REQUEST,
 			)
 
@@ -513,8 +618,44 @@ class VerifyEmailView(APIView):
 		refresh = RefreshToken.for_user(user)
 		update_last_login(None, user)
 
-		response = Response({'detail': 'Email verified'}, status=status.HTTP_200_OK)
+		response = Response({'detail': 'Email confirmed'}, status=status.HTTP_200_OK)
 		_set_auth_cookies(response, refresh)
+		return response
+
+
+class AccountDeleteView(APIView):
+	"""Delete your own account. Deliberately available to guests.
+
+	A guest can do exactly two things, and this is one of them; someone who
+	registered by mistake must not be stuck with an account they cannot remove.
+	"""
+
+	permission_classes = [IsAuthenticated]
+
+	def delete(self, request):
+		user = request.user
+		# Captured before the row goes: there is nothing to read them from after.
+		recipient = user.email
+		label = user.username
+		logger.info('Account %s deleted by its owner', user.pk)
+
+		with transaction.atomic():
+			CampusUser.objects.filter(django_user=user).update(django_user=None)
+			_blacklist_all_sessions_for(user)
+			user.delete()
+
+		# Sent after the delete has committed, and never allowed to undo it: the
+		# owner asked for the account to go, so a mail failure must not resurrect
+		# it. Unlike registration, where an undeliverable link would strand an
+		# unusable account, here the operation is already complete and correct.
+		if recipient:
+			try:
+				send_account_deleted_email(recipient, label)
+			except Exception:
+				logger.exception('Account %s deleted but the confirmation email failed', label)
+
+		response = Response(status=status.HTTP_204_NO_CONTENT)
+		_clear_auth_cookies(response)
 		return response
 
 

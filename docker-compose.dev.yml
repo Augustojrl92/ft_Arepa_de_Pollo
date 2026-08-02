@@ -10,6 +10,9 @@ services:
       - /app/node_modules
       - /app/.next
     environment:
+      # Baked into the browser bundle, so it must be an address the *browser*
+      # can reach. Set NEXT_PUBLIC_API_URL in the repo-root .env to point at the
+      # server's LAN IP when testing from another machine.
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
     restart: always
 
@@ -46,19 +49,45 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Catch-all SMTP server for development. Accepts every message and shows it in
+  # a web inbox at http://localhost:8025 instead of delivering anywhere, so
+  # verification and password-reset emails work without an MTA or a third-party
+  # account. Nothing ever leaves the machine.
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+      MP_MAX_MESSAGES: 500
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
     env_file:
-      - ./backend/.env
+      - ./.env
     volumes:
       - ./backend:/app
+      # Cron runs with a bare environment, so it sources this file to get what
+      # the web process receives via env_file. Mounted *outside* /app on
+      # purpose: /app is itself a bind mount, so a file mounted inside it would
+      # make Docker create the mount point back on the host.
+      - ./.env:/etc/aedlph.env:ro
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8000/api/health/ || exit 1"]
       interval: 10s

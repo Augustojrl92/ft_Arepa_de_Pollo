@@ -10,6 +10,13 @@ import { useAuthStore } from "@/hooks"
 import { ApiHttpError, getLoginUrl, postEmailLogin } from "@/lib/authApi"
 import { validateEmail, validatePassword } from "@/lib/passwordRules"
 
+const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+	oauth_failed: "Error de autenticación con 42. Por favor, inténtalo de nuevo.",
+	not_in_campus_db: "Tu cuenta de 42 no está registrada en nuestra base de datos",
+	not_in_madrid_campus: "Solo puedes acceder con una cuenta de 42 Madrid",
+	account_already_exists: "Ya tienes una cuenta. Inicia sesión con tu email y contraseña.",
+}
+
 export default function Login() {
 	const [isRedirecting, setIsRedirecting] = useState(false)
 	const [isSubmitting, setIsSubmitting] = useState(false)
@@ -64,18 +71,12 @@ export default function Login() {
 		hasProcessedQueryError.current = true
 		const errorParam = new URLSearchParams(window.location.search).get('error')
 
-		switch (errorParam) {
-			case 'oauth_failed':
-				setError('Error de autenticación con 42. Por favor, inténtalo de nuevo.')
-				break
-			case 'not_in_campus_db':
-				setError('Tu cuenta de 42 no está registrada en nuestra base de datos')
-				break
-			case 'not_in_madrid_campus':
-				setError('Solo puedes acceder con una cuenta de 42 Madrid')
-				break
-			default:
-				break
+		if (errorParam) {
+			// The callback reports failures the frontend does not have a friendly
+			// wording for ("Invalid OAuth state", "Failed to obtain access token").
+			// Falling through silently left the user back on a login page with no
+			// explanation, so anything unrecognised is shown verbatim.
+			setError(OAUTH_ERROR_MESSAGES[errorParam] ?? `No se ha podido completar el acceso con 42: ${errorParam}`)
 		}
 
 		if (window.location.search) {

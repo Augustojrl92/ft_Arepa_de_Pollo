@@ -8,6 +8,18 @@ def _normalize_email(value):
 	return (value or '').strip().lower()
 
 
+def has_password_set(user):
+	"""True when the account has a password that can actually be matched.
+
+	`User.has_usable_password()` is not enough: accounts created by the 42
+	callback through `get_or_create` are stored with `password=''`, and Django
+	reports an empty string as *usable* (it only treats None and '!'-prefixed
+	hashes as unusable). Such an account would then be asked for a current
+	password that no input can ever satisfy.
+	"""
+	return bool(user.password) and user.has_usable_password()
+
+
 class _PasswordPairMixin:
 	"""Shared confirm-match check and Django validator plumbing.
 
@@ -95,7 +107,7 @@ class SetPasswordSerializer(serializers.Serializer, _PasswordPairMixin):
 
 		# Accounts created through 42 have no password yet, so the first time
 		# there is nothing to confirm. Once one exists, changing it requires it.
-		if user.has_usable_password():
+		if has_password_set(user):
 			current = attrs.get('current_password') or ''
 			if not user.check_password(current):
 				raise serializers.ValidationError({'current_password': 'Current password is incorrect.'})

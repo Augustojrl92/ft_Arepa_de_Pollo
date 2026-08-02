@@ -64,8 +64,8 @@ export default function Register() {
 		return (
 			<AuthShell title="Revisa tu email" subtitle="Ya casi está.">
 				<p className="text-sm text-text-secondary text-center">
-					Si tu email es válido, te hemos enviado un enlace de verificación. Ábrelo para activar
-					tu cuenta.
+					Si esa dirección puede usarse, te hemos enviado un enlace de confirmación. Ábrelo
+					para activar tu cuenta.
 				</p>
 				<Link href="/login" className="text-sm text-accent hover:underline text-center">
 					Volver a iniciar sesión
@@ -87,9 +87,10 @@ export default function Register() {
 				</p>
 			}
 		>
-			{/* Stated up front: being told the rule now beats silence after submitting. */}
+			{/* Set expectations up front: the account starts with no access. */}
 			<p className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-text-secondary text-center">
-				El registro está limitado a estudiantes de 42 Madrid. Usa el email de tu cuenta de 42.
+				Tu cuenta empezará como <strong>invitado</strong>, sin acceso a los datos del campus.
+				Para ver coaliciones, rankings y perfiles tendrás que vincular tu cuenta de 42 después.
 			</p>
 
 			<form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>

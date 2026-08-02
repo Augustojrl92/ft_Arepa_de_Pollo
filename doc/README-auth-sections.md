@@ -76,7 +76,7 @@ is no custom user model.
 
 ## Instructions (authentication setup)
 
-Copy `backend/env.example` to `backend/.env` and fill in:
+Copy `.env.example` to `.env` at the repo root and fill in:
 
 ```bash
 # 42 OAuth
