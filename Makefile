@@ -9,7 +9,7 @@ BACKUP_FILE ?=
 # Set these in the environment if you want different behavior, e.g.
 #   make back-down BACK_RM_VOLUMES=-v
 FRONT_RM_VOLUMES ?= -v
-BACK_RM_VOLUMES ?=
+BACK_RM_VOLUMES ?= -v
 
 # Helper: stop a specific service(s) only if any of them are running
 define stop_if_running
@@ -27,11 +27,11 @@ fi
 endef
 
 # Helper: stop selected services only if any of the important services are running
-# We consider frontend, backend, db, or db-backup as the key services for full-stop (OR)
+# We consider frontend, backend, db, or public_api as the key services for full-stop (OR)
 define stop_all_if_running
-@# Check full-stack services and stop only those actually running (simple OR check)
+@# Check frontend/backend/db/public_api and stop only those actually running (simple OR check)
 @running=""; \
-for svc in frontend backend db db-backup; do \
+for svc in frontend backend db public_api; do \
   $(DOCKER) ps --filter "label=com.docker.compose.service=$$svc" -q | grep -q . && running="$$running $$svc" || true; \
 done; \
 if [ -n "$$running" ]; then \
@@ -39,7 +39,7 @@ if [ -n "$$running" ]; then \
 	$(DOCKER_COMPOSE) stop $$running; \
 	echo "Stopped selected services:$$running"; \
 else \
-	echo "no selected services running (frontend/backend/db), skipping stop"; \
+	echo "no selected services running (frontend/backend/db/public_api), skipping stop"; \
 fi
 endef
 
@@ -54,7 +54,7 @@ front-stop:
 	$(call stop_if_running,frontend)
 
 front-down:
-	$(DOCKER_COMPOSE) rm -sf$(FRONT_RM_VOLUMES) frontend
+	$(DOCKER_COMPOSE) rm -sf $(FRONT_RM_VOLUMES) frontend
 
 front-re: front-down front-up
 
@@ -69,7 +69,7 @@ back-stop:
 	$(call stop_if_running,backend db)
 
 back-down:
-	$(DOCKER_COMPOSE) rm -sf$(BACK_RM_VOLUMES) backend db
+	$(DOCKER_COMPOSE) rm -sf $(BACK_RM_VOLUMES) backend db
 
 back-re: back-down back-up
 
@@ -131,6 +131,44 @@ db-backup-auto-stop:
 
 db-backup-auto-logs:
 	$(DOCKER_COMPOSE) logs -f db-backup
+# ─── Public API ────────────────────────────────────────────────────────────────
+api-up: back-up
+	$(DOCKER_COMPOSE) up -d --build public_api
+
+api-stop:
+	$(call stop_if_running,public_api)
+
+api-down:
+	$(DOCKER_COMPOSE) rm -sf public_api
+
+api-re: api-down api-up
+
+api-logs:
+	$(DOCKER_COMPOSE) logs -f public_api
+
+api-alembic-init:
+	$(DOCKER_COMPOSE) run --rm public_api alembic init alembic
+
+api-migrate:
+	$(DOCKER_COMPOSE) run --rm public_api alembic upgrade head
+
+api-revision:
+	@if [ -z "$(MSG)" ]; then echo "Usage: make api-revision MSG=init_public_api_keys"; exit 1; fi
+	$(DOCKER_COMPOSE) run --rm public_api alembic revision --autogenerate -m "$(MSG)"
+
+api-history:
+	$(DOCKER_COMPOSE) run --rm public_api alembic history
+
+api-current:
+	$(DOCKER_COMPOSE) run --rm public_api alembic current
+
+api-downgrade:
+	@if [ -z "$(REV)" ]; then echo "Uso: make api-downgrade REV=-1"; exit 1; fi
+	$(DOCKER_COMPOSE) run --rm public_api alembic downgrade "$(REV)"
+
+api-syncdb: api-migrate
+
+
 
 # ─── Full stack ────────────────────────────────────────────────────────────────
 full-up:
@@ -170,15 +208,19 @@ dev-down: front-down
 dev-logs: front-logs
 dev-re: front-re
 
-.PHONY: all \
-        front-up front-stop front-down front-re front-logs \
-			back-up back-stop back-down back-re back-logs \
-			back-migrate back-makemigrations back-makemigrations-app \
-			back-showmigrations back-showmigrations-app back-syncdb \
-			back-superuser back-shell back-test back-import-evaluations front-pwa \
-			db-backup db-restore db-backup-ls \
-			db-backup-auto-up db-backup-auto-stop db-backup-auto-logs \
-	        full-up full-stop full-down full-re full-logs \
-        fclean \
-		up stop down logs migrate makemigrations initialize reinitialize superuser shell test \
-        dev-up dev-stop dev-down dev-re dev-logs
+.PHONY: \
+	front-up front-stop front-down front-re front-logs front-pwa \
+	back-up back-stop back-down back-re back-logs \
+	back-migrate back-makemigrations back-makemigrations-app \
+	back-showmigrations back-showmigrations-app back-syncdb \
+	back-superuser back-shell back-test back-syncapi back-import-evaluations \
+	db-backup db-restore db-backup-ls \
+	db-backup-auto-up db-backup-auto-stop db-backup-auto-logs \
+	api-up api-stop api-down api-re api-logs \
+	api-alembic-init api-migrate api-revision api-history api-current \
+	api-downgrade api-syncdb api-create-key \
+	full-up full-stop full-down full-re full-logs \
+	fclean \
+	up stop down logs migrate makemigrations initialize reinitialize \
+	superuser shell test \
+	dev-up dev-stop dev-down dev-re dev-logs
