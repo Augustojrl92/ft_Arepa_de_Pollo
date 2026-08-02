@@ -20,13 +20,13 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: trascendence
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${DB_NAME:-trascendence}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d trascendence"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-trascendence}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -46,10 +46,10 @@ services:
   db-backup:
     image: postgres:16-alpine
     environment:
-      POSTGRES_HOST: db
-      POSTGRES_DB: trascendence
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: ${DB_HOST:-db}
+      POSTGRES_DB: ${DB_NAME:-trascendence}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-21600}
       BACKUP_RETRY_SECONDS: ${BACKUP_RETRY_SECONDS:-300}
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
@@ -93,7 +93,7 @@ services:
       context: ./public_api
       dockerfile: Dockerfile.dev
     env_file:
-      - ./public_api/.env.example
+      - ./.env
     volumes:
       - ./public_api:/app
     ports:
