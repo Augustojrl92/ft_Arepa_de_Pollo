@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
 import { fetchMatches, MultiplayerMatch } from '@/lib/gameApi'
+import { subscribeGameSocket } from '@/lib/gameSocket'
 import styles from './GameNotifications.module.css'
 
 export default function GameNotifications() {
@@ -24,10 +25,10 @@ export default function GameNotifications() {
 		}
 
 		void refresh()
-		const interval = window.setInterval(() => void refresh(), 5000)
+		const unsubscribe = subscribeGameSocket({ onEvent: () => void refresh() })
 		return () => {
 			active = false
-			window.clearInterval(interval)
+			unsubscribe()
 		}
 	}, [])
 
