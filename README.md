@@ -71,8 +71,8 @@ time and passes them to the proxy:
 | Source | Example |
 |---|---|
 | loopback | `DNS:localhost`, `IP:127.0.0.1` |
-| machine name (`hostname`) | `DNS:SamGB4Pro`, `DNS:SamGB4Pro.local` |
-| current LAN address (`ip route get`) | `IP:172.16.16.112` |
+| machine name (`hostname`) | `DNS:<hostname>`, `DNS:<hostname>.local` |
+| current LAN address (`ip route get`) | `IP:<detected>` |
 
 The LAN address is read from the route actually used for outbound traffic, so it
 picks the real interface rather than one of the Docker bridges. Override either
@@ -87,40 +87,78 @@ Because the certificate changes, browsers show the warning again the first time.
 
 #### Reaching the app from another machine
 
-Campus addresses are handed out by DHCP and **do change** — so prefer the mDNS
-name over the IP:
-
-```
-https://<hostname>.local
-```
-
-Both are in the certificate, but only the name survives a new lease. This
-matters most for OAuth: `FT_REDIRECT_URI` has to match a URI registered on the
-42 application byte for byte, so an IP-based one would need re-registering every
-time the lease changes, possibly mid-evaluation. Register the `.local` name once
-and it keeps working.
-
-To serve the app under that name, point these at it in `.env`:
+By default everything points at `https://localhost`, which only works on the
+machine running the stack. To serve it under an address others can reach:
 
 ```bash
-FRONTEND_URL=https://<hostname>.local
-FT_REDIRECT_URI=https://<hostname>.local/api/auth/42/callback/
-CORS_ALLOWED_ORIGINS=https://<hostname>.local
-CSRF_TRUSTED_ORIGINS=https://<hostname>.local
+make evaluation                            # uses the detected LAN IP
+make evaluation EVAL_HOST=<hostname>.local # stable across DHCP leases
+make evaluation EVAL_HOST=localhost        # put it back
 ```
 
-`NEXT_PUBLIC_API_URL` stays empty — the frontend calls the API relative to
-whatever address it was loaded from, so it needs no change.
+That one command rewrites `FRONTEND_URL`, `FT_REDIRECT_URI`,
+`CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` in `.env`, reissues the
+certificate for the new address, and recreates the backend and frontend
+containers — `env_file` is only read when a container is created, so a plain
+restart would not pick the change up.
+
+It is safe to re-run: the rewrite replaces whatever host is currently
+configured rather than matching the literal string `localhost`, so it cannot
+accumulate. The previous file is kept as `.env.bak`.
+
+`NEXT_PUBLIC_API_URL` is deliberately left empty throughout — the frontend calls
+the API relative to whatever origin it was loaded from, so it never needs to
+change.
+
+##### Prefer the `.local` name over the IP
+
+Campus addresses come from DHCP and **do change** — ours moved twice in a single
+afternoon. Both the IP and the mDNS name are in the certificate, but only the
+name survives a new lease.
+
+This matters most for **OAuth**, the one part `make evaluation` cannot fix by
+itself: 42 only accepts a `redirect_uri` that is registered on the application,
+byte for byte. An IP-based URI has to be re-registered every time the lease
+changes — possibly mid-evaluation. Register the `.local` form **once**:
+
+```
+https://<hostname>.local/api/auth/42/callback/
+```
+
+and `make evaluation EVAL_HOST=<hostname>.local` will keep working forever
+without touching intra again. Keep the `https://localhost/...` URI registered
+alongside it for local work; 42 accepts several.
 
 mDNS resolution requires the *client* to support `.local` names: macOS and most
 Linux distributions do out of the box, Windows needs Bonjour installed. The IP
 is in the certificate as a fallback for clients that cannot resolve it.
 
-The evaluation-day procedure is therefore just:
+#### Evaluation-day procedure
 
 ```bash
-make certs-reset
+make evaluation EVAL_HOST=<hostname>.local   # or plain `make evaluation` for the IP
+make full-up
 ```
+
+Then check, before anyone is watching:
+
+```bash
+curl -sk https://localhost/api/health/
+docker compose -f docker-compose.dev.yml exec -T backend python manage.py shell -c \
+  "from sync.models import CampusUser; from django.contrib.auth.models import User; \
+   print('roster', CampusUser.objects.count(), '| superusers', User.objects.filter(is_superuser=True).count())"
+```
+
+You want a non-zero roster and at least one superuser. If the database was
+wiped, the roster has to be re-synced or parts of the app will fail quietly:
+
+```bash
+make back-syncapi MODE=full     # ~2 minutes
+```
+
+Say "https" out loud when handing over the URL. Browsers default to `http://`,
+there is no listener on port 80, and the resulting connection error looks like a
+broken stack.
 
 #### Django admin
 
