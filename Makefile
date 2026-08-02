@@ -228,6 +228,50 @@ certs-reset:
 	@echo "Your browser cached an exception for the old certificate, so it will"
 	@echo "warn again on the first visit — accept it once more."
 
+# ─── Evaluation ────────────────────────────────────────────────────────────────
+# Repoints the stack from localhost to an address other machines can reach, then
+# reissues the certificate and restarts what needs restarting.
+#
+#   make evaluation                      # uses the detected LAN IP
+#   make evaluation EVAL_HOST=$(HOST_NAME).local   # stable across DHCP leases
+#   make evaluation EVAL_HOST=localhost  # put everything back
+#
+# The previous .env is kept as .env.bak. Rewriting is idempotent: it replaces
+# whatever host is currently configured, so running it twice is harmless.
+EVAL_HOST ?= $(HOST_IP)
+
+evaluation:
+	@if [ -z "$(strip $(EVAL_HOST))" ]; then \
+		echo "Could not detect a LAN address. Pass one explicitly:"; \
+		echo "  make evaluation EVAL_HOST=10.11.12.13"; \
+		exit 1; \
+	fi
+	@if [ ! -f .env ]; then echo "No .env found. Copy .env.example first."; exit 1; fi
+	@cp .env .env.bak
+	@sed -i -E \
+		-e 's#^(FRONTEND_URL=)https?://[^/]*#\1https://$(EVAL_HOST)#' \
+		-e 's#^(FT_REDIRECT_URI=)https?://[^/]*#\1https://$(EVAL_HOST)#' \
+		-e 's#^(CORS_ALLOWED_ORIGINS=)https?://[^/,]*#\1https://$(EVAL_HOST)#' \
+		-e 's#^(CSRF_TRUSTED_ORIGINS=)https?://[^/,]*#\1https://$(EVAL_HOST)#' \
+		.env
+	@echo "Repointed .env at https://$(EVAL_HOST) (previous copy saved as .env.bak):"
+	@grep -E '^(FRONTEND_URL|FT_REDIRECT_URI|CORS_ALLOWED_ORIGINS|CSRF_TRUSTED_ORIGINS)=' .env | sed 's/^/    /'
+	$(MAKE) certs-reset
+	$(DOCKER_COMPOSE) up -d --force-recreate backend frontend
+	@echo ""
+	@echo "──────────────────────────────────────────────────────────────────────"
+	@echo "  Open:  https://$(EVAL_HOST)"
+	@echo ""
+	@echo "  42 OAuth will only work if this exact redirect URI is registered"
+	@echo "  on the intra application:"
+	@echo "      https://$(EVAL_HOST)/api/auth/42/callback/"
+	@echo "  An IP changes with the DHCP lease; $(HOST_NAME).local does not, so"
+	@echo "  prefer registering that one:"
+	@echo "      make evaluation EVAL_HOST=$(HOST_NAME).local"
+	@echo ""
+	@echo "  Revert with:  make evaluation EVAL_HOST=localhost"
+	@echo "──────────────────────────────────────────────────────────────────────"
+
 # ─── Total wipe ────────────────────────────────────────────────────────────
 fclean:
 	$(DOCKER_COMPOSE) down --volumes --rmi all --remove-orphans
@@ -260,6 +304,6 @@ dev-re: front-re
 			db-backup db-restore db-backup-ls \
 			db-backup-auto-up db-backup-auto-stop db-backup-auto-logs \
 	        full-up full-stop full-down full-re full-logs \
-        fclean certs-reset \
+        fclean certs-reset evaluation \
 		up stop down logs migrate makemigrations initialize reinitialize superuser shell test \
         dev-up dev-stop dev-down dev-re dev-logs
