@@ -1,4 +1,7 @@
+export type UserRole = "guest" | "student" | "admin"
+
 export interface User {
+	role: UserRole
 	id: number
 	username: string
 	email: string

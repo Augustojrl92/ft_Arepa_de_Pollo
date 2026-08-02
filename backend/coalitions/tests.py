@@ -1,13 +1,27 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from sync.models import Coalition, CoalitionScoreSnapshot
+from sync.models import CampusUser, Coalition, CoalitionScoreSnapshot
 
 
 class CoalitionPointsHistoryViewTests(TestCase):
 	def setUp(self):
 		self.user = User.objects.create_user(username='tester', password='secret123')
+		# Campus data now requires a linked 42 identity: an account without one is
+		# a guest and is refused. Give the fixture the entitlement it is testing.
+		now = timezone.now()
+		CampusUser.objects.create(
+			django_user=self.user,
+			intra_id=91001,
+			user_id=91001,
+			login='tester',
+			email='tester@student.42madrid.com',
+			display_name='Tester',
+			created_at=now,
+			updated_at=now,
+		)
 		access_token = str(RefreshToken.for_user(self.user).access_token)
 		self.client.defaults['HTTP_AUTHORIZATION'] = f'Bearer {access_token}'
 

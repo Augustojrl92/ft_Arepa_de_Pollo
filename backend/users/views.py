@@ -9,6 +9,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from authentication.permissions import IsStudentOrAdmin
 
 from sync.models import CampusUser
 
@@ -38,7 +39,7 @@ logger = logging.getLogger(__name__)
 # Create your views here.
 
 class UserDetailView(APIView):
-	permission_classes = [IsAuthenticated]
+	permission_classes = [IsStudentOrAdmin]
 
 	def get(self, request):
 		user_login = request.query_params.get('login')
@@ -61,7 +62,7 @@ class UserDetailView(APIView):
 
 
 class UserPointsHistoryView(APIView):
-	permission_classes = [IsAuthenticated]
+	permission_classes = [IsStudentOrAdmin]
 
 	def get(self, request):
 		user_login = request.query_params.get('login')
@@ -83,7 +84,7 @@ class UserPointsHistoryView(APIView):
 
 
 class FriendsMeView(APIView):
-	permission_classes = [IsAuthenticated]
+	permission_classes = [IsStudentOrAdmin]
 
 	def get(self, request):
 		payload = get_or_create_friends_payload_for_user(request.user, request=request)
@@ -91,7 +92,7 @@ class FriendsMeView(APIView):
 
 
 class UserHeartbeatView(APIView):
-	permission_classes = [IsAuthenticated]
+	permission_classes = [IsStudentOrAdmin]
 
 	def post(self, request):
 		user = request.user
@@ -119,7 +120,7 @@ class UserHeartbeatView(APIView):
 
 
 class FriendsRequestView(APIView):
-	permission_classes = [IsAuthenticated]
+	permission_classes = [IsStudentOrAdmin]
 
 	def get(self, request):
 		query = request.query_params.get('q', '')
@@ -174,7 +175,7 @@ class FriendsRequestView(APIView):
 
 
 class FriendsPendingView(APIView):
-	permission_classes = [IsAuthenticated]
+	permission_classes = [IsStudentOrAdmin]
 
 	def get(self, request):
 		payload = get_pending_friend_requests_payload_for_user(request.user, request=request)
@@ -182,7 +183,7 @@ class FriendsPendingView(APIView):
 
 
 class FriendsRelationView(APIView):
-	permission_classes = [IsAuthenticated]
+	permission_classes = [IsStudentOrAdmin]
 
 	def delete(self, request):
 		friend_login = request.data.get('login')
@@ -198,7 +199,7 @@ class FriendsRelationView(APIView):
 
 
 class UserPreferencesView(APIView):
-	permission_classes = [IsAuthenticated]
+	permission_classes = [IsStudentOrAdmin]
 
 	VALID_ITEMS_PER_PAGE = {10, 25, 50, 100}
 	VALID_THEME_MODES = {'light', 'dark', 'system'}
@@ -317,7 +318,7 @@ class UserMeAccountView(APIView):
 
 
 class UserAvatarView(APIView):
-	permission_classes = [IsAuthenticated]
+	permission_classes = [IsStudentOrAdmin]
 	parser_classes = [MultiPartParser, FormParser]
 
 	MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024
@@ -369,6 +370,10 @@ class UserAvatarView(APIView):
 		)
 	
 class UserAchievementsView(APIView):
+	# Was relying on the global default, which only requires authentication and
+	# would therefore have been readable by guests.
+	permission_classes = [IsStudentOrAdmin]
+
 	def get(self, req, login: str):
 		if not login:
 			return Response(

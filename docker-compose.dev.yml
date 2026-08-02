@@ -62,6 +62,25 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Catch-all SMTP server for development. Accepts every message and shows it in
+  # a web inbox at http://localhost:8025 instead of delivering anywhere, so
+  # verification and password-reset emails work without an MTA or a third-party
+  # account. Nothing ever leaves the machine.
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+      MP_MAX_MESSAGES: 500
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend

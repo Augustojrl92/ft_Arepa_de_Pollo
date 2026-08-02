@@ -2,6 +2,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from authentication.permissions import IsStudentOrAdmin
 
 from .services import (
 	_serialize_simple_coalitions,
@@ -12,7 +13,7 @@ from .services import (
 )
 
 class CoalitionSimpleView(APIView):
-	permission_classes = [IsAuthenticated]
+	permission_classes = [IsStudentOrAdmin]
 
 	def get(self, request):
 		coalition_slug = request.query_params.get('slug')
@@ -34,7 +35,7 @@ class CoalitionSimpleView(APIView):
 		)
 
 class UserRankingView(APIView):
-	permission_classes = [IsAuthenticated]
+	permission_classes = [IsStudentOrAdmin]
 
 	def get(self, request):
 		coalition_filter = request.query_params.get('coalition')
@@ -54,7 +55,7 @@ class UserRankingView(APIView):
 		)
 
 class CoalitionSingleDetailView(APIView):
-	permission_classes = [IsAuthenticated]
+	permission_classes = [IsStudentOrAdmin]
 
 	def get(self, request):
 		coalition_slug = request.query_params.get('coalition')
@@ -77,7 +78,7 @@ class CoalitionSingleDetailView(APIView):
 
 
 class CoalitionPointsHistoryView(APIView):
-	permission_classes = [IsAuthenticated]
+	permission_classes = [IsStudentOrAdmin]
 
 	def get(self, request):
 		coalition_slug = request.query_params.get('coalition')

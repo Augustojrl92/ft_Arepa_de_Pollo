@@ -91,6 +91,7 @@ export const useAuthStore = create<AuthState>()(
 
           set({
             user: {
+              role: profile.role ?? "guest",
               id: profile.user_id,
               username: profile.display_name,
               email: profile.email ?? "",

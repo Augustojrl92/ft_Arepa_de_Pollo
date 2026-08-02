@@ -2,6 +2,7 @@ import { useEffect, useState, type ChangeEvent } from 'react'
 import type { ProfilePreferences, RankingPerPage } from './types'
 import { X } from 'lucide-react'
 import CustomButton from '@/components/CustomButton'
+import { PasswordSettings } from './PasswordSettings'
 
 type UserPreferencesModalProps = {
 	isOpen: boolean
@@ -196,6 +197,8 @@ export function UserConfigurationModal({
 							</div>
 						</div>
 					</div>
+
+					<PasswordSettings />
 
 					<div className="rounded-xl border border-border bg-surface/40 p-3">
 						<div className="space-y-2">
