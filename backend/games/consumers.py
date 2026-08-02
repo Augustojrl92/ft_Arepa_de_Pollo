@@ -1,6 +1,6 @@
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
-from .events import game_user_group
+from config.realtime import user_realtime_group
 
 
 class GameConsumer(AsyncJsonWebsocketConsumer):
@@ -10,7 +10,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 			await self.close(code=4401)
 			return
 
-		self.user_group = game_user_group(user.id)
+		self.user_group = user_realtime_group(user.id)
 		await self.channel_layer.group_add(self.user_group, self.channel_name)
 		await self.accept()
 		await self.send_json({'type': 'game.connected'})
@@ -25,5 +25,5 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 			return
 		await self.send_json({'type': 'game.error', 'error': 'Unsupported message type'})
 
-	async def game_event(self, event):
+	async def realtime_event(self, event):
 		await self.send_json(event['payload'])

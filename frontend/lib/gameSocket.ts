@@ -10,8 +10,17 @@ export type GameSocketEvent = {
 	occurred_at: string
 }
 
+export type FriendSocketEvent = {
+	type: 'friend.event'
+	event: string
+	actor_login: string
+	occurred_at: string
+}
+
+export type RealtimeSocketEvent = GameSocketEvent | FriendSocketEvent
+
 type Subscriber = {
-	onEvent: (event: GameSocketEvent) => void
+	onEvent: (event: RealtimeSocketEvent) => void
 	onStatus?: (status: GameSocketStatus) => void
 }
 
@@ -79,9 +88,9 @@ function connect() {
 
 	nextSocket.addEventListener('message', (message) => {
 		try {
-			const payload = JSON.parse(message.data) as GameSocketEvent | { type: string }
-			if (payload.type === 'game.event') {
-				subscribers.forEach((subscriber) => subscriber.onEvent(payload as GameSocketEvent))
+			const payload = JSON.parse(message.data) as RealtimeSocketEvent | { type: string }
+			if (payload.type === 'game.event' || payload.type === 'friend.event') {
+				subscribers.forEach((subscriber) => subscriber.onEvent(payload as RealtimeSocketEvent))
 			}
 		} catch {
 			// Ignore malformed server messages and keep the live connection open.
