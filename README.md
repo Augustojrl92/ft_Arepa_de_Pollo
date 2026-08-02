@@ -23,6 +23,113 @@ make full-up
 
 This starts the frontend, backend, database, and supporting services from `docker-compose.dev.yml`.
 
+Then open:
+
+```
+https://localhost
+```
+
+### HTTPS
+
+Every connection from a browser, a script or an external API goes through an
+nginx reverse proxy that terminates TLS. **443 is the only port published to the
+host**: the frontend and the backend are reachable on the internal Docker
+network only, so there is no plain-HTTP way into the application. Traffic
+between containers stays unencrypted, which the subject allows.
+
+The proxy serves everything from a single origin, which is also why the frontend
+needs no API URL configured — it calls `/api/...` relative to whatever address
+it was loaded from:
+
+| Path | Served by |
+|---|---|
+| `/api/`, `/admin/`, `/static/`, `/media/` | Django (`backend:8000`) |
+| everything else | Next.js (`frontend:3000`) |
+
+Django itself is proxy-aware: `SECURE_PROXY_SSL_HEADER` makes it trust the
+`X-Forwarded-Proto` header the proxy sets, so it treats requests as secure and
+sets `Secure` cookies. That header can only come from the proxy, since nothing
+else can reach the container.
+
+#### Certificates
+
+On first start the proxy generates a **self-signed** certificate into the
+`tls_certs` volume. Browsers will warn once — choose *Advanced → Proceed*. That
+bypass exists because HSTS is deliberately not enabled; turning it on with a
+self-signed certificate removes the click-through and locks you out.
+
+A certificate is only issued when none exists, and the volume survives rebuilds,
+so it is not regenerated on its own. Issue a fresh one with:
+
+```bash
+make certs-reset
+```
+
+Nothing needs editing first. The target works out the names to certify at run
+time and passes them to the proxy:
+
+| Source | Example |
+|---|---|
+| loopback | `DNS:localhost`, `IP:127.0.0.1` |
+| machine name (`hostname`) | `DNS:SamGB4Pro`, `DNS:SamGB4Pro.local` |
+| current LAN address (`ip route get`) | `IP:172.16.16.112` |
+
+The LAN address is read from the route actually used for outbound traffic, so it
+picks the real interface rather than one of the Docker bridges. Override either
+part when you need to:
+
+```bash
+make certs-reset HOST_IP=10.11.12.13
+make certs-reset TLS_SAN=DNS:localhost,IP:127.0.0.1
+```
+
+Because the certificate changes, browsers show the warning again the first time.
+
+#### Reaching the app from another machine
+
+Campus addresses are handed out by DHCP and **do change** — so prefer the mDNS
+name over the IP:
+
+```
+https://<hostname>.local
+```
+
+Both are in the certificate, but only the name survives a new lease. This
+matters most for OAuth: `FT_REDIRECT_URI` has to match a URI registered on the
+42 application byte for byte, so an IP-based one would need re-registering every
+time the lease changes, possibly mid-evaluation. Register the `.local` name once
+and it keeps working.
+
+To serve the app under that name, point these at it in `.env`:
+
+```bash
+FRONTEND_URL=https://<hostname>.local
+FT_REDIRECT_URI=https://<hostname>.local/api/auth/42/callback/
+CORS_ALLOWED_ORIGINS=https://<hostname>.local
+CSRF_TRUSTED_ORIGINS=https://<hostname>.local
+```
+
+`NEXT_PUBLIC_API_URL` stays empty — the frontend calls the API relative to
+whatever address it was loaded from, so it needs no change.
+
+mDNS resolution requires the *client* to support `.local` names: macOS and most
+Linux distributions do out of the box, Windows needs Bonjour installed. The IP
+is in the certificate as a fallback for clients that cannot resolve it.
+
+The evaluation-day procedure is therefore just:
+
+```bash
+make certs-reset
+```
+
+#### Django admin
+
+```
+https://localhost/admin/
+```
+
+Create the first account with `make back-superuser`.
+
 ### Backend commands
 
 ```bash
@@ -43,7 +150,8 @@ make front-logs
 
 ### Useful notes
 
-- The backend reads its development configuration from `backend/.env`.
+- Configuration lives in `.env` at the repository root; copy `.env.example` to get started.
+- `FT_REDIRECT_URI` must be registered verbatim on the 42 application, and now uses `https://`.
 - The cron-based sync jobs are registered through Django and executed in the backend container.
 - The PWA manifest is exposed from the Next.js app router and the service worker is served from `frontend/public/sw.js`.
 
