@@ -24,3 +24,7 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 # so the header is dropped in development only. Production serves HTTPS and
 # keeps the default.
 SECURE_CROSS_ORIGIN_OPENER_POLICY = None
+
+# The proxy already redirects 80 -> 443, and leaving Django's own redirect on
+# makes `manage.py test` and container health checks bounce on plain HTTP.
+SECURE_SSL_REDIRECT = False

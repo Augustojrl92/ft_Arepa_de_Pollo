@@ -5,11 +5,30 @@ CSV_PATH ?= /app/evaluations_snapshot_round_apr_oct_2026.csv
 DRY_RUN ?=
 BACKUP_FILE ?=
 
+# ─── TLS certificate subject names ────────────────────────────────────────────
+# Detected at run time so a new DHCP lease never requires editing a file. The
+# machine name is included because it is stable across leases: prefer
+# https://$(HOST_NAME).local over the IP for anything you have to register
+# somewhere, such as the 42 OAuth redirect URI.
+#
+# Override either part when needed:
+#   make certs-reset HOST_IP=10.11.12.13
+#   make certs-reset TLS_SAN=DNS:localhost,IP:127.0.0.1
+HOST_IP ?= $(shell ip -4 route get 1.1.1.1 2>/dev/null | awk '{print $$7; exit}')
+HOST_NAME ?= $(shell hostname)
+
+TLS_SAN_BASE = DNS:localhost,DNS:$(HOST_NAME),DNS:$(HOST_NAME).local,IP:127.0.0.1
+ifneq ($(strip $(HOST_IP)),)
+TLS_SAN ?= $(TLS_SAN_BASE),IP:$(HOST_IP)
+else
+TLS_SAN ?= $(TLS_SAN_BASE)
+endif
+
 # Per-service default flags for `docker compose rm` regarding volumes.
 # Set these in the environment if you want different behavior, e.g.
 #   make back-down BACK_RM_VOLUMES=-v
 FRONT_RM_VOLUMES ?= -v
-BACK_RM_VOLUMES ?=
+BACK_RM_VOLUMES ?= -v
 
 # Helper: stop a specific service(s) only if any of them are running
 define stop_if_running
@@ -27,11 +46,11 @@ fi
 endef
 
 # Helper: stop selected services only if any of the important services are running
-# We consider frontend, backend, db, or db-backup as the key services for full-stop (OR)
+# We consider frontend, backend, db, or public_api as the key services for full-stop (OR)
 define stop_all_if_running
-@# Check full-stack services and stop only those actually running (simple OR check)
+@# Check frontend/backend/db/public_api and stop only those actually running (simple OR check)
 @running=""; \
-for svc in frontend backend db db-backup; do \
+for svc in frontend backend db public_api; do \
   $(DOCKER) ps --filter "label=com.docker.compose.service=$$svc" -q | grep -q . && running="$$running $$svc" || true; \
 done; \
 if [ -n "$$running" ]; then \
@@ -39,7 +58,7 @@ if [ -n "$$running" ]; then \
 	$(DOCKER_COMPOSE) stop $$running; \
 	echo "Stopped selected services:$$running"; \
 else \
-	echo "no selected services running (frontend/backend/db), skipping stop"; \
+	echo "no selected services running (frontend/backend/db/public_api), skipping stop"; \
 fi
 endef
 
@@ -54,7 +73,7 @@ front-stop:
 	$(call stop_if_running,frontend)
 
 front-down:
-	$(DOCKER_COMPOSE) rm -sf$(FRONT_RM_VOLUMES) frontend
+	$(DOCKER_COMPOSE) rm -sf $(FRONT_RM_VOLUMES) frontend
 
 front-re: front-down front-up
 
@@ -69,7 +88,7 @@ back-stop:
 	$(call stop_if_running,backend db)
 
 back-down:
-	$(DOCKER_COMPOSE) rm -sf$(BACK_RM_VOLUMES) backend db
+	$(DOCKER_COMPOSE) rm -sf $(BACK_RM_VOLUMES) backend db
 
 back-re: back-down back-up
 
@@ -131,6 +150,44 @@ db-backup-auto-stop:
 
 db-backup-auto-logs:
 	$(DOCKER_COMPOSE) logs -f db-backup
+# ─── Public API ────────────────────────────────────────────────────────────────
+api-up: back-up
+	$(DOCKER_COMPOSE) up -d --build public_api
+
+api-stop:
+	$(call stop_if_running,public_api)
+
+api-down:
+	$(DOCKER_COMPOSE) rm -sf public_api
+
+api-re: api-down api-up
+
+api-logs:
+	$(DOCKER_COMPOSE) logs -f public_api
+
+api-alembic-init:
+	$(DOCKER_COMPOSE) run --rm public_api alembic init alembic
+
+api-migrate:
+	$(DOCKER_COMPOSE) run --rm public_api alembic upgrade head
+
+api-revision:
+	@if [ -z "$(MSG)" ]; then echo "Usage: make api-revision MSG=init_public_api_keys"; exit 1; fi
+	$(DOCKER_COMPOSE) run --rm public_api alembic revision --autogenerate -m "$(MSG)"
+
+api-history:
+	$(DOCKER_COMPOSE) run --rm public_api alembic history
+
+api-current:
+	$(DOCKER_COMPOSE) run --rm public_api alembic current
+
+api-downgrade:
+	@if [ -z "$(REV)" ]; then echo "Uso: make api-downgrade REV=-1"; exit 1; fi
+	$(DOCKER_COMPOSE) run --rm public_api alembic downgrade "$(REV)"
+
+api-syncdb: api-migrate
+
+
 
 # ─── Full stack ────────────────────────────────────────────────────────────────
 full-up:
@@ -146,6 +203,74 @@ full-re: full-down full-up
 
 full-logs:
 	$(DOCKER_COMPOSE) logs -f
+
+# ─── TLS ───────────────────────────────────────────────────────────────────────
+# The proxy issues a self-signed certificate only when none exists, and keeps it
+# in a named volume so it survives rebuilds. Changing TLS_SAN therefore has no
+# effect on its own — the old certificate is still there. This throws it away so
+# the next start issues a new one for the current TLS_SAN.
+#
+# The volume is found by its compose label rather than by name, so this keeps
+# working whatever the project directory is called.
+certs-reset:
+	$(DOCKER_COMPOSE) rm -sf proxy
+	@vol="$$($(DOCKER) volume ls -q --filter label=com.docker.compose.volume=tls_certs)"; \
+	if [ -n "$$vol" ]; then \
+		$(DOCKER) volume rm $$vol; \
+	else \
+		echo "no tls_certs volume found, nothing to remove"; \
+	fi
+	@echo "Issuing certificate for: $(TLS_SAN)"
+	TLS_SAN="$(TLS_SAN)" $(DOCKER_COMPOSE) up -d proxy
+	@echo ""
+	@echo "Reach the app at https://localhost or https://$(HOST_NAME).local"
+	@echo "The .local name survives DHCP changes; the IP does not."
+	@echo "Your browser cached an exception for the old certificate, so it will"
+	@echo "warn again on the first visit — accept it once more."
+
+# ─── Evaluation ────────────────────────────────────────────────────────────────
+# Repoints the stack from localhost to an address other machines can reach, then
+# reissues the certificate and restarts what needs restarting.
+#
+#   make evaluation                      # uses the detected LAN IP
+#   make evaluation EVAL_HOST=$(HOST_NAME).local   # stable across DHCP leases
+#   make evaluation EVAL_HOST=localhost  # put everything back
+#
+# The previous .env is kept as .env.bak. Rewriting is idempotent: it replaces
+# whatever host is currently configured, so running it twice is harmless.
+EVAL_HOST ?= $(HOST_IP)
+
+evaluation:
+	@if [ -z "$(strip $(EVAL_HOST))" ]; then \
+		echo "Could not detect a LAN address. Pass one explicitly:"; \
+		echo "  make evaluation EVAL_HOST=10.11.12.13"; \
+		exit 1; \
+	fi
+	@if [ ! -f .env ]; then echo "No .env found. Copy .env.example first."; exit 1; fi
+	@cp .env .env.bak
+	@sed -i -E \
+		-e 's#^(FRONTEND_URL=)https?://[^/]*#\1https://$(EVAL_HOST)#' \
+		-e 's#^(FT_REDIRECT_URI=)https?://[^/]*#\1https://$(EVAL_HOST)#' \
+		-e 's#^(CORS_ALLOWED_ORIGINS=)https?://[^/,]*#\1https://$(EVAL_HOST)#' \
+		-e 's#^(CSRF_TRUSTED_ORIGINS=)https?://[^/,]*#\1https://$(EVAL_HOST)#' \
+		.env
+	@echo "Repointed .env at https://$(EVAL_HOST) (previous copy saved as .env.bak):"
+	@grep -E '^(FRONTEND_URL|FT_REDIRECT_URI|CORS_ALLOWED_ORIGINS|CSRF_TRUSTED_ORIGINS)=' .env | sed 's/^/    /'
+	$(MAKE) certs-reset
+	$(DOCKER_COMPOSE) up -d --force-recreate backend frontend
+	@echo ""
+	@echo "──────────────────────────────────────────────────────────────────────"
+	@echo "  Open:  https://$(EVAL_HOST)"
+	@echo ""
+	@echo "  42 OAuth will only work if this exact redirect URI is registered"
+	@echo "  on the intra application:"
+	@echo "      https://$(EVAL_HOST)/api/auth/42/callback/"
+	@echo "  An IP changes with the DHCP lease; $(HOST_NAME).local does not, so"
+	@echo "  prefer registering that one:"
+	@echo "      make evaluation EVAL_HOST=$(HOST_NAME).local"
+	@echo ""
+	@echo "  Revert with:  make evaluation EVAL_HOST=localhost"
+	@echo "──────────────────────────────────────────────────────────────────────"
 
 # ─── Total wipe ────────────────────────────────────────────────────────────
 fclean:
@@ -179,6 +304,6 @@ dev-re: front-re
 			db-backup db-restore db-backup-ls \
 			db-backup-auto-up db-backup-auto-stop db-backup-auto-logs \
 	        full-up full-stop full-down full-re full-logs \
-        fclean \
+        fclean certs-reset evaluation \
 		up stop down logs migrate makemigrations initialize reinitialize superuser shell test \
         dev-up dev-stop dev-down dev-re dev-logs

@@ -347,6 +347,7 @@ def send_friend_request(from_user, to_login):
 	with transaction.atomic():
 		from_list.friends_requests_sent.add(to_list)
 		to_list.friends_requests_received.add(from_list)
+	return to_user
 
 
 def accept_friend_request(current_user, from_login):
@@ -364,6 +365,7 @@ def accept_friend_request(current_user, from_login):
 		current_list.friends_requests_received.remove(from_list)
 		from_list.friends_requests_sent.remove(current_list)
 		current_list.friends.add(from_list)
+	return from_user
 
 
 def reject_friend_request(current_user, from_login):
@@ -380,6 +382,7 @@ def reject_friend_request(current_user, from_login):
 	with transaction.atomic():
 		current_list.friends_requests_received.remove(from_list)
 		from_list.friends_requests_sent.remove(current_list)
+	return from_user
 
 
 def withdraw_friend_request(current_user, to_login):
@@ -396,6 +399,7 @@ def withdraw_friend_request(current_user, to_login):
 	with transaction.atomic():
 		current_list.friends_requests_sent.remove(to_list)
 		to_list.friends_requests_received.remove(current_list)
+	return to_user
 
 
 def remove_friend(current_user, friend_login):
@@ -411,6 +415,7 @@ def remove_friend(current_user, friend_login):
 
 	with transaction.atomic():
 		current_list.friends.remove(friend_list)
+	return friend_user
 
 def get_achivements_for(login) -> list[UserAchievement] | None:
 	set_up_achievements()
