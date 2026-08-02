@@ -12,3 +12,6 @@ Thumbs.db
 
 # Backups locales
 backups/postgres/
+
+# Claude
+CLAUDE.md
