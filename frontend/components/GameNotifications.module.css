@@ -68,6 +68,16 @@
   color: var(--color-accent);
 }
 
+.sectionLabel {
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.55rem 1rem;
+  background: var(--color-card-hover);
+  color: var(--color-text-secondary);
+  font-size: 0.65rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
 .item {
   min-height: 4.5rem;
   display: grid;

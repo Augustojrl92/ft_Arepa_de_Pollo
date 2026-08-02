@@ -30,6 +30,7 @@ from .services import (
 	withdraw_friend_request,
 	get_achivements_for,
 )
+from .events import broadcast_friend_event
 
 
 logger = logging.getLogger(__name__)
@@ -129,10 +130,11 @@ class FriendsRequestView(APIView):
 		to_login = request.data.get('login')
 
 		try:
-			send_friend_request(request.user, to_login)
+			to_user = send_friend_request(request.user, to_login)
 		except FriendsRequestError as error:
 			return Response({'error': error.message}, status=error.http_status)
 
+		broadcast_friend_event([request.user, to_user], 'friend.request.created', request.user)
 		payload = get_or_create_friends_payload_for_user(request.user, request=request)
 		return Response({'detail': 'Friend request sent', 'friends': payload}, status=status.HTTP_201_CREATED)
 
@@ -145,14 +147,16 @@ class FriendsRequestView(APIView):
 
 		try:
 			if action == 'accept':
-				accept_friend_request(request.user, from_login)
+				from_user = accept_friend_request(request.user, from_login)
 				detail = 'Friend request accepted'
 			else:
-				reject_friend_request(request.user, from_login)
+				from_user = reject_friend_request(request.user, from_login)
 				detail = 'Friend request rejected'
 		except FriendsRequestError as error:
 			return Response({'error': error.message}, status=error.http_status)
 
+		event_name = 'friend.request.accepted' if action == 'accept' else 'friend.request.rejected'
+		broadcast_friend_event([request.user, from_user], event_name, request.user)
 		payload = get_or_create_friends_payload_for_user(request.user, request=request)
 		return Response({'detail': detail, 'friends': payload}, status=status.HTTP_200_OK)
 
@@ -160,10 +164,11 @@ class FriendsRequestView(APIView):
 		to_login = request.data.get('login')
 
 		try:
-			withdraw_friend_request(request.user, to_login)
+			to_user = withdraw_friend_request(request.user, to_login)
 		except FriendsRequestError as error:
 			return Response({'error': error.message}, status=error.http_status)
 
+		broadcast_friend_event([request.user, to_user], 'friend.request.withdrawn', request.user)
 		payload = get_or_create_friends_payload_for_user(request.user, request=request)
 		return Response({'detail': 'Friend request withdrawn', 'friends': payload}, status=status.HTTP_200_OK)
 
@@ -183,10 +188,11 @@ class FriendsRelationView(APIView):
 		friend_login = request.data.get('login')
 
 		try:
-			remove_friend(request.user, friend_login)
+			friend_user = remove_friend(request.user, friend_login)
 		except FriendsRequestError as error:
 			return Response({'error': error.message}, status=error.http_status)
 
+		broadcast_friend_event([request.user, friend_user], 'friend.removed', request.user)
 		payload = get_or_create_friends_payload_for_user(request.user, request=request)
 		return Response({'detail': 'Friend removed', 'friends': payload}, status=status.HTTP_200_OK)
 

@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import GameMatch
+from .events import broadcast_game_event
 from .services import GameError, create_invitation, resolve_invitation, serialize_match, submit_move
 
 
@@ -46,6 +47,7 @@ class MatchListView(APIView):
 		except GameError as error:
 			return _error_response(error)
 		match = _get_match(match.id, request.user)
+		broadcast_game_event(match, 'invitation.created')
 		return Response(serialize_match(match, request.user, request=request), status=status.HTTP_201_CREATED)
 
 
@@ -64,6 +66,13 @@ class MatchDetailView(APIView):
 		except GameError as error:
 			return _error_response(error)
 		match = _get_match(match.id, request.user)
+		event_name = {
+			'accept': 'invitation.accepted',
+			'decline': 'invitation.declined',
+			'cancel': 'invitation.cancelled',
+			'forfeit': 'match.forfeited',
+		}.get(request.data.get('action'), 'match.updated')
+		broadcast_game_event(match, event_name)
 		return Response(serialize_match(match, request.user, request=request))
 
 
@@ -76,6 +85,7 @@ class MatchMoveView(APIView):
 		except GameError as error:
 			return _error_response(error)
 		match = _get_match(match.id, request.user)
+		broadcast_game_event(match, 'match.move_submitted')
 		return Response(serialize_match(match, request.user, request=request))
 
 
@@ -95,4 +105,5 @@ class MatchRematchView(APIView):
 		except GameError as error:
 			return _error_response(error)
 		new_match = _get_match(new_match.id, request.user)
+		broadcast_game_event(new_match, 'rematch.created')
 		return Response(serialize_match(new_match, request.user, request=request), status=status.HTTP_201_CREATED)

@@ -332,6 +332,46 @@ Repository evidence:
 - `backend/cron_scheduler/apps.py`
 - `backend/sync/models.py`
 
+2. Real-time Features - Game Events (+2 points)
+
+The multiplayer game and its invitations use Django Channels instead of browser
+polling. HTTP endpoints remain authoritative for commands, while WebSockets
+broadcast state changes immediately to both players.
+
+Implementation highlights:
+
+- JWT authentication from the existing HttpOnly access-token cookie.
+- A private channel group for each authenticated user.
+- Redis-backed channel layers for multi-process event delivery.
+- Real-time invitation, acceptance, move, forfeit, rematch, and friendship events.
+- Heartbeats and exponential client reconnection.
+- No private move choices are included in WebSocket event payloads.
+
+Repository evidence:
+
+- `backend/authentication/websocket.py`
+- `backend/games/consumers.py`
+- `backend/games/events.py`
+- `backend/games/routing.py`
+- `frontend/lib/gameSocket.ts`
+- `frontend/components/GameNotifications.tsx`
+- `frontend/app/games/page.tsx`
+
+3. Complete Web-based Game (+2 points)
+
+PPTLS supports live matches between two authenticated friends. Invitations,
+hidden choices, scoring, win conditions, forfeits, rematches, rounds, and match
+state are validated and persisted by Django.
+
+Repository evidence:
+
+- `backend/games/models.py`
+- `backend/games/services.py`
+- `backend/games/views.py`
+- `backend/games/tests.py`
+- `backend/games/test_websockets.py`
+- `frontend/app/games/page.tsx`
+
 ## Individual Contributions
 
 ### Fernando Morenilla
