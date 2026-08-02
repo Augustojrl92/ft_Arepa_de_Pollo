@@ -45,20 +45,22 @@ else \
 fi
 endef
 
-# Helper: stop selected services only if any of the important services are running
-# We consider frontend, backend, db, or public_api as the key services for full-stop (OR)
+# Helper: stop every service the compose file defines, not a hardcoded list.
+# The list used to be written out by hand and drifted three times — once when
+# public_api was added, again with redis, again with proxy — each time leaving
+# services running after a "stop everything". Asking compose cannot go stale.
 define stop_all_if_running
-@# Check frontend/backend/db/public_api and stop only those actually running (simple OR check)
-@running=""; \
-for svc in frontend backend db public_api; do \
+@svcs="$$($(DOCKER_COMPOSE) config --services 2>/dev/null | tr '\n' ' ')"; \
+running=""; \
+for svc in $$svcs; do \
   $(DOCKER) ps --filter "label=com.docker.compose.service=$$svc" -q | grep -q . && running="$$running $$svc" || true; \
 done; \
 if [ -n "$$running" ]; then \
-	echo "Stopping selected services:$$running"; \
+	echo "Stopping:$$running"; \
 	$(DOCKER_COMPOSE) stop $$running; \
-	echo "Stopped selected services:$$running"; \
+	echo "Stopped:$$running"; \
 else \
-	echo "no selected services running (frontend/backend/db/public_api), skipping stop"; \
+	echo "nothing running out of:$$svcs"; \
 fi
 endef
 
@@ -82,18 +84,18 @@ front-logs:
 
 # ─── Backend ───────────────────────────────────────────────────────────────────
 back-up:
-	$(DOCKER_COMPOSE) up -d --build backend db
+	$(DOCKER_COMPOSE) up -d --build backend db redis
 
 back-stop:
-	$(call stop_if_running,backend db)
+	$(call stop_if_running,backend db redis)
 
 back-down:
-	$(DOCKER_COMPOSE) rm -sf $(BACK_RM_VOLUMES) backend db
+	$(DOCKER_COMPOSE) rm -sf $(BACK_RM_VOLUMES) backend db redis
 
 back-re: back-down back-up
 
 back-logs:
-	$(DOCKER_COMPOSE) logs -f backend db
+	$(DOCKER_COMPOSE) logs -f backend db redis
 
 back-migrate:
 	$(DOCKER_COMPOSE) run --rm backend python manage.py migrate
@@ -190,8 +192,11 @@ api-syncdb: api-migrate
 
 
 # ─── Full stack ────────────────────────────────────────────────────────────────
+# TLS_SAN is passed here as well as in certs-reset: otherwise a rebuild after
+# the certificate volume was removed would silently mint a localhost-only
+# certificate from the .env default.
 full-up:
-	$(DOCKER_COMPOSE) up -d --build
+	TLS_SAN="$(TLS_SAN)" $(DOCKER_COMPOSE) up -d --build
 
 full-stop:
 	$(call stop_all_if_running)
@@ -254,8 +259,26 @@ evaluation:
 		-e 's#^(CORS_ALLOWED_ORIGINS=)https?://[^/,]*#\1https://$(EVAL_HOST)#' \
 		-e 's#^(CSRF_TRUSTED_ORIGINS=)https?://[^/,]*#\1https://$(EVAL_HOST)#' \
 		.env
+	@# ALLOWED_HOSTS is a bare host list, not a URL, so it needs its own rule.
+	@#
+	@# It validates the Host header, i.e. the address a client used to reach
+	@# *this* server — every client sends the same value, so there is nothing
+	@# per-client to allow and Django accepts no CIDR ranges. What does change is
+	@# our own address, when the DHCP lease moves. The machine name is therefore
+	@# listed as well: it survives a new lease, so https://<host>.local keeps
+	@# working even when the IP below has gone stale.
+	@hosts="localhost,127.0.0.1,$(HOST_NAME),$(HOST_NAME).local"; \
+	case ",$$hosts," in \
+		*",$(EVAL_HOST),"*) ;; \
+		*) hosts="$$hosts,$(EVAL_HOST)" ;; \
+	esac; \
+	if grep -qE '^ALLOWED_HOSTS=' .env; then \
+		sed -i -E "s#^ALLOWED_HOSTS=.*#ALLOWED_HOSTS=$$hosts#" .env; \
+	else \
+		echo "ALLOWED_HOSTS=$$hosts" >> .env; \
+	fi
 	@echo "Repointed .env at https://$(EVAL_HOST) (previous copy saved as .env.bak):"
-	@grep -E '^(FRONTEND_URL|FT_REDIRECT_URI|CORS_ALLOWED_ORIGINS|CSRF_TRUSTED_ORIGINS)=' .env | sed 's/^/    /'
+	@grep -E '^(ALLOWED_HOSTS|FRONTEND_URL|FT_REDIRECT_URI|CORS_ALLOWED_ORIGINS|CSRF_TRUSTED_ORIGINS)=' .env | sed 's/^/    /'
 	$(MAKE) certs-reset
 	$(DOCKER_COMPOSE) up -d --force-recreate backend frontend
 	@echo ""
