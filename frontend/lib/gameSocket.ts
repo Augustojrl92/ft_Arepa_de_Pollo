@@ -37,8 +37,17 @@ let browserListenersAttached = false
 
 function socketUrl() {
 	const explicitUrl = process.env.NEXT_PUBLIC_WS_URL?.trim()
-	const baseUrl = explicitUrl || API_URL.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:')
-	return new URL('/ws/games/', `${baseUrl}/`).toString()
+	if (explicitUrl) {
+		return new URL('/ws/games/', `${explicitUrl}/`).toString()
+	}
+	if (API_URL) {
+		const baseUrl = API_URL.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:')
+		return new URL('/ws/games/', `${baseUrl}/`).toString()
+	}
+	// Empty API_URL means same-origin, routed through the nginx proxy — derive
+	// the ws(s) base from the page's own origin instead of an absolute API URL.
+	const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+	return `${protocol}//${window.location.host}/ws/games/`
 }
 
 function updateStatus(nextStatus: GameSocketStatus) {
