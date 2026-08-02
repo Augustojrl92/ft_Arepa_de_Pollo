@@ -915,6 +915,17 @@ html.dark {
     box-shadow: 0 0 0 3px rgb(74 222 128 / 16%);
   }
 
+  .game-live-badge.is-connecting > span,
+  .game-live-badge.is-reconnecting > span {
+    background: #facc15;
+    box-shadow: 0 0 0 3px rgb(250 204 21 / 16%);
+  }
+
+  .game-live-badge.is-disconnected > span {
+    background: #fb7185;
+    box-shadow: 0 0 0 3px rgb(251 113 133 / 16%);
+  }
+
   .game-match-commands {
     display: flex;
     align-items: center;

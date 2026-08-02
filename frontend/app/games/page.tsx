@@ -28,6 +28,7 @@ import {
 	submitMatchMove,
 	updateMatchInvitation,
 } from '@/lib/gameApi'
+import { GameSocketStatus, subscribeGameSocket } from '@/lib/gameSocket'
 import {
 	CHOICE_DETAILS,
 	RPSLS_CHOICES,
@@ -263,13 +264,24 @@ function ChoiceButtons({ disabled, selected, onChoice }: { disabled: boolean; se
 	return <div className="game-choices" aria-label="Elige tu jugada">{RPSLS_CHOICES.map((choice) => <button key={choice} type="button" disabled={disabled} className={selected === choice ? 'is-selected' : ''} onClick={() => onChoice(choice)}><span aria-hidden="true">{CHOICE_DETAILS[choice].symbol}</span><strong>{CHOICE_DETAILS[choice].label}</strong></button>)}</div>
 }
 
-function MultiplayerArena({ match, currentUserId, onMove, onRematch, onForfeit, busy }: {
+function GameLiveStatus({ status }: { status: GameSocketStatus }) {
+	const labels: Record<GameSocketStatus, string> = {
+		connecting: 'Conectando',
+		connected: 'Tiempo real',
+		reconnecting: 'Reconectando',
+		disconnected: 'Sin conexion',
+	}
+	return <span className={`game-live-badge is-${status}`}><span /> {labels[status]}</span>
+}
+
+function MultiplayerArena({ match, currentUserId, onMove, onRematch, onForfeit, busy, socketStatus }: {
 	match: MultiplayerMatch
 	currentUserId: number
 	onMove: (choice: RpslsChoice) => void
 	onRematch: () => void
 	onForfeit: () => void
 	busy: boolean
+	socketStatus: GameSocketStatus
 }) {
 	const meIsInviter = match.inviter.user_id === currentUserId
 	const me = meIsInviter ? match.inviter : match.opponent
@@ -287,8 +299,8 @@ function MultiplayerArena({ match, currentUserId, onMove, onRematch, onForfeit, 
 	return (
 		<>
 			<div className="games-titlebar games-subtitlebar">
-				<div><p className="games-eyebrow"><SwordsIcon size={15} /> Partida #{match.id}</p><h2>{me.display_name} contra {rival.display_name}</h2></div>
-				<div className="game-match-commands"><span className="game-live-badge"><span /> Sincronizada</span>{!finished && <button type="button" disabled={busy} onClick={onForfeit}>Abandonar</button>}</div>
+				<div><p className="games-eyebrow"><SwordsIcon size={15} /> Partida #{match.id}</p><h2>{me.login} vs {rival.login}</h2></div>
+				<div className="game-match-commands"><GameLiveStatus status={socketStatus} />{!finished && <button type="button" disabled={busy} onClick={onForfeit}>Abandonar</button>}</div>
 			</div>
 			<div className="game-score game-multiplayer-score" aria-label="Marcador">
 				<div><span>{me.display_name}</span><strong>{myScore}</strong></div>
@@ -320,11 +332,12 @@ function MultiplayerArena({ match, currentUserId, onMove, onRematch, onForfeit, 
 	)
 }
 
-function MultiplayerLobby({ matches, friends, target, busy, onTarget, onInvite, onResolve }: {
+function MultiplayerLobby({ matches, friends, target, busy, socketStatus, onTarget, onInvite, onResolve }: {
 	matches: MatchList
 	friends: FriendEntry[]
 	target: 3 | 5
 	busy: boolean
+	socketStatus: GameSocketStatus
 	onTarget: (target: 3 | 5) => void
 	onInvite: (friend: FriendEntry) => void
 	onResolve: (match: MultiplayerMatch, action: 'accept' | 'decline' | 'cancel') => void
@@ -333,7 +346,7 @@ function MultiplayerLobby({ matches, friends, target, busy, onTarget, onInvite, 
 	return (
 		<div className="game-lobby-grid">
 			<section className="game-panel game-invitations">
-				<h2><Clock3Icon size={18} /> Invitaciones</h2>
+				<div className="game-panel-heading"><h2><Clock3Icon size={18} /> Invitaciones</h2><GameLiveStatus status={socketStatus} /></div>
 				{matches.incoming.map((match) => <div className="game-invitation-row" key={match.id}><div><strong>{match.inviter.display_name}</strong><span>Primero a {match.target_score}</span></div><div className="game-row-actions"><button type="button" className="is-accept" disabled={busy} onClick={() => onResolve(match, 'accept')} title="Aceptar"><CheckIcon size={18} /></button><button type="button" disabled={busy} onClick={() => onResolve(match, 'decline')} title="Rechazar"><XIcon size={18} /></button></div></div>)}
 				{matches.outgoing.map((match) => <div className="game-invitation-row" key={match.id}><div><strong>{match.opponent.display_name}</strong><span>Esperando respuesta</span></div><button type="button" className="game-cancel-invite" disabled={busy} onClick={() => onResolve(match, 'cancel')}>Cancelar</button></div>)}
 				{matches.incoming.length + matches.outgoing.length === 0 && <p className="game-panel-empty">No hay invitaciones pendientes.</p>}
@@ -357,6 +370,7 @@ function FriendsGame() {
 	const [target, setTarget] = useState<3 | 5>(3)
 	const [busy, setBusy] = useState(false)
 	const [error, setError] = useState<string | null>(null)
+	const [socketStatus, setSocketStatus] = useState<GameSocketStatus>('connecting')
 
 	const refresh = useCallback(async () => {
 		try {
@@ -373,8 +387,10 @@ function FriendsGame() {
 	useEffect(() => {
 		void refresh()
 		void fetchMyFriends().then((payload) => setFriends(payload.friends ?? [])).catch(() => setFriends([]))
-		const interval = window.setInterval(() => void refresh(), 2000)
-		return () => window.clearInterval(interval)
+		return subscribeGameSocket({
+			onEvent: () => void refresh(),
+			onStatus: setSocketStatus,
+		})
 	}, [refresh])
 
 	const runAction = async (action: () => Promise<MultiplayerMatch>) => {
@@ -396,7 +412,7 @@ function FriendsGame() {
 	return (
 		<>
 			{error && <div className="game-error" role="alert">{error}</div>}
-			{selected && (selected.status === 'active' || selected.status === 'completed') ? <MultiplayerArena match={selected} currentUserId={user.id} busy={busy} onMove={(choice) => void runAction(() => submitMatchMove(selected.id, choice))} onRematch={() => void runAction(() => requestRematch(selected.id))} onForfeit={() => { if (window.confirm('¿Seguro que quieres abandonar? La victoria sera para tu rival.')) void runAction(() => updateMatchInvitation(selected.id, 'forfeit')) }} /> : <MultiplayerLobby matches={matches} friends={friends} target={target} busy={busy} onTarget={setTarget} onInvite={(friend) => void runAction(() => createMatchInvitation(friend.login, target))} onResolve={(match, action) => void runAction(() => updateMatchInvitation(match.id, action))} />}
+			{selected && (selected.status === 'active' || selected.status === 'completed') ? <MultiplayerArena match={selected} currentUserId={user.id} busy={busy} socketStatus={socketStatus} onMove={(choice) => void runAction(() => submitMatchMove(selected.id, choice))} onRematch={() => void runAction(() => requestRematch(selected.id))} onForfeit={() => { if (window.confirm('¿Seguro que quieres abandonar? La victoria sera para tu rival.')) void runAction(() => updateMatchInvitation(selected.id, 'forfeit')) }} /> : <MultiplayerLobby matches={matches} friends={friends} target={target} busy={busy} socketStatus={socketStatus} onTarget={setTarget} onInvite={(friend) => void runAction(() => createMatchInvitation(friend.login, target))} onResolve={(match, action) => void runAction(() => updateMatchInvitation(match.id, action))} />}
 		</>
 	)
 }

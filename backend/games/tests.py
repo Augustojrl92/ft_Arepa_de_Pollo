@@ -1,7 +1,8 @@
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
+from unittest.mock import patch
 
 from sync.models import CampusUser
 from users.models import FriendsList
@@ -9,6 +10,21 @@ from users.models import FriendsList
 from .models import GameMatch
 
 
+TEST_CHANNEL_LAYERS = {
+	'default': {
+		'BACKEND': 'channels.layers.InMemoryChannelLayer',
+	},
+}
+TEST_SIMPLE_JWT = {
+	'SIGNING_KEY': 'tests-only-signing-key-with-more-than-32-bytes',
+}
+
+
+@override_settings(
+	CHANNEL_LAYERS=TEST_CHANNEL_LAYERS,
+	SECRET_KEY='tests-only-secret-key-with-more-than-32-bytes',
+	SIMPLE_JWT=TEST_SIMPLE_JWT,
+)
 class MultiplayerGameApiTests(TestCase):
 	def setUp(self):
 		self.first = self._create_user('first', 101)
@@ -143,3 +159,35 @@ class MultiplayerGameApiTests(TestCase):
 		self.assertEqual(response.status_code, 200)
 		self.assertEqual(response.json()['status'], 'completed')
 		self.assertEqual(response.json()['winner_user_id'], self.first.id)
+
+	@patch('games.views.broadcast_game_event')
+	def test_invitation_emits_realtime_event(self, broadcast):
+		response = self.client.post(
+			'/api/games/matches/',
+			{'opponent_login': 'second', 'target_score': 3},
+			content_type='application/json',
+		)
+
+		self.assertEqual(response.status_code, 201)
+		broadcast.assert_called_once()
+		match, event_name = broadcast.call_args.args
+		self.assertEqual(match.id, response.json()['id'])
+		self.assertEqual(event_name, 'invitation.created')
+
+	@patch('games.views.broadcast_game_event')
+	def test_move_emits_realtime_event_without_choice_payload(self, broadcast):
+		match_id = self._invite_and_accept()
+		broadcast.reset_mock()
+		self._authenticate(self.first)
+
+		response = self.client.post(
+			f'/api/games/matches/{match_id}/move/',
+			{'choice': 'rock'},
+			content_type='application/json',
+		)
+
+		self.assertEqual(response.status_code, 200)
+		broadcast.assert_called_once()
+		match, event_name = broadcast.call_args.args
+		self.assertEqual(match.id, match_id)
+		self.assertEqual(event_name, 'match.move_submitted')
