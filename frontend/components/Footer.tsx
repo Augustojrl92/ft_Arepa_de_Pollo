@@ -13,7 +13,14 @@ export default function Footer() {
         </div>
 
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-6">
-          <nav className="flex items-center gap-1 p-1">
+          <nav className="flex flex-wrap items-center justify-center gap-1 p-1">
+            <Link
+              href="/status"
+              className="px-2 py-1.5 sm:px-3 text-text-secondary transition-all duration-200 hover:text-accent"
+            >
+              Status
+            </Link>
+            <div className="h-3 w-px bg-border/60 shrink-0" aria-hidden="true" />
             <Link
               href="/privacy"
               className="px-2 py-1.5 sm:px-3 text-text-secondary transition-all duration-200 hover:text-accent"
