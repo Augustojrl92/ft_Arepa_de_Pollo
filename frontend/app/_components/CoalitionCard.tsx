@@ -14,7 +14,7 @@ export default function CoalitionCard() {
 	const coalitionUserRank = user.coalitionUserRank ? `#${user.coalitionUserRank}` : "-"
 
 	return (
-		<CardContainer style={{ backgroundColor: coalition?.color }} className="relative flex flex-col justify-between gap-8 min-w-80 shrink-0">
+		<CardContainer style={{ backgroundColor: coalition?.color }} className="relative flex flex-col justify-between gap-8 w-full lg:min-w-80 lg:w-auto lg:shrink-0">
 			<div className="flex items-center justify-between">
 				<Medal />
 				<span className="uppercase text-sm font-bold bg-white/25 px-3 py-1 rounded-lg">Your ranks</span>

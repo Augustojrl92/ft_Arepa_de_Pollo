@@ -95,17 +95,17 @@ export default function CoalitionPointsChart({ userLogin }: CoalitionPointsChart
 
 	return (
 		<CardContainer>
-			<div className="flex items-center justify-between mb-4">
+			<div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
 				<div className="flex items-center gap-4">
 					<TrendingUp size={24} className="text-muted" color="var(--color-accent)" />
 					<h2 className="font-semibold">Evolución de Tus Puntos</h2>
 				</div>
-				<div className="flex items-center gap-2 bg-[#1E293B] py-2 px-3 rounded-lg">
+				<div className="flex items-center gap-2 bg-[#1E293B] py-2 px-3 rounded-lg self-start sm:self-auto">
 					{tabs.map((tab) => (
 						<button
 							key={tab.key}
-							className={`cursor-pointer px-4 py-2 rounded-md text-sm font-medium ${activeTab === tab.key ? 'bg-card-hover text-primary' : 'bg-muted text-text-secondary'}`}
-							onClick={() => setActiveTab(tab.key as any)}
+							className={`cursor-pointer px-3 py-2 rounded-md text-xs font-medium sm:px-4 sm:text-sm ${activeTab === tab.key ? 'bg-card-hover text-primary' : 'bg-muted text-text-secondary'}`}
+							onClick={() => setActiveTab(tab.key as 'weekly' | 'monthly' | 'cumulative')}
 						>
 							{tab.label}
 						</button>

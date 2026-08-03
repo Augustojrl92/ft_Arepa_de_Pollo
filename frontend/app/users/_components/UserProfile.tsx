@@ -169,12 +169,12 @@ export function UserProfile({
 				</div>
 
 				<div className="mt-8 w-full max-w-2xl rounded-2xl border border-border bg-card p-6">
-					<div className="grid grid-cols-3 gap-4">
+					<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
 						<div className="text-center">
 							<p className="text-[11px] uppercase tracking-[0.16em] text-text-secondary">Puntos de Coalicion</p>
 							<p className="mt-1 text-2xl font-black">{profile.points.toLocaleString('es-ES')}</p>
 						</div>
-						<div className="text-center border-x-2 border-border">
+						<div className="text-center border-y-2 border-border py-4 sm:border-x-2 sm:border-y-0 sm:py-0">
 							<p className="text-[11px] uppercase tracking-[0.16em] text-text-secondary">Ranking 42 Madrid</p>
 							<p className="mt-1 text-2xl font-black">{profile.campusRank ? `#${profile.campusRank}` : 'N/D'}</p>
 						</div>

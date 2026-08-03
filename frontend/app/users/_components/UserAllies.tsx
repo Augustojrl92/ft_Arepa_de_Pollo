@@ -317,12 +317,12 @@ export function UserAllies({ currentLogin }: UserAlliesProps) {
 				)}
 
 				{allyTab === 'received' && (
-					<div className="flex items-center justify-between gap-3">
+					<div className="space-y-3">
 						{incomingRequests.length === 0 && (
-							<p className="flex-1 rounded-lg border border-border bg-surface/40 p-3 text-sm text-text-secondary">No tienes solicitudes pendientes.</p>
+							<p className="rounded-lg border border-border bg-surface/40 p-3 text-sm text-text-secondary">No tienes solicitudes pendientes.</p>
 						)}
 						{incomingRequests.map((request) => (
-							<Link key={request.userId} href={`/users/${request.login}`} className="flex-1 flex items-center justify-between rounded-lg border border-border bg-surface/40 p-3">
+							<Link key={request.userId} href={`/users/${request.login}`} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface/40 p-3">
 								<div className="flex items-center gap-3">
 									<img src={request.avatarUrl} alt={`Avatar de ${request.login}`} className="h-15 w-15 rounded-full border border-border object-cover" />
 									<div className="flex-1 min-w-0">

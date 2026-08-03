@@ -15,10 +15,10 @@ export default function Home() {
 	if (isCoalitionsLoading && coalitions.length === 0) {
 		return (
 			<>
-				<section className="py-5 flex gap-5">
-					<div className="min-w-80 h-32 bg-surface-elevated rounded-lg animate-pulse" />
-					<div className="min-w-80 h-32 bg-surface-elevated rounded-lg animate-pulse" />
-					<div className="min-w-80 h-32 bg-surface-elevated rounded-lg animate-pulse" />
+				<section className="py-5 flex flex-col gap-5 lg:flex-row">
+					<div className="h-32 w-full bg-surface-elevated rounded-lg animate-pulse lg:min-w-80 lg:w-auto" />
+					<div className="h-32 w-full bg-surface-elevated rounded-lg animate-pulse lg:min-w-80 lg:w-auto" />
+					<div className="h-32 w-full bg-surface-elevated rounded-lg animate-pulse lg:min-w-80 lg:w-auto" />
 				</section>
 				<section>
 					<div className="h-80 bg-surface-elevated rounded-lg animate-pulse" />
@@ -29,7 +29,7 @@ export default function Home() {
 
 	return (
 		<>
-			<section className="py-5 flex gap-5">
+			<section className="py-5 flex flex-col gap-5 lg:flex-row">
 				<UserCard />
 				<TournamentCard />
 				<CoalitionCard />

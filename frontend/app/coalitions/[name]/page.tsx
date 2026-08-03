@@ -173,7 +173,7 @@ export default function CoalitionDetailPage({
 
 			<CardContainer className="p-6">
 				<p className="text-text-secondary text-sm uppercase font-semibold mb-6">Progresión de Puntos</p>
-				<div className="grid grid-cols-3 gap-4">
+				<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
 					<StatCard
 						title="Últimas 24h"
 						value={`${scoreChange24h >= 0 ? '+' : ''}${(scoreChange24h / 1000).toFixed(1)}k`}
@@ -201,7 +201,7 @@ export default function CoalitionDetailPage({
 					title={`Evolución de Puntos de ${coalition.name}`}
 				/>
 
-			<div className="grid grid-cols-2 gap-6">
+			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
 				<CardContainer className="p-6">
 					<p className="text-text-secondary text-sm uppercase font-semibold mb-6">Distribución de Niveles (Activos)</p>
 					<div className="flex flex-col gap-4">
