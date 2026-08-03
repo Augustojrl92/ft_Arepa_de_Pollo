@@ -2,14 +2,15 @@ from http.cookies import CookieError, SimpleCookie
 
 from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
-from django.contrib.auth.models import AnonymousUser
 from rest_framework.exceptions import AuthenticationFailed
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
 
 @database_sync_to_async
 def _get_user_from_access_token(raw_token):
+	from django.contrib.auth.models import AnonymousUser
+	from rest_framework_simplejwt.authentication import JWTAuthentication
+	from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+
 	if not raw_token:
 		return AnonymousUser()
 

@@ -19,6 +19,12 @@ logger = logging.getLogger(__name__)
 
 time_until_inactivity = 2 * 60
 
+from sync.models import CampusUser
+from .models import FriendsList, Achievement, UserAchievement
+from .achievement_functions import set_up_achievements
+
+time_until_inactivity = 2 * 60
+
 class FriendsRequestError(Exception):
 	def __init__(self, message, http_status):
 		super().__init__(message)
@@ -468,4 +474,4 @@ def get_achivements_for(login) -> list[UserAchievement] | None:
 	if missing_func:
 		print('Add the check function inside User/models.py->Achievement.__init__()', end='')
 		print(', the file User/achievement_functions.py exists to hold these functions.')
-	return achievements_of_user
+	return achievements_of_user;

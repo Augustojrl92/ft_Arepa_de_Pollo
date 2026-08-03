@@ -1,5 +1,7 @@
 from django.urls import path
 
+from .views import FriendsMeView, FriendsPendingView, FriendsRelationView, FriendsRequestView, UserAvatarView, UserDetailView, UserPreferencesView, UserAchievementsView
+# from .views import MessagesView
 
 from .views import (
 	FriendsMeView,

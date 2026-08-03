@@ -3,6 +3,7 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.utils import timezone
+from django.utils.functional import SimpleLazyObject
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from sync.models import CampusUser, CampusUserScoreSnapshot
@@ -73,6 +74,7 @@ class UserPointsHistoryViewTests(TestCase):
 			],
 		)
 
+<<<<<<< HEAD
 
 @override_settings(
 	CHANNEL_LAYERS=TEST_CHANNEL_LAYERS,
@@ -144,3 +146,12 @@ class FriendRealtimeEventTests(TestCase):
 		self.assertEqual({user.id for user in users}, {self.sender.id, self.receiver.id})
 		self.assertEqual(event_name, 'friend.request.accepted')
 		self.assertEqual(actor.id, self.receiver.id)
+=======
+	def test_get_or_create_friends_payload_accepts_lazy_users(self):
+		lazy_user = SimpleLazyObject(lambda: self.user)
+
+		payload = get_or_create_friends_payload_for_user(lazy_user)
+
+		self.assertEqual(payload['owner_user_id'], self.user.id)
+		self.assertEqual(payload['friends_count'], 0)
+>>>>>>> 5cbbf09 (feat: chat service with chats persistence at #ggc45)

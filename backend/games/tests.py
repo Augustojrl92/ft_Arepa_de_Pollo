@@ -1,5 +1,6 @@
+from django.conf import settings
 from django.contrib.auth.models import User
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 from unittest.mock import patch
@@ -18,6 +19,11 @@ TEST_CHANNEL_LAYERS = {
 TEST_SIMPLE_JWT = {
 	'SIGNING_KEY': 'tests-only-signing-key-with-more-than-32-bytes',
 }
+
+
+class GamesAppConfigTests(SimpleTestCase):
+	def test_games_app_is_installed(self):
+		self.assertIn('games', settings.INSTALLED_APPS)
 
 
 @override_settings(
