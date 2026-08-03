@@ -20,6 +20,7 @@ export const viewport: Viewport = {
 
 const inter = Inter({
   subsets: ['latin'],
+  preload: false,
 })
 
 export default function RootLayout({
