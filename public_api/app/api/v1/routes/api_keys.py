@@ -1,17 +1,27 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Security, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Security, status
 from fastapi.security import APIKeyHeader
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.api_key import ApiKey
 from app.schemas.api_key import ApiKeyCreate, ApiKeyCreateResponse, ApiKeyRead
 from app.services.api_key_service import ApiKeyService
+from app.services.rate_limit_service import (
+    RateLimitExceeded,
+    RateLimitService,
+    RateLimitUnavailable,
+)
 
 router = APIRouter(prefix="/api/v1/api-keys", tags=["api-keys"])
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+rate_limiter = RateLimitService(
+    redis_url=settings.redis_url,
+    window_seconds=settings.rate_limit_window_seconds,
+)
 
 
 def get_db():
@@ -23,6 +33,7 @@ def get_db():
 
 
 def require_api_key(
+    request: Request,
     raw_key: str | None = Security(api_key_header),
     db: Session = Depends(get_db),
 ) -> ApiKey:
@@ -39,6 +50,26 @@ def require_api_key(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired API key",
         )
+
+    try:
+        usage = rate_limiter.enforce(api_key)
+    except RateLimitExceeded as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=(
+                f"Rate limit exceeded: {exc.limit} requests per "
+                f"{exc.window_seconds} seconds"
+            ),
+            headers={"Retry-After": str(exc.retry_after)},
+        ) from exc
+    except RateLimitUnavailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Rate limiter unavailable",
+        ) from exc
+
+    request.state.api_key = api_key
+    request.state.rate_limit = usage
 
     return api_key
 

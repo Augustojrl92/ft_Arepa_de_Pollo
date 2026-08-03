@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     db_password: str = Field(alias="DB_PASSWORD")
     db_host: str = Field(alias="DB_HOST")
     db_port: int = Field(alias="DB_PORT")
+    redis_url: str = Field(default="redis://redis:6379/1", alias="REDIS_URL")
+    rate_limit_window_seconds: int = Field(
+        default=60,
+        ge=1,
+        alias="PUBLIC_API_RATE_LIMIT_WINDOW_SECONDS",
+    )
 
     @property
     def database_url(self) -> str:
