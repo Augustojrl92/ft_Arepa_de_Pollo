@@ -7,7 +7,29 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from urllib import error, request
+import ssl
+from urllib import error, parse, request
+
+
+# The dev stack terminates TLS with a self-signed certificate, which urllib
+# rejects by default. Verification is skipped only for loopback and private
+# addresses, so pointing these scripts at a real deployment still validates the
+# certificate chain properly.
+def _ssl_context_for(url: str):
+    host = (parse.urlsplit(url).hostname or "").lower()
+    is_local = (
+        host in {"localhost", "127.0.0.1", "::1"}
+        or host.endswith(".local")
+        or host.startswith(("10.", "192.168.", "172.16.", "172.17.", "172.18.", "172.19."))
+    )
+    if not is_local:
+        return None
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    return context
+
+
 
 
 RESET = "\033[0m"
@@ -67,7 +89,7 @@ def http_json(
 
     req = request.Request(url=url, data=body_bytes, headers=req_headers, method=method)
     try:
-        with request.urlopen(req, timeout=timeout) as resp:
+        with request.urlopen(req, timeout=timeout, context=_ssl_context_for(url)) as resp:
             raw = resp.read().decode("utf-8")
             parsed = json.loads(raw) if raw else None
             return HttpResult(resp.status, resp.reason, raw), parsed
@@ -131,7 +153,7 @@ def create_bootstrap_key(name: str) -> str | None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Automatic API key lifecycle test")
     parser.add_argument("name", help="Name used to create API key")
-    parser.add_argument("--base-url", default="http://localhost:8001", help="Public API base URL")
+    parser.add_argument("--base-url", default="https://localhost", help="Public API base URL")
     parser.add_argument("--timeout", type=float, default=8.0, help="HTTP timeout in seconds")
     args = parser.parse_args()
     key_name = args.name.strip()
