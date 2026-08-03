@@ -18,9 +18,9 @@ Create a key with a tiny quota and call a protected endpoint repeatedly:
 
 ```bash
 make api-create-key NAME="rate_demo" RPM=2
-curl -i "http://localhost:8001/api/v1/users?per_page=1" -H "X-API-Key: <key>"
-curl -i "http://localhost:8001/api/v1/users?per_page=1" -H "X-API-Key: <key>"
-curl -i "http://localhost:8001/api/v1/users?per_page=1" -H "X-API-Key: <key>"
+curl -i "https://localhost/api/v1/users?per_page=1" -H "X-API-Key: <key>"
+curl -i "https://localhost/api/v1/users?per_page=1" -H "X-API-Key: <key>"
+curl -i "https://localhost/api/v1/users?per_page=1" -H "X-API-Key: <key>"
 ```
 
 The third request should return `429`.

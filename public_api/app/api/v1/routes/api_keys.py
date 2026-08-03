@@ -60,7 +60,12 @@ def require_api_key(
                 f"Rate limit exceeded: {exc.limit} requests per "
                 f"{exc.window_seconds} seconds"
             ),
-            headers={"Retry-After": str(exc.retry_after)},
+            headers={
+                "Retry-After": str(exc.retry_after),
+                "X-RateLimit-Limit": str(exc.limit),
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": str(exc.retry_after),
+            },
         ) from exc
     except RateLimitUnavailable as exc:
         raise HTTPException(
