@@ -14,8 +14,21 @@ BACKUP_FILE ?=
 # Override either part when needed:
 #   make certs-reset HOST_IP=10.11.12.13
 #   make certs-reset TLS_SAN=DNS:localhost,IP:127.0.0.1
+UNAME_S := $(shell uname -s 2>/dev/null)
+
+# `ip route get` is Linux-only (iproute2). Windows uses PowerShell to inspect
+# the active route, while macOS uses the BSD-native route/ipconfig equivalent.
+ifeq ($(OS),Windows_NT)
+HOST_IP ?= $(shell C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/detect_lan_ip.ps1 2>/dev/null | tr -d '\r')
+HOST_NAME ?= $(COMPUTERNAME)
+else
+ifeq ($(UNAME_S),Darwin)
+HOST_IP ?= $(shell route get 1.1.1.1 2>/dev/null | awk '/interface: /{print $$2}' | xargs -I {} ipconfig getifaddr {} 2>/dev/null)
+else
 HOST_IP ?= $(shell ip -4 route get 1.1.1.1 2>/dev/null | awk '{print $$7; exit}')
+endif
 HOST_NAME ?= $(shell hostname)
+endif
 
 TLS_SAN_BASE = DNS:localhost,DNS:$(HOST_NAME),DNS:$(HOST_NAME).local,IP:127.0.0.1
 ifneq ($(strip $(HOST_IP)),)
@@ -257,33 +270,37 @@ evaluation:
 	fi
 	@if [ ! -f .env ]; then echo "No .env found. Copy .env.example first."; exit 1; fi
 	@cp .env .env.bak
-	@sed -i -E \
-		-e 's#^(FRONTEND_URL=)https?://[^/]*#\1https://$(EVAL_HOST)#' \
-		-e 's#^(FT_REDIRECT_URI=)https?://[^/]*#\1https://$(EVAL_HOST)#' \
-		-e 's#^(CORS_ALLOWED_ORIGINS=)https?://[^/,]*#\1https://$(EVAL_HOST)#' \
-		-e 's#^(CSRF_TRUSTED_ORIGINS=)https?://[^/,]*#\1https://$(EVAL_HOST)#' \
-		.env
-	@# ALLOWED_HOSTS is a bare host list, not a URL, so it needs its own rule.
-	@#
-	@# It validates the Host header, i.e. the address a client used to reach
-	@# *this* server — every client sends the same value, so there is nothing
-	@# per-client to allow and Django accepts no CIDR ranges. What does change is
-	@# our own address, when the DHCP lease moves. The machine name is therefore
-	@# listed as well: it survives a new lease, so https://<host>.local keeps
-	@# working even when the IP below has gone stale.
+	@set_env_url() { \
+		key="$$1"; value="$$2"; \
+		if grep -qE "^$${key}=" .env; then \
+			sed -i.sedtmp -E "s#^$${key}=.*#$${key}=$${value}#" .env; \
+			rm -f .env.sedtmp; \
+		else \
+			printf '%s=%s\n' "$$key" "$$value" >> .env; \
+		fi; \
+	}; \
+	set_env_url FRONTEND_URL "https://$(EVAL_HOST)"; \
+	set_env_url FT_REDIRECT_URI "https://$(EVAL_HOST)/api/auth/42/callback/"; \
+	set_env_url CORS_ALLOWED_ORIGINS "https://$(EVAL_HOST)"; \
+	set_env_url CSRF_TRUSTED_ORIGINS "https://$(EVAL_HOST)"
 	@hosts="localhost,127.0.0.1,$(HOST_NAME),$(HOST_NAME).local"; \
 	case ",$$hosts," in \
 		*",$(EVAL_HOST),"*) ;; \
 		*) hosts="$$hosts,$(EVAL_HOST)" ;; \
 	esac; \
 	if grep -qE '^ALLOWED_HOSTS=' .env; then \
-		sed -i -E "s#^ALLOWED_HOSTS=.*#ALLOWED_HOSTS=$$hosts#" .env; \
+		sed -i.sedtmp -E "s#^ALLOWED_HOSTS=.*#ALLOWED_HOSTS=$$hosts#" .env; \
+		rm -f .env.sedtmp; \
 	else \
-		echo "ALLOWED_HOSTS=$$hosts" >> .env; \
+		printf 'ALLOWED_HOSTS=%s\n' "$$hosts" >> .env; \
 	fi
 	@echo "Repointed .env at https://$(EVAL_HOST) (previous copy saved as .env.bak):"
 	@grep -E '^(ALLOWED_HOSTS|FRONTEND_URL|FT_REDIRECT_URI|CORS_ALLOWED_ORIGINS|CSRF_TRUSTED_ORIGINS)=' .env | sed 's/^/    /'
-	$(MAKE) certs-reset
+	@case "$(EVAL_HOST)" in \
+		[0-9]*.[0-9]*.[0-9]*.[0-9]*) eval_san="$(TLS_SAN_BASE),IP:$(EVAL_HOST)" ;; \
+		*) eval_san="$(TLS_SAN_BASE),DNS:$(EVAL_HOST)" ;; \
+	esac; \
+	"$(MAKE)" certs-reset TLS_SAN="$$eval_san"
 	$(DOCKER_COMPOSE) up -d --force-recreate backend frontend
 	@echo ""
 	@echo "──────────────────────────────────────────────────────────────────────"
