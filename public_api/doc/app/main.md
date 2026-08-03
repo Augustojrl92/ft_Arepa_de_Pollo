@@ -6,6 +6,7 @@ This file is the entry point of the public_api FastAPI application. It creates t
 ## What it defines
 - `app`: the FastAPI application instance.
 - `GET /api/v1/health`: a simple endpoint used to confirm the service is alive.
+- Public API routers for API keys, users, and coalitions.
 
 ## Why it matters
 Every FastAPI service needs a central application object. Uvicorn does not run the project folder by itself; it imports the `app` object from this file. That is why the Docker command points to `app.main:app`.
@@ -42,8 +43,10 @@ It does not touch the database or any other service. That is intentional. Health
 ## How it fits in the project
 - Docker starts this file through Uvicorn.
 - Swagger docs are automatically generated from this app.
-- Later routers for API keys will be included into this app.
+- API key, users, and coalitions routers are included from here.
 - This file will remain the composition root for the public API.
 
 ## Current scope
-Right now this file is intentionally minimal. It is only proving that the microservice boots correctly before more complex layers like database access, API key auth, and rate limiting are added.
+This file composes the FastAPI service. The route modules provide API key
+authentication, Redis-backed rate limiting, and read endpoints over the shared
+database.

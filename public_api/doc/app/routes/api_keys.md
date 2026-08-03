@@ -10,7 +10,8 @@ Its job is to receive HTTP requests, validate input, call the service layer, and
 - `router`: a FastAPI `APIRouter` instance for the API key feature.
 - `get_db()`: a dependency that creates and closes a SQLAlchemy session per request.
 - `api_key_header`: security scheme that reads `X-API-Key` from request headers.
-- `require_api_key()`: dependency that validates API keys through the service layer.
+- `require_api_key()`: dependency that validates API keys and enforces their
+  rate limit.
 - `POST /api/v1/api-keys`: create a new API key.
 - `GET /api/v1/api-keys/{api_key_id}`: read one API key by UUID.
 - `PUT /api/v1/api-keys/{api_key_id}`: update an API key.
@@ -19,9 +20,11 @@ Its job is to receive HTTP requests, validate input, call the service layer, and
 ## Security model
 - Header name: `X-API-Key`
 - Validation source: `ApiKeyService.validate_raw_key`
-- `GET`, `PUT`, `DELETE` require a valid key.
-- `POST` currently does not require a key (bootstrap mode).
+- Rate limit source: `RateLimitService.enforce`
+- `POST`, `GET`, `PUT`, and `DELETE` require a valid key.
 - Invalid, missing, inactive, or expired keys return `401 Unauthorized`.
+- Over-quota keys return `429 Too Many Requests`.
+- Redis/rate-limiter outages return `503 Service Unavailable`.
 
 ## Why it matters
 This file is the public HTTP surface for API key administration.
@@ -140,6 +143,7 @@ Why this pattern matters:
 ### Security dependency
 ```python
 def require_api_key(
+    request: Request,
     raw_key: str | None = Security(api_key_header),
     db: Session = Depends(get_db),
 ) -> ApiKey:
@@ -157,6 +161,9 @@ def require_api_key(
             detail="Invalid or expired API key",
         )
 
+    usage = rate_limiter.enforce(api_key)
+    request.state.rate_limit = usage
+
     return api_key
 ```
 
@@ -166,7 +173,8 @@ How it works:
 1. Reads `X-API-Key` from headers.
 2. Rejects missing header with `401`.
 3. Uses service-layer validation (hash match, active state, expiration).
-4. Returns the authenticated key record when valid.
+4. Enforces the key-specific Redis quota.
+5. Returns the authenticated key record when valid.
 
 ### `POST /api/v1/api-keys`
 ```python
@@ -344,4 +352,5 @@ This keeps the API predictable and aligned with standard HTTP semantics.
 This file defines the HTTP layer for API key management.
 The router is registered in `app/main.py`, so these endpoints are reachable through the FastAPI app.
 
-Security is now integrated at the route layer through `X-API-Key` validation on `GET`, `PUT`, and `DELETE`.
+Security is integrated at the route layer through `X-API-Key` validation and
+Redis-backed rate limiting on every API key management endpoint.

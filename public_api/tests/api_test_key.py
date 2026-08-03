@@ -93,18 +93,7 @@ def create_bootstrap_key(name: str) -> str | None:
 
     env = os.environ.copy()
     env["NAME"] = f"{name}_bootstrap"
-    bootstrap_code = (
-        "import os\n"
-        "from app.db.session import SessionLocal\n"
-        "from app.services.api_key_service import ApiKeyService\n"
-        "db = SessionLocal()\n"
-        "try:\n"
-        "    service = ApiKeyService(db)\n"
-        "    _, raw_key = service.create_api_key(name=os.getenv('NAME', 'bootstrap_key'), requests_per_minute=60)\n"
-        "    print('key:' + raw_key)\n"
-        "finally:\n"
-        "    db.close()\n"
-    )
+    env["RPM"] = "60"
 
     proc = subprocess.run(
         [
@@ -116,10 +105,12 @@ def create_bootstrap_key(name: str) -> str | None:
             "--rm",
             "-e",
             "NAME",
+            "-e",
+            "RPM",
             "public_api",
             "python",
-            "-c",
-            bootstrap_code,
+            "-m",
+            "app.cli.create_api_key",
         ],
         cwd=str(repo_root),
         env=env,
@@ -132,8 +123,8 @@ def create_bootstrap_key(name: str) -> str | None:
         return None
 
     for line in proc.stdout.splitlines():
-        if line.strip().startswith("key:"):
-            return line.split(":", 1)[1].strip()
+        if line.strip().startswith("key="):
+            return line.split("=", 1)[1].strip()
     return None
 
 
@@ -185,7 +176,7 @@ def main() -> int:
         f"{base}/api/v1/api-keys",
         timeout=args.timeout,
         headers=headers,
-        payload={"name": key_name, "requests_per_minute": 30},
+        payload={"name": key_name, "requests_per_minute": 2},
     )
     print_step("POST /api/v1/api-keys", create_res, f"name={key_name}")
     assert_status("create-key", create_res, 201, failures)
@@ -206,6 +197,21 @@ def main() -> int:
         return 1
 
     print(colorize(f"created key: {created_raw_key}", YELLOW, bold=True))
+
+    rate_headers = {"X-API-Key": created_raw_key}
+    for attempt, expected_status in enumerate([200, 200, 429], start=1):
+        rate_res, _ = http_json(
+            "GET",
+            f"{base}/api/v1/users?per_page=1",
+            timeout=args.timeout,
+            headers=rate_headers,
+        )
+        print_step(
+            f"GET /api/v1/users rate-limit attempt {attempt}",
+            rate_res,
+            "created key rpm=2",
+        )
+        assert_status(f"rate-limit-attempt-{attempt}", rate_res, expected_status, failures)
 
     # Read key
     get_res, _ = http_json(
@@ -228,36 +234,36 @@ def main() -> int:
     print_step("PUT /api/v1/api-keys/{id}", update_res, "rename + rpm")
     assert_status("update-key", update_res, 200, failures)
 
-    # # Revoke key
-    # delete_res, _ = http_json(
-    #     "DELETE",
-    #     f"{base}/api/v1/api-keys/{created_id}",
-    #     timeout=args.timeout,
-    #     headers=headers,
-    # )
-    # print_step("DELETE /api/v1/api-keys/{id}", delete_res, "revoke")
-    # assert_status("delete-key", delete_res, 200, failures)
+    # Revoke key
+    delete_res, _ = http_json(
+        "DELETE",
+        f"{base}/api/v1/api-keys/{created_id}",
+        timeout=args.timeout,
+        headers=headers,
+    )
+    print_step("DELETE /api/v1/api-keys/{id}", delete_res, "revoke")
+    assert_status("delete-key", delete_res, 200, failures)
 
-#     # Revoked key can no longer authenticate
-#     revoked_headers = {"X-API-Key": created_raw_key}
-#     revoked_check_res, _ = http_json(
-#         "GET",
-#         f"{base}/api/v1/api-keys/{created_id}",
-#         timeout=args.timeout,
-#         headers=revoked_headers,
-#     )
-#     print_step("GET with revoked key", revoked_check_res, "expected 401")
-#     assert_status("revoked-key-guard", revoked_check_res, 401, failures)
+    # Revoked key can no longer authenticate
+    revoked_headers = {"X-API-Key": created_raw_key}
+    revoked_check_res, _ = http_json(
+        "GET",
+        f"{base}/api/v1/api-keys/{created_id}",
+        timeout=args.timeout,
+        headers=revoked_headers,
+    )
+    print_step("GET with revoked key", revoked_check_res, "expected 401")
+    assert_status("revoked-key-guard", revoked_check_res, 401, failures)
 
-#     if failures:
-#         print(colorize("Smoke test failed", RED, bold=True))
-#         for failure in failures:
-#             print(colorize(f"- {failure}", RED))
-#         return 1
+    if failures:
+        print(colorize("Smoke test failed", RED, bold=True))
+        for failure in failures:
+            print(colorize(f"- {failure}", RED))
+        return 1
 
-#     print(colorize("Smoke test passed", GREEN, bold=True))
-#     return 0
+    print(colorize("Smoke test passed", GREEN, bold=True))
+    return 0
 
 
 if __name__ == "__main__":
-     raise SystemExit(main())
+    raise SystemExit(main())

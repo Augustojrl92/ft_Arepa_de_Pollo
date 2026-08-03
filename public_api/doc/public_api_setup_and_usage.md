@@ -8,6 +8,7 @@ make full-up
 
 This starts:
 - `db`
+- `redis`
 - `backend`
 - `frontend`
 - `public_api`
@@ -21,6 +22,7 @@ make api-up
 This starts:
 - `backend`
 - `db`
+- `redis`
 - `public_api`
 
 The `api-*` targets are the public API-specific rules in the root `Makefile`.
@@ -42,11 +44,14 @@ Removes the `public_api` container.
 ### `make api-re`
 Recreates the `public_api` container by running `api-down` followed by `api-up`.
 
-### `make api-logs`If you need a real key for testing:
+### `make api-logs`
+Streams logs for the `public_api` container.
+
+If you need a real key for testing:
 
 ```bash
 make api-create-key NAME="bootstrap_key"
-Streams logs for the `public_api` container.
+```
 
 ### `make api-alembic-init`
 Initializes Alembic scaffolding inside `public_api`.
@@ -114,6 +119,23 @@ The command prints:
 - the key name
 - the key prefix
 - the raw one-time key value
+
+## Authentication and rate limiting
+
+Every endpoint except `GET /api/v1/health` requires:
+
+```text
+X-API-Key: <valid_key>
+```
+
+API keys are stored hashed in `public_api_keys`. The raw key is only printed once
+when it is created.
+
+Each key has its own `requests_per_minute` quota. The API enforces this quota in
+Redis using a fixed 60-second window by default. When a key exceeds its quota, the
+API returns `429 Too Many Requests` with a `Retry-After` header. If Redis is not
+available, protected endpoints return `503 Rate limiter unavailable` instead of
+silently bypassing the limit.
 
 ## Current endpoints
 
@@ -261,6 +283,8 @@ curl -i "http://localhost:8001/api/v1/coalitions/45" \
 ### Common auth failures
 - Missing `X-API-Key` header: `401` (`Missing API key`)
 - Invalid, expired, or revoked key: `401` (`Invalid or expired API key`)
+- Rate limit exceeded: `429` (`Rate limit exceeded: N requests per 60 seconds`)
+- Redis unavailable: `503` (`Rate limiter unavailable`)
 
 ## api_test_key.py usage
 
@@ -271,16 +295,14 @@ This script runs a test against the current endpoints.
 Coverage includes:
 - health endpoint
 - API key lifecycle (create/read/update/revoke + revoked key guard)
+- per-key rate limit guard (`429`)
 - users list/detail checks
 - coalitions list/detail checks
 
 ### CLI options
 - Positional `name` (required): name used for `POST /api/v1/api-keys`
 - `--base-url` (optional, default `http://localhost:8001`): target API URL
-- `--api-key` (optional): bootstrap key for protected lifecycle tests
-	- if omitted, script reads `PUBLIC_API_KEY` from environment
 - `--timeout` (optional, default `8.0`): request timeout in seconds
 
 ### Missing required `name`
 If `name` is not provided, argparse prints usage and exits with an error.
-

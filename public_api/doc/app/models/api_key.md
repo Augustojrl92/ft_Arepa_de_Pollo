@@ -86,9 +86,11 @@ This updates automatically when the record changes.
 
 ## How it fits in the project
 - `api_key_service.py` creates and validates these rows.
+- `rate_limit_service.py` reads `requests_per_minute` from these rows and
+  enforces per-key quotas in Redis.
 - `schemas/api_key.py` validates input/output data around these rows.
 - Alembic migrations will create the actual `public_api_keys` table from this model.
-- Authentication and rate limiting will rely on this table later.
+- Authentication and rate limiting rely on this table.
 
 ## Security model
 This file is designed to support a secure API key workflow:
@@ -101,4 +103,5 @@ This file is designed to support a secure API key workflow:
 
 ## Current scope
 This is the database foundation for the public API’s authentication and quota system.
-It does not yet enforce authentication by itself; that will happen in service and route layers.
+The model does not enforce authentication by itself; service and route layers
+validate keys and apply quotas before protected endpoints run.

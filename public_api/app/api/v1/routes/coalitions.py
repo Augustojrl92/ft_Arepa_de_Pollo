@@ -16,6 +16,21 @@ from app.services.coalition_service import CoalitionService
 router = APIRouter(prefix="/api/v1/coalitions", tags=["coalitions"])
 
 
+def _build_coalition_read(coalition, member_count: int, active_member_count: int) -> CoalitionRead:
+    return CoalitionRead(
+        coalition_id=coalition.coalition_id,
+        name=coalition.name,
+        slug=coalition.slug,
+        image_url=coalition.image_url,
+        cover_url=coalition.cover_url,
+        color=coalition.color,
+        total_score=coalition.total_score,
+        member_count=int(member_count),
+        active_member_count=int(active_member_count),
+        updated_at=coalition.updated_at,
+    )
+
+
 @router.get("", response_model=CoalitionListResponse)
 def list_coalitions(
     page: int = Query(1, ge=1),
@@ -32,10 +47,7 @@ def list_coalitions(
 
     items: list[CoalitionRead] = []
     for coalition, member_count, active_member_count in rows:
-        item = CoalitionRead.model_validate(coalition)
-        item.member_count = int(member_count)
-        item.active_member_count = int(active_member_count)
-        items.append(item)
+        items.append(_build_coalition_read(coalition, member_count, active_member_count))
 
     return CoalitionListResponse(
         page=page,
@@ -62,15 +74,13 @@ def get_coalition(
     leader = service.get_leader(coalition.leader_user_id)
     change_24h, change_7d, change_30d = service.get_score_trends(coalition)
 
-    payload = CoalitionDetailRead.model_validate(coalition)
-    payload.member_count = member_count
-    payload.active_member_count = active_member_count
-    payload.score_trends = CoalitionScoreTrends(
+    score_trends = CoalitionScoreTrends(
         change_24h=change_24h,
         change_7d=change_7d,
         change_30d=change_30d,
     )
-    payload.top_members = [
+
+    top_member_payload = [
         CoalitionTopMember(
             intra_id=member.intra_id,
             login=member.login,
@@ -81,7 +91,8 @@ def get_coalition(
         )
         for member in top_members
     ]
-    payload.leader = (
+
+    leader_payload = (
         CoalitionLeaderSummary(
             intra_id=leader.intra_id,
             login=leader.login,
@@ -91,4 +102,10 @@ def get_coalition(
         if leader
         else None
     )
-    return payload
+
+    return CoalitionDetailRead(
+        **_build_coalition_read(coalition, member_count, active_member_count).model_dump(),
+        leader=leader_payload,
+        score_trends=score_trends,
+        top_members=top_member_payload,
+    )

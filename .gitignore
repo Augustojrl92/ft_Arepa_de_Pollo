@@ -10,6 +10,10 @@ Thumbs.db
 # Docker
 *.log
 
+# Python
+__pycache__/
+*.py[cod]
+
 # Backups locales
 backups/postgres/
 

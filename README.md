@@ -341,7 +341,7 @@ Key relationships:
 
 ## Modules
 
-The documented optional module implemented in this repository is:
+The documented optional modules implemented in this repository are:
 
 1. Custom Major - Campus Data Sync and Temporal Snapshot Engine (+2 points)
 
@@ -409,6 +409,32 @@ Repository evidence:
 - `backend/games/tests.py`
 - `backend/games/test_websockets.py`
 - `frontend/app/games/page.tsx`
+
+4. Public API - API Keys, Rate Limiting, and Data Endpoints (+2 points)
+
+The `public_api` FastAPI service exposes a documented public interface over the
+shared database. Protected endpoints require `X-API-Key`, raw keys are only
+shown once, stored keys are hashed, and each key has an enforced
+`requests_per_minute` quota backed by Redis.
+
+Implementation highlights:
+
+- Protected API key lifecycle endpoints using `POST`, `GET`, `PUT`, and `DELETE`.
+- User and coalition read endpoints with filtering, sorting, and pagination.
+- Redis-backed per-key rate limiting with `429 Too Many Requests` responses.
+- `make api-create-key` for creating a real one-time key during evaluation.
+- Public API documentation and smoke tests under `public_api/doc/` and
+  `public_api/tests/`.
+
+Repository evidence:
+
+- `public_api/app/api/v1/routes/api_keys.py`
+- `public_api/app/api/v1/routes/users.py`
+- `public_api/app/api/v1/routes/coalitions.py`
+- `public_api/app/services/api_key_service.py`
+- `public_api/app/services/rate_limit_service.py`
+- `public_api/doc/public_api_setup_and_usage.md`
+- `public_api/tests/api_test_key.py`
 
 ## Individual Contributions
 

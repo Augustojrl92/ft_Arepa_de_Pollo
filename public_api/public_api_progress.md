@@ -18,14 +18,15 @@
   4. DELETE /api/v1/api-keys/{id} (revoke/deactivate, 200/404)
   5. GET /api/v1/health (unauth, 200)
 - Security: X-API-Key header auth, dependency injection, 401 guards
+- Rate limiting: Redis-backed fixed-window quota per API key with 429 responses
 - Alembic scaffolding + migration applied in running container
-- Makefile: api-* rules (api-up, api-migrate, api-revision, etc.)
+- Makefile: api-* rules (api-up, api-migrate, api-create-key, api-revision, etc.)
 - Comprehensive docs in public_api/doc/public_api_instructions.md
 - Smoke test script (public_api/tests/api_test_key.py):
   - Positional `name` argument (required)
-  - --base-url, --api-key, --timeout options
-  - Colored ANSI output, partial/full modes
-  - Tested & passing with bootstrap key
+  - --base-url and --timeout options
+  - Colored ANSI output
+  - Creates its own bootstrap key and checks the 429 rate-limit guard
 
 ### Current State
 - Service: running, healthy, all 5 endpoints responding
@@ -88,7 +89,5 @@ make api-logs
 ```
 
 ## Next Steps
-- Decide which real data suite to implement (recommend: Users)
-- Build schemas → services → routes for chosen suite
-- Add pagination, filtering, sorting as needed
-- Optional: rate limiting (Redis), caching, OpenAPI customization
+- Keep endpoint examples and smoke tests aligned when routes change
+- Optional: caching and richer OpenAPI examples
