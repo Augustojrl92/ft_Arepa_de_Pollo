@@ -64,12 +64,19 @@ services:
 
   mailpit:
     image: axllent/mailpit:latest
-    ports:
-      - "8025:8025"
+    # Not published: reached over TLS at https://<host>:<port>/mailpit/ like
+    # everything else, so there is no plain-HTTP way to read captured mail.
+    expose:
+      - "8025"
+      - "1025"
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
       MP_MAX_MESSAGES: 500
+      # Mailpit serves its UI from / by default and emits absolute asset paths.
+      # Telling it the base path is what stops every asset 404ing behind the
+      # proxy — rewriting URLs in nginx would not be enough.
+      MP_WEBROOT: /mailpit/
     healthcheck:
       test: ["CMD", "/mailpit", "readyz"]
       interval: 5s
@@ -143,6 +150,7 @@ services:
       - frontend
       - backend
       - public_api
+      - mailpit
     restart: unless-stopped
 
 volumes:
