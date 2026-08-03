@@ -130,7 +130,9 @@ services:
     build:
       context: ./nginx
     ports:
-      - "443:443"
+      # Host port is unprivileged: evaluation machines refuse to bind low ports.
+      # nginx still listens on 443 inside the container.
+      - "${HTTPS_PORT:-8443}:443"
     environment:
       # Add the machine's LAN IP here when testing from another computer, e.g.
       #   TLS_SAN=DNS:localhost,IP:127.0.0.1,IP:10.19.200.165

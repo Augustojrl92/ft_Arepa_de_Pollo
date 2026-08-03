@@ -25,6 +25,10 @@ else
 ifeq ($(UNAME_S),Darwin)
 HOST_IP ?= $(shell route get 1.1.1.1 2>/dev/null | awk '/interface: /{print $$2}' | xargs -I {} ipconfig getifaddr {} 2>/dev/null)
 else
+# Host port for HTTPS. Evaluation machines cannot bind privileged ports, so
+# the proxy is published high; nginx still terminates TLS on 443 internally.
+HTTPS_PORT ?= 8443
+
 HOST_IP ?= $(shell ip -4 route get 1.1.1.1 2>/dev/null | awk '{print $$7; exit}')
 endif
 HOST_NAME ?= $(shell hostname)
@@ -245,7 +249,7 @@ certs-reset:
 	@echo "Issuing certificate for: $(TLS_SAN)"
 	TLS_SAN="$(TLS_SAN)" $(DOCKER_COMPOSE) up -d proxy
 	@echo ""
-	@echo "Reach the app at https://localhost or https://$(HOST_NAME).local"
+	@echo "Reach the app at https://localhost:$(HTTPS_PORT) or https://$(HOST_NAME).local:$(HTTPS_PORT)"
 	@echo "The .local name survives DHCP changes; the IP does not."
 	@echo "Your browser cached an exception for the old certificate, so it will"
 	@echo "warn again on the first visit — accept it once more."
@@ -279,10 +283,10 @@ evaluation:
 			printf '%s=%s\n' "$$key" "$$value" >> .env; \
 		fi; \
 	}; \
-	set_env_url FRONTEND_URL "https://$(EVAL_HOST)"; \
-	set_env_url FT_REDIRECT_URI "https://$(EVAL_HOST)/api/auth/42/callback/"; \
-	set_env_url CORS_ALLOWED_ORIGINS "https://$(EVAL_HOST)"; \
-	set_env_url CSRF_TRUSTED_ORIGINS "https://$(EVAL_HOST)"
+	set_env_url FRONTEND_URL "https://$(EVAL_HOST):$(HTTPS_PORT)"; \
+	set_env_url FT_REDIRECT_URI "https://$(EVAL_HOST):$(HTTPS_PORT)/api/auth/42/callback/"; \
+	set_env_url CORS_ALLOWED_ORIGINS "https://$(EVAL_HOST):$(HTTPS_PORT)"; \
+	set_env_url CSRF_TRUSTED_ORIGINS "https://$(EVAL_HOST):$(HTTPS_PORT)"
 	@hosts="localhost,127.0.0.1,$(HOST_NAME),$(HOST_NAME).local"; \
 	case ",$$hosts," in \
 		*",$(EVAL_HOST),"*) ;; \
@@ -294,7 +298,7 @@ evaluation:
 	else \
 		printf 'ALLOWED_HOSTS=%s\n' "$$hosts" >> .env; \
 	fi
-	@echo "Repointed .env at https://$(EVAL_HOST) (previous copy saved as .env.bak):"
+	@echo "Repointed .env at https://$(EVAL_HOST):$(HTTPS_PORT) (previous copy saved as .env.bak):"
 	@grep -E '^(ALLOWED_HOSTS|FRONTEND_URL|FT_REDIRECT_URI|CORS_ALLOWED_ORIGINS|CSRF_TRUSTED_ORIGINS)=' .env | sed 's/^/    /'
 	@case "$(EVAL_HOST)" in \
 		[0-9]*.[0-9]*.[0-9]*.[0-9]*) eval_san="$(TLS_SAN_BASE),IP:$(EVAL_HOST)" ;; \
@@ -304,11 +308,11 @@ evaluation:
 	$(DOCKER_COMPOSE) up -d --force-recreate backend frontend
 	@echo ""
 	@echo "──────────────────────────────────────────────────────────────────────"
-	@echo "  Open:  https://$(EVAL_HOST)"
+	@echo "  Open:  https://$(EVAL_HOST):$(HTTPS_PORT)"
 	@echo ""
 	@echo "  42 OAuth will only work if this exact redirect URI is registered"
 	@echo "  on the intra application:"
-	@echo "      https://$(EVAL_HOST)/api/auth/42/callback/"
+	@echo "      https://$(EVAL_HOST):$(HTTPS_PORT)/api/auth/42/callback/"
 	@echo "  An IP changes with the DHCP lease; $(HOST_NAME).local does not, so"
 	@echo "  prefer registering that one:"
 	@echo "      make evaluation EVAL_HOST=$(HOST_NAME).local"
