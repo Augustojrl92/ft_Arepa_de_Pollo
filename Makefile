@@ -14,7 +14,16 @@ BACKUP_FILE ?=
 # Override either part when needed:
 #   make certs-reset HOST_IP=10.11.12.13
 #   make certs-reset TLS_SAN=DNS:localhost,IP:127.0.0.1
+UNAME_S := $(shell uname -s 2>/dev/null)
+
+# `ip route get` is Linux-only (iproute2) — covers Linux and WSL2, which
+# reports itself as Linux. macOS has no `ip` by default, so it gets its own
+# branch using the BSD-native route/ipconfig equivalent.
+ifeq ($(UNAME_S),Darwin)
+HOST_IP ?= $(shell route get 1.1.1.1 2>/dev/null | awk '/interface: /{print $$2}' | xargs -I {} ipconfig getifaddr {} 2>/dev/null)
+else
 HOST_IP ?= $(shell ip -4 route get 1.1.1.1 2>/dev/null | awk '{print $$7; exit}')
+endif
 HOST_NAME ?= $(shell hostname)
 
 TLS_SAN_BASE = DNS:localhost,DNS:$(HOST_NAME),DNS:$(HOST_NAME).local,IP:127.0.0.1
@@ -248,12 +257,15 @@ evaluation:
 	fi
 	@if [ ! -f .env ]; then echo "No .env found. Copy .env.example first."; exit 1; fi
 	@cp .env .env.bak
-	@sed -i -E \
+	@# -i.sedtmp works identically on GNU sed (Linux/WSL2) and BSD sed (macOS);
+	@# plain -i does not, since BSD sed requires a backup suffix argument.
+	@sed -i.sedtmp -E \
 		-e 's#^(FRONTEND_URL=)https?://[^/]*#\1https://$(EVAL_HOST)#' \
 		-e 's#^(FT_REDIRECT_URI=)https?://[^/]*#\1https://$(EVAL_HOST)#' \
 		-e 's#^(CORS_ALLOWED_ORIGINS=)https?://[^/,]*#\1https://$(EVAL_HOST)#' \
 		-e 's#^(CSRF_TRUSTED_ORIGINS=)https?://[^/,]*#\1https://$(EVAL_HOST)#' \
 		.env
+	@rm -f .env.sedtmp
 	@echo "Repointed .env at https://$(EVAL_HOST) (previous copy saved as .env.bak):"
 	@grep -E '^(FRONTEND_URL|FT_REDIRECT_URI|CORS_ALLOWED_ORIGINS|CSRF_TRUSTED_ORIGINS)=' .env | sed 's/^/    /'
 	$(MAKE) certs-reset
