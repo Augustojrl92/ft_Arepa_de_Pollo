@@ -1,3 +1,10 @@
+.group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .container {
   position: relative;
 }
@@ -19,6 +26,16 @@
 .trigger[aria-expanded="true"] {
   background: var(--color-card-hover);
   color: var(--color-accent);
+}
+
+.triggerActive {
+  background: var(--color-card-hover);
+  color: var(--color-accent);
+}
+
+.triggerActive:hover {
+  background: var(--color-accent);
+  color: #ffffff;
 }
 
 .badge {
