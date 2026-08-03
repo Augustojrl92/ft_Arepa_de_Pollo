@@ -139,7 +139,7 @@ silently bypassing the limit.
 
 ## Current endpoints
 
-Base URL (local Docker): `http://localhost:8001`
+Base URL (local Docker): `https://localhost`
 
 ### `GET /api/v1/health`
 - Auth: none
@@ -149,7 +149,7 @@ Base URL (local Docker): `http://localhost:8001`
 Example:
 
 ```bash
-curl -i http://localhost:8001/api/v1/health
+curl -i https://localhost/api/v1/health
 ```
 
 ### `POST /api/v1/api-keys`
@@ -165,7 +165,7 @@ curl -i http://localhost:8001/api/v1/health
 Example:
 
 ```bash
-curl -i -X POST http://localhost:8001/api/v1/api-keys \
+curl -i -X POST https://localhost/api/v1/api-keys \
 	-H "Content-Type: application/json" \
 	-H "X-API-Key: <bootstrap_key>" \
 	-d '{"name":"team_key","requests_per_minute":60}'
@@ -180,7 +180,7 @@ curl -i -X POST http://localhost:8001/api/v1/api-keys \
 Example:
 
 ```bash
-curl -i http://localhost:8001/api/v1/api-keys/<uuid> \
+curl -i https://localhost/api/v1/api-keys/<uuid> \
 	-H "X-API-Key: <bootstrap_key>"
 ```
 
@@ -197,7 +197,7 @@ curl -i http://localhost:8001/api/v1/api-keys/<uuid> \
 Example:
 
 ```bash
-curl -i -X PUT http://localhost:8001/api/v1/api-keys/<uuid> \
+curl -i -X PUT https://localhost/api/v1/api-keys/<uuid> \
 	-H "Content-Type: application/json" \
 	-H "X-API-Key: <bootstrap_key>" \
 	-d '{"name":"team_key_updated","requests_per_minute":120}'
@@ -212,7 +212,7 @@ curl -i -X PUT http://localhost:8001/api/v1/api-keys/<uuid> \
 Example:
 
 ```bash
-curl -i -X DELETE http://localhost:8001/api/v1/api-keys/<uuid> \
+curl -i -X DELETE https://localhost/api/v1/api-keys/<uuid> \
 	-H "X-API-Key: <bootstrap_key>"
 ```
 
@@ -233,7 +233,7 @@ curl -i -X DELETE http://localhost:8001/api/v1/api-keys/<uuid> \
 Example:
 
 ```bash
-curl -i "http://localhost:8001/api/v1/users?page=1&per_page=10&coalition=the-alliance&is_active=true&sort_by=-level" \
+curl -i "https://localhost/api/v1/users?page=1&per_page=10&coalition=the-alliance&is_active=true&sort_by=-level" \
 	-H "X-API-Key: <bootstrap_key>"
 ```
 
@@ -246,7 +246,7 @@ curl -i "http://localhost:8001/api/v1/users?page=1&per_page=10&coalition=the-all
 Example:
 
 ```bash
-curl -i "http://localhost:8001/api/v1/users/12345" \
+curl -i "https://localhost/api/v1/users/12345" \
 	-H "X-API-Key: <bootstrap_key>"
 ```
 
@@ -263,7 +263,7 @@ curl -i "http://localhost:8001/api/v1/users/12345" \
 Example:
 
 ```bash
-curl -i "http://localhost:8001/api/v1/coalitions?page=1&per_page=10&sort_by=-total_score" \
+curl -i "https://localhost/api/v1/coalitions?page=1&per_page=10&sort_by=-total_score" \
 	-H "X-API-Key: <bootstrap_key>"
 ```
 
@@ -276,7 +276,7 @@ curl -i "http://localhost:8001/api/v1/coalitions?page=1&per_page=10&sort_by=-tot
 Example:
 
 ```bash
-curl -i "http://localhost:8001/api/v1/coalitions/45" \
+curl -i "https://localhost/api/v1/coalitions/45" \
 	-H "X-API-Key: <bootstrap_key>"
 ```
 
@@ -301,7 +301,7 @@ Coverage includes:
 
 ### CLI options
 - Positional `name` (required): name used for `POST /api/v1/api-keys`
-- `--base-url` (optional, default `http://localhost:8001`): target API URL
+- `--base-url` (optional, default `https://localhost`): target API URL
 - `--timeout` (optional, default `8.0`): request timeout in seconds
 
 ### Missing required `name`

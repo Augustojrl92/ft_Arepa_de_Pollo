@@ -114,8 +114,10 @@ services:
       PUBLIC_API_RATE_LIMIT_WINDOW_SECONDS: ${PUBLIC_API_RATE_LIMIT_WINDOW_SECONDS:-60}
     volumes:
       - ./public_api:/app
-    ports:
-      - "8001:8000"
+    # Not published: the proxy is the only way in, so the public API is only
+    # reachable over TLS at https://<host>/api/v1/ like everything else.
+    expose:
+      - "8000"
     depends_on:
       db:
         condition: service_healthy
@@ -138,6 +140,7 @@ services:
     depends_on:
       - frontend
       - backend
+      - public_api
     restart: unless-stopped
 
 volumes:
