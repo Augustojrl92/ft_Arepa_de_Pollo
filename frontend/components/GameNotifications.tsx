@@ -2,6 +2,8 @@
 
 import { BellIcon, CheckCircle2Icon, Gamepad2Icon, UserPlusIcon } from 'lucide-react'
 import Link from 'next/link'
+import { usePathname, useSearchParams } from 'next/navigation'
+import type { MouseEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
 
 import { fetchMatches, MultiplayerMatch } from '@/lib/gameApi'
@@ -21,6 +23,25 @@ export default function GameNotifications() {
 	const [friendActivities, setFriendActivities] = useState<FriendActivity[]>([])
 	const [isOpen, setIsOpen] = useState(false)
 	const containerRef = useRef<HTMLDivElement>(null)
+	const pathname = usePathname()
+	const searchParams = useSearchParams()
+
+	const handleDestinationClick = (
+		event: MouseEvent<HTMLAnchorElement>,
+		href: string,
+		afterClick?: () => void,
+	) => {
+		afterClick?.()
+		setIsOpen(false)
+
+		const currentQuery = searchParams.toString()
+		const currentHref = currentQuery ? `${pathname}?${currentQuery}` : pathname
+
+		if (currentHref === href) {
+			event.preventDefault()
+			window.location.assign(href)
+		}
+	}
 
 	useEffect(() => {
 		let active = true
@@ -97,10 +118,11 @@ export default function GameNotifications() {
 							className={styles.item}
 							href={`/users/${encodeURIComponent(activity.login)}`}
 							key={activity.id}
-							onClick={() => {
-								setFriendActivities((current) => current.filter((item) => item.id !== activity.id))
-								setIsOpen(false)
-							}}
+							onClick={(event) => handleDestinationClick(
+								event,
+								`/users/${encodeURIComponent(activity.login)}`,
+								() => setFriendActivities((current) => current.filter((item) => item.id !== activity.id)),
+							)}
 						>
 							<CheckCircle2Icon className={styles.icon} size={18} />
 							<span className={styles.copy}><strong>{activity.login}</strong> aceptó tu solicitud de amistad.<small>Ahora forma parte de tus amigos</small></span>
@@ -108,14 +130,14 @@ export default function GameNotifications() {
 					))}
 					{friendRequests.length > 0 && <p className={styles.sectionLabel}>Solicitudes de amistad</p>}
 					{friendRequests.map((request) => (
-						<Link className={styles.item} href={`/users/${encodeURIComponent(request.login)}`} key={`friend-${request.userId}`} onClick={() => setIsOpen(false)}>
+						<Link className={styles.item} href={`/users/${encodeURIComponent(request.login)}`} key={`friend-${request.userId}`} onClick={(event) => handleDestinationClick(event, `/users/${encodeURIComponent(request.login)}`)}>
 							<UserPlusIcon className={styles.icon} size={18} />
 							<span className={styles.copy}><strong>{request.login}</strong> quiere ser tu amigo.<small>Abre su perfil para responder</small></span>
 						</Link>
 					))}
 					{invitations.length > 0 && <p className={styles.sectionLabel}>Invitaciones de PPTLS</p>}
 					{invitations.map((match) => (
-							<Link className={styles.item} href="/games?view=friends" key={match.id} onClick={() => setIsOpen(false)}>
+							<Link className={styles.item} href="/games?view=friends" key={match.id} onClick={(event) => handleDestinationClick(event, '/games?view=friends')}>
 								<Gamepad2Icon className={styles.icon} size={18} />
 								<span className={styles.copy}><strong>{match.inviter.display_name}</strong> te ha invitado a jugar.<small>Primero a {match.target_score}</small></span>
 							</Link>
