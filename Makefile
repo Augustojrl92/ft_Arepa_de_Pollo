@@ -182,6 +182,10 @@ api-alembic-init:
 api-migrate:
 	$(DOCKER_COMPOSE) run --rm public_api alembic upgrade head
 
+api-create-key:
+	@if [ -z "$(NAME)" ]; then echo "Usage: make api-create-key NAME=bootstrap_key [EXPIRES_AT=2026-12-31T23:59:59+00:00] [RPM=60]"; exit 1; fi
+	$(DOCKER_COMPOSE) run --rm -e NAME="$(NAME)" -e EXPIRES_AT="$(EXPIRES_AT)" -e RPM="$(RPM)" public_api python -m app.cli.create_api_key
+
 api-revision:
 	@if [ -z "$(MSG)" ]; then echo "Usage: make api-revision MSG=init_public_api_keys"; exit 1; fi
 	$(DOCKER_COMPOSE) run --rm public_api alembic revision --autogenerate -m "$(MSG)"

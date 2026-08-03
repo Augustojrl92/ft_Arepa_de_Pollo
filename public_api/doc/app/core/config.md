@@ -78,4 +78,5 @@ Other files import `settings` instead of creating their own copies.
 - This file acts as the single source of truth for public_api runtime configuration.
 
 ## Current scope
-At this stage, this file is focused on database connectivity. It can later be expanded to include more public_api settings such as rate-limit defaults, secret keys, Redis URL, or debug flags.
+At this stage, this file holds database connectivity plus the Redis URL and
+rate-limit window used by protected public API endpoints.
