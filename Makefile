@@ -283,10 +283,10 @@ evaluation:
 			printf '%s=%s\n' "$$key" "$$value" >> .env; \
 		fi; \
 	}; \
-	set_env_url FRONTEND_URL "https://$(EVAL_HOST)"; \
-	set_env_url FT_REDIRECT_URI "https://$(EVAL_HOST)/api/auth/42/callback/"; \
-	set_env_url CORS_ALLOWED_ORIGINS "https://$(EVAL_HOST)"; \
-	set_env_url CSRF_TRUSTED_ORIGINS "https://$(EVAL_HOST)"
+	set_env_url FRONTEND_URL "https://$(EVAL_HOST):$(HTTPS_PORT)"; \
+	set_env_url FT_REDIRECT_URI "https://$(EVAL_HOST):$(HTTPS_PORT)/api/auth/42/callback/"; \
+	set_env_url CORS_ALLOWED_ORIGINS "https://$(EVAL_HOST):$(HTTPS_PORT)"; \
+	set_env_url CSRF_TRUSTED_ORIGINS "https://$(EVAL_HOST):$(HTTPS_PORT)"
 	@hosts="localhost,127.0.0.1,$(HOST_NAME),$(HOST_NAME).local"; \
 	case ",$$hosts," in \
 		*",$(EVAL_HOST),"*) ;; \
@@ -298,7 +298,7 @@ evaluation:
 	else \
 		printf 'ALLOWED_HOSTS=%s\n' "$$hosts" >> .env; \
 	fi
-	@echo "Repointed .env at https://$(EVAL_HOST) (previous copy saved as .env.bak):"
+	@echo "Repointed .env at https://$(EVAL_HOST):$(HTTPS_PORT) (previous copy saved as .env.bak):"
 	@grep -E '^(ALLOWED_HOSTS|FRONTEND_URL|FT_REDIRECT_URI|CORS_ALLOWED_ORIGINS|CSRF_TRUSTED_ORIGINS)=' .env | sed 's/^/    /'
 	@case "$(EVAL_HOST)" in \
 		[0-9]*.[0-9]*.[0-9]*.[0-9]*) eval_san="$(TLS_SAN_BASE),IP:$(EVAL_HOST)" ;; \
