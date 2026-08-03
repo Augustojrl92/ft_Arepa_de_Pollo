@@ -9,14 +9,14 @@
 
 import os
 
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.dev')
+
 from channels.routing import ProtocolTypeRouter, URLRouter
 # from channels.auth import AuthMiddlewareStack
 from django.core.asgi import get_asgi_application
 from authentication.websocket import CookieJWTAuthMiddleware
 from games.routing import websocket_urlpatterns as games_ws
 from chat.routing import websocket_urlpatterns as chat_ws
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.dev')
 
 django_asgi_app = get_asgi_application()
 

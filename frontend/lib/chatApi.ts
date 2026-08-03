@@ -1,13 +1,37 @@
+import { authFetchJson } from './authApi'
+
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/\$/, "")
+const CHAT_BASE_URL = API_URL ? `${API_URL}/api/chat` : "/api/chat"
+
 export async function fetchMessagesWith(login: string) {
-	const res = await fetch(`http://localhost:8000/api/chat/messages/${login}/`, {
-		credentials: 'include',
-	});
-	if (!res.ok) throw new Error('Failed to fetch messages');
-	const data = await res.json();
-	return data.messages as {
-		sender_login: string;
-		receiver_login: string;
-		message: string;
-		date_time: string;
-	}[];
+  const data = await authFetchJson<{
+    messages: Array<{
+      sender_login: string
+      receiver_login: string
+      message: string
+      date_time: string
+    }>
+  }>(
+    `${CHAT_BASE_URL}/messages/${login}/`,
+    { method: 'GET' },
+    'Failed to fetch messages',
+  )
+  return data.messages
+}
+
+export async function fetchConversations() {
+  const data = await authFetchJson<{
+    conversations: Array<{
+      id: number
+      login: string
+      name: string
+      last_message: string
+      last_time: string
+    }>
+  }>(
+    `${CHAT_BASE_URL}/conversations/`,
+    { method: 'GET' },
+    'Failed to fetch conversations',
+  )
+  return data.conversations
 }

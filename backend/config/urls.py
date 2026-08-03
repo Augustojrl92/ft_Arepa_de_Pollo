@@ -24,11 +24,8 @@ from .views import api_root, health_check, server_message, status_check
 from authentication import urls as auth_urls
 from coalitions import urls as coalition_urls
 from users import urls as user_urls
-<<<<<<< HEAD
 from games import urls as game_urls
-=======
 from chat import urls as chat_urls
->>>>>>> 5cbbf09 (feat: chat service with chats persistence at #ggc45)
 
 urlpatterns = [
     path('', api_root, name='api-root'),

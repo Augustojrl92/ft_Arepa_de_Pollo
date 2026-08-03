@@ -4,7 +4,6 @@ from django.db.models import Q, Max
 from sync.models import CampusUser
 from .models import Message
 
-
 def get_conversations_for_user(login: str) -> list[dict]:
 	me = CampusUser.objects.filter(login=login).first()
 	if me is None:
@@ -13,7 +12,7 @@ def get_conversations_for_user(login: str) -> list[dict]:
 	messages = (
 		Message.objects
 		.filter(Q(sender=me) | Q(receiver=me))
-		.select_related('sender', 'receiver')
+		.select_related('sender', 'receiver', 'sender__django_user', 'receiver__django_user')
 		.order_by('-date_time')
 	)
 
@@ -23,10 +22,12 @@ def get_conversations_for_user(login: str) -> list[dict]:
 		partner = msg.receiver if msg.sender_id == me.id else msg.sender
 
 		if partner.id in conversations_by_partner:
-			continue  # ya tenemos el más reciente (por el order_by -date_time)
+			continue
+
+		partner_conversation_id = partner.django_user_id if partner.django_user_id is not None else partner.id
 
 		conversations_by_partner[partner.id] = {
-			'id': partner.user_id,
+			'id': partner_conversation_id,
 			'login': partner.login,
 			'name': partner.display_name or partner.login,
 			'last_message': msg.message,

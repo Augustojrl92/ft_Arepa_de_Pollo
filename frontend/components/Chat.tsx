@@ -2,8 +2,9 @@
 
 import { ArrowLeftIcon, MessageCircleIcon, PlusIcon, XIcon } from "lucide-react";
 import { useMemo, useState, useRef, useEffect } from "react";
-import { fetchMessagesWith } from "@/lib/chatApi";
+// import { fetchMessagesWith } from "@/lib/chatApi";
 import { useAuthStore } from "@/hooks";
+import { fetchConversations, fetchMessagesWith } from "@/lib/chatApi";
 
 type ChatMessage = {
 	id: number;
@@ -213,9 +214,10 @@ export default function Chat() {
 	const socketRef = useRef<WebSocket | null>(null);
 
 	useEffect(() => {
-		console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAA")
+		if (!myLogin) return;
 		let isCleaningUp = false;
-		const chatSocket = new WebSocket(`ws://localhost:8000/ws/chat/`);
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+		const chatSocket = new WebSocket(`${protocol}//${window.location.host}/ws/chat/`)
 		socketRef.current = chatSocket;
 
 		chatSocket.onopen = () => console.log('Conectado al chat WebSocket');
@@ -243,7 +245,6 @@ export default function Chat() {
 						text: data.message,
 						time: new Date(data.timestamp).toLocaleTimeString(),
 					};
-
 					if (exists) {
 						return prev.map((conv) =>
 							conv.id === data.from_user_id
@@ -298,8 +299,39 @@ export default function Chat() {
 				chatSocket.close();
 			}
 		};
-	}, []);
+	}, [myLogin]);
+	useEffect(() => {
+		if (!myLogin) return;
 
+		let isCancelled = false;
+
+		fetchConversations()
+			.then((rows) => {
+				if (isCancelled) return;
+
+				setConversations((prev) => {
+					const existingIds = new Set(prev.map((c) => c.id));
+					const newOnes: ChatConversation[] = rows
+						.filter((row) => !existingIds.has(row.id))
+						.map((row) => ({
+							id: row.id,
+							name: row.name,
+							login: row.login,
+							status: 'Desconectado', // se actualizará vía status_update si llega
+							lastMessage: row.last_message,
+							lastTime: new Date(row.last_time).toLocaleTimeString(),
+							messages: [],
+						}));
+
+					return [...prev, ...newOnes];
+				});
+			})
+			.catch((err) => console.error('Error cargando conversaciones:', err));
+
+		return () => {
+			isCancelled = true;
+		};
+	}, [myLogin]);
 	const filteredUsers = useMemo(() => {
 		const normalizedTerm = searchTerm.trim().toLowerCase();
 		if (!normalizedTerm) {

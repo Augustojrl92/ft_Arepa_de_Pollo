@@ -4,9 +4,6 @@ from datetime import datetime
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 
-from sync.models import CampusUser
-from .models import Message
-
 class DirectChatConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
@@ -44,6 +41,9 @@ class DirectChatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _save_message(self, sender_login, recipient_login, message_text):
+        from sync.models import CampusUser
+        from .models import Message
+
         sender_user = CampusUser.objects.filter(login=sender_login).first()
         recipient_user = CampusUser.objects.filter(login=recipient_login).first()
 
