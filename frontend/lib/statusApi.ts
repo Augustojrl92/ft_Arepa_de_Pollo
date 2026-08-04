@@ -4,10 +4,11 @@ const STATUS_ENDPOINT = `${API_URL}/api/status/`
 export type SystemStatus = {
 	service: string
 	status: "ok" | "error"
+	backend: "ok" | "error"
 	database: "ok" | "error"
 	last_sync: string | null
 	timestamp: string
-	error?: string
+	errors?: string[]
 }
 
 export const fetchSystemStatus = async (): Promise<SystemStatus> => {
@@ -18,8 +19,11 @@ export const fetchSystemStatus = async (): Promise<SystemStatus> => {
 
 	const payload = await response.json().catch(() => null) as SystemStatus | null
 
-	if (!response.ok || payload === null) {
-		throw new Error(payload?.error ?? `No se pudo consultar ${STATUS_ENDPOINT}`)
+	if (payload === null) {
+		throw new Error(`No se pudo consultar ${STATUS_ENDPOINT}`)
+	}
+	if (!response.ok && payload.status !== "error") {
+		throw new Error(payload.errors?.join(". ") ?? `No se pudo consultar ${STATUS_ENDPOINT}`)
 	}
 
 	return payload
