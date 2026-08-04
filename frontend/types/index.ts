@@ -1,5 +1,5 @@
 export type UserRole = "guest" | "student" | "admin"
-
+ 
 export interface User {
 	role: UserRole
 	id: number
@@ -16,7 +16,7 @@ export interface User {
 	evalPoints: number
 	hasCustomAvatar?: boolean
 }
-
+ 
 export interface UserDetails {
 	id: number
 	login: string
@@ -32,14 +32,14 @@ export interface UserDetails {
 	active: boolean
 	hasAccount: boolean
 }
-
+ 
 export interface PointsHistoryEntry {
 	date: string
 	points: number
 	coalitionRank?: number | null
 	campusRank?: number | null
 }
-
+ 
 export interface FriendEntry {
 	userId: number
 	username: string
@@ -48,7 +48,7 @@ export interface FriendEntry {
 	avatarUrl: string
 	active: boolean
 }
-
+ 
 export interface FriendsPayload {
 	ownerUserId: number
 	friendsCount?: number
@@ -58,7 +58,7 @@ export interface FriendsPayload {
 	pendingReceived: FriendEntry[]
 	pendingSent: FriendEntry[]
 }
-
+ 
 export interface TopMember {
 	login: string
 	displayName: string
@@ -66,7 +66,7 @@ export interface TopMember {
 	points: number
 	avatar: string
 }
-
+ 
 interface CoalitionDetails {
 	levelDistribution: { range: string, count: number }[]
 	averageLevel: number
@@ -84,7 +84,7 @@ interface CoalitionDetails {
 	projectsDeliveredTotal: number
 	projectsDeliveredCurrentSeason: number
 }
-
+ 
 export interface Coalition {
 	id: number
 	name: string
@@ -102,7 +102,7 @@ export interface Coalition {
 	projectsDeliveredCurrentSeason: number
 	details?: CoalitionDetails
 }
-
+ 
 export interface RankingEntry {
 	rank: number
 	coalitionRank: number
@@ -115,7 +115,7 @@ export interface RankingEntry {
 	evaluationsDoneTotal: number
 	evaluationsDoneCurrentSeason: number
 }
-
+ 
 export interface RankingPage {
 	users: RankingEntry[]
 	page: number
@@ -123,3 +123,42 @@ export interface RankingPage {
 	total: number
 	totalPages: number
 }
+ 
+export type ChatMessage = {
+  id: number;
+  author: "me" | "friend";
+  text: string;
+  time: string;
+};
+ 
+export type ChatConversation = {
+  id: number;
+  name: string;
+  login: string;
+  status: string;
+  lastMessage: string;
+  lastTime: string;
+  messages: ChatMessage[];
+  isTyping: boolean;
+};
+ 
+export type ChatUser = {
+  id: number;
+  name: string;
+  login: string;
+  status: string;
+};
+ 
+export type ChatWindowProps = {
+  open: boolean;
+  onClose: () => void;
+  selectedConversationId: number | null;
+  onSelectConversation: (conversationId: number) => void;
+  onBack: () => void;
+  conversations: ChatConversation[];
+  onOpenNewChat: () => void;
+  newMessage: string;
+  onNewMessageChange: (value: string) => void;
+  onSendMessage: (to_user_id: number, to_user_login: string, message: string) => void;
+  onTyping: ()=> void;
+};
