@@ -80,6 +80,21 @@ def _has_open_match(first_user, second_user):
 	).exists()
 
 
+def get_busy_user_ids(user_ids):
+	user_ids = set(user_ids)
+	if not user_ids:
+		return set()
+	active_matches = GameMatch.objects.filter(status=GameMatch.Status.ACTIVE).filter(
+		Q(inviter_id__in=user_ids) | Q(opponent_id__in=user_ids)
+	).values_list('inviter_id', 'opponent_id')
+	return {
+		user_id
+		for participants in active_matches
+		for user_id in participants
+		if user_id in user_ids
+	}
+
+
 def create_invitation(user, opponent_login, target_score=3):
 	opponent = _find_user(opponent_login)
 	if opponent.id == user.id:
@@ -118,6 +133,17 @@ def resolve_invitation(match_id, user, action):
 	if action == 'accept':
 		if user.id != match.opponent_id:
 			raise GameError('Only the invited player can accept', 403)
+		participant_ids = {match.inviter_id, match.opponent_id}
+		list(
+			get_user_model().objects.select_for_update()
+			.filter(pk__in=participant_ids)
+			.order_by('pk')
+		)
+		busy_user_ids = get_busy_user_ids(participant_ids)
+		if match.opponent_id in busy_user_ids:
+			raise GameError('Ya estas en una partida activa', 409)
+		if match.inviter_id in busy_user_ids:
+			raise GameError('El jugador que te invito ya esta en una partida activa', 409)
 		match.status = GameMatch.Status.ACTIVE
 		match.accepted_at = timezone.now()
 		match.save(update_fields=['status', 'accepted_at', 'updated_at'])
@@ -190,8 +216,10 @@ def submit_move(match_id, user, choice):
 	return match
 
 
-def serialize_match(match, user, request=None):
+def serialize_match(match, user, request=None, busy_user_ids=None):
 	_ensure_participant(match, user)
+	if busy_user_ids is None:
+		busy_user_ids = get_busy_user_ids({match.inviter_id, match.opponent_id})
 	is_inviter = user.id == match.inviter_id
 	resolved_rounds = []
 	current_round = None
@@ -223,6 +251,8 @@ def serialize_match(match, user, request=None):
 		'opponent_score': match.opponent_score,
 		'winner_user_id': match.winner_id,
 		'role': 'inviter' if is_inviter else 'opponent',
+		'inviter_busy': match.inviter_id in busy_user_ids,
+		'opponent_busy': match.opponent_id in busy_user_ids,
 		'current_round': current_round,
 		'rounds': list(reversed(resolved_rounds)),
 		'created_at': match.created_at.isoformat(),
