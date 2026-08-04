@@ -1,8 +1,7 @@
 import { ArrowLeftIcon, PlusIcon, XIcon } from "lucide-react";
-import React from "react";
-import { useRef, useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { ChatWindowProps } from "@/types";
-
+ 
 export default function ChatWindow({
   open,
   onClose,
@@ -18,12 +17,13 @@ export default function ChatWindow({
 }: ChatWindowProps) {
   const selectedConversation = conversations.find((c) => c.id === selectedConversationId);
   const threadRef = useRef<HTMLDivElement>(null);
-useEffect(() => {
-  const el = threadRef.current;
-  if (el) {
-    el.scrollTop = el.scrollHeight;
-  }
-}, [selectedConversation?.messages, selectedConversation?.isTyping, selectedConversationId]);
+
+  useEffect(() => {
+    const el = threadRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [selectedConversation?.messages, selectedConversation?.isTyping, selectedConversationId]);
   return (
     <div className={open ? "chat-container is-open" : "chat-container"}>
       <div className="chat-header">
@@ -61,6 +61,13 @@ useEffect(() => {
                   <span>{message.time}</span>
                 </div>
               ))}
+              {selectedConversation.isTyping ? (
+                <div className="chat-typing-bubble" aria-label={`${selectedConversation.name} está escribiendo`}>
+                  <span className="chat-typing-dot" />
+                  <span className="chat-typing-dot" />
+                  <span className="chat-typing-dot" />
+                </div>
+              ) : null}
             </div>
             <div className="chat-composer">
               <textarea

@@ -1,7 +1,7 @@
 import { XIcon } from "lucide-react";
 import React from "react";
 import { ChatUser } from "@/types";
-
+ 
 export default function NewChatModal({
   open,
   onClose,
@@ -18,7 +18,7 @@ export default function NewChatModal({
   onSelectUser: (user: ChatUser) => void;
 }) {
   if (!open) return null;
-
+ 
   return (
     <div className="new-chat-modal-overlay" role="presentation">
       <div className="new-chat-modal" role="dialog" aria-modal="true" aria-label="Iniciar nuevo chat">

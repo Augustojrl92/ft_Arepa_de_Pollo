@@ -1,5 +1,6 @@
-"use client";
 
+"use client";
+ 
 import { MessageCircleIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import useChatSocket from "@/hooks/useChatSocket";
@@ -9,20 +10,20 @@ import NewChatModal from "@/components/NewChatModal";
 import { ChatMessage, ChatConversation, ChatUser } from "@/types";
 import { useAuthStore } from "@/hooks";
 import { fetchMessagesWith } from "@/lib/chatApi";
-
+ 
 export default function Chat() {
 	const { user } = useAuthStore();
 	const myLogin = user?.login;
 	const [open, setOpen] = useState(false);
 	const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
-
+ 
 	const [isNewChatOpen, setIsNewChatOpen] = useState(false);
 	const [searchTerm, setSearchTerm] = useState("");
 	const [newMessage, setNewMessage] = useState("");
 	const [friends, setFriends] = useState<ChatUser[]>([]);
 	const { conversations, setConversations } = useConversations(myLogin);
 	const { socketRef, sendMessage } = useChatSocket(myLogin, setFriends, setConversations);
-	const conversationsWithStatus = useMemo(() => {
+ 	const conversationsWithStatus = useMemo(() => {
 		const statusByLogin = new Map(friends.map((friend) => [friend.login, friend.status]));
 		return conversations.map((conversation) => ({
 			...conversation,
@@ -40,21 +41,21 @@ export default function Chat() {
 			return haystack.includes(normalizedTerm);
 		});
 	}, [searchTerm, friends]);
-
+ 
 	const handleClose = () => {
 		setOpen(false);
 		setSelectedConversationId(null);
 		setIsNewChatOpen(false);
 		setNewMessage("");
 	};
-
+ 
 	const handleStartConversation = async (chatUser: ChatUser) => {
 		const existing = conversations.find(
 			(conversation) => conversation.id === chatUser.id || conversation.login === chatUser.login
 		);
 		setIsNewChatOpen(false);
 		setSearchTerm("");
-
+ 
 		if (existing) {
 			await handleSelectConversation(existing.id);
 			return;
@@ -74,14 +75,14 @@ export default function Chat() {
 		try {
 			const history = await fetchMessagesWith(chatUser.login);
 			if (history.length === 0) return;
-
+ 
 			const mappedMessages: ChatMessage[] = history.map((row, index) => ({
 				id: index,
 				author: row.sender_login === myLogin ? 'me' : 'friend',
 				text: row.message,
 				time: new Date(row.date_time).toLocaleTimeString(),
 			}));
-
+ 
 			setConversations((prev) =>
 				prev.map((c) =>
 					c.id === chatUser.id ? { ...c, messages: mappedMessages } : c
@@ -93,10 +94,10 @@ export default function Chat() {
 	};
 	const handleSelectConversation = async (conversationId: number) => {
 		setSelectedConversationId(conversationId);
-
+ 
 		const conv = conversations.find((c) => c.id === conversationId);
 		if (!conv || conv.messages.length > 0) return; // ya cargado
-
+ 
 		try {
 			const history = await fetchMessagesWith(conv.login);
 			const mappedMessages: ChatMessage[] = history.map((row, index) => ({
@@ -105,7 +106,7 @@ export default function Chat() {
 				text: row.message,
 				time: new Date(row.date_time).toLocaleTimeString(),
 			}));
-
+ 
 			setConversations((prev) =>
 				prev.map((c) =>
 					c.id === conversationId ? { ...c, messages: mappedMessages } : c
@@ -120,7 +121,7 @@ export default function Chat() {
 			(conversation) => conversation.id === selectedConversationId,
 		);
 		if (!selectedConversation) return;
-
+ 
 		if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
 			socketRef.current.send(JSON.stringify({
 				type: 'typing',
@@ -130,7 +131,7 @@ export default function Chat() {
 			console.log('Se envió el socket de "escribiendo" a', selectedConversation.login);
 		}
 	};
-
+ 
 	const handleSendMessage = (to_user_id: number, to_user_login: string, message: string) => {
 		sendMessage({
 			type: 'chat_message',
@@ -139,7 +140,7 @@ export default function Chat() {
 			message: message,
 			timestamp: new Date().toISOString(),
 		});
-
+ 
 		setConversations((prev) =>
 			prev.map((conv) => {
 				if (conv.id === to_user_id) {
@@ -180,10 +181,10 @@ export default function Chat() {
 				onBack={() => setSelectedConversationId(null)}
 				conversations={conversationsWithStatus}
 				onOpenNewChat={() => {
-				if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-					socketRef.current.send(JSON.stringify({ type: 'refresh_friends' }));
-				}
-				setIsNewChatOpen(true);
+					if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+						socketRef.current.send(JSON.stringify({ type: 'refresh_friends' }));
+					}
+					setIsNewChatOpen(true);
 				}}
 				newMessage={newMessage}
 				onNewMessageChange={setNewMessage}
