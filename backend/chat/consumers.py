@@ -36,8 +36,27 @@ class DirectChatConsumer(AsyncWebsocketConsumer):
 
         if message_type == 'chat_message':
             await self.handle_chat_message(data)
+        elif message_type == 'typing':
+            await self.handle_typing(data)
         elif message_type == 'refresh_friends':
             await self.send_friends_list()
+
+    async def handle_typing(self, data):
+        try:
+            to_user_id = int(data.get('to_user_id'))
+        except (TypeError, ValueError):
+            return
+
+        recipient_group_name = f'user_{to_user_id}'
+
+        await self.channel_layer.group_send(
+            recipient_group_name,
+            {
+                'type': 'receive_typing',
+                'from_username': self.user.username,
+                'from_user_id': self.user.id,
+            }
+        )
 
     @database_sync_to_async
     def _save_message(self, sender_login, recipient_login, message_text):
@@ -91,6 +110,13 @@ class DirectChatConsumer(AsyncWebsocketConsumer):
             'from_username': event['from_username'],
             'message': event['message'],
             'timestamp': event['timestamp'],
+        }))
+
+    async def receive_typing(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'typing',
+            'from_user_id': event['from_user_id'],
+            'from_username': event['from_username'],
         }))
 
     async def send_friends_list(self):
