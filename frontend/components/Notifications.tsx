@@ -17,6 +17,7 @@ type FriendActivity = {
 
 export default function Notifications() {
 	const [invitations, setInvitations] = useState<MultiplayerMatch[]>([])
+	const [busyOutgoingInvitations, setBusyOutgoingInvitations] = useState<MultiplayerMatch[]>([])
 	const [friendRequests, setFriendRequests] = useState<FriendEntry[]>([])
 	const [friendActivities, setFriendActivities] = useState<FriendActivity[]>([])
 	const [isOpen, setIsOpen] = useState(false)
@@ -29,6 +30,7 @@ export default function Notifications() {
 				const [matches, friends] = await Promise.all([fetchMatches(), fetchMyPendingFriendRequests()])
 				if (active) {
 					setInvitations(matches.incoming)
+					setBusyOutgoingInvitations(matches.outgoing.filter((match) => match.opponent_busy))
 					setFriendRequests(friends.pendingReceived)
 				}
 			} catch {
@@ -58,7 +60,7 @@ export default function Notifications() {
 	}, [])
 
 	const friendNotificationCount = friendRequests.length + friendActivities.length
-	const gameNotificationCount = invitations.length
+	const gameNotificationCount = invitations.length + busyOutgoingInvitations.length
 
 	useEffect(() => {
 		const closeOnOutsideClick = (event: PointerEvent) => {
@@ -80,7 +82,7 @@ export default function Notifications() {
 			<Link
 				href={gameNotificationCount > 0 ? '/games?view=friends' : '/games'}
 				className={`${styles.trigger} ${gameNotificationCount > 0 ? styles.triggerActive : ''}`}
-				aria-label={gameNotificationCount > 0 ? `Invitaciones de partida pendientes: ${gameNotificationCount}` : 'Ir al juego'}
+				aria-label={gameNotificationCount > 0 ? `Avisos de partida pendientes: ${gameNotificationCount}` : 'Ir al juego'}
 			>
 				<Gamepad2Icon size={20} />
 				{gameNotificationCount > 0 && <span className={styles.badge}>{gameNotificationCount > 9 ? '9+' : gameNotificationCount}</span>}

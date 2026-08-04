@@ -16,6 +16,10 @@ BACKUP_FILE ?=
 #   make certs-reset TLS_SAN=DNS:localhost,IP:127.0.0.1
 UNAME_S := $(shell uname -s 2>/dev/null)
 
+# Host port for HTTPS. Evaluation machines cannot bind privileged ports, so
+# the proxy is published high; nginx still terminates TLS on 443 internally.
+HTTPS_PORT ?= 8443
+
 # `ip route get` is Linux-only (iproute2). Windows uses PowerShell to inspect
 # the active route, while macOS uses the BSD-native route/ipconfig equivalent.
 ifeq ($(OS),Windows_NT)
@@ -25,10 +29,6 @@ else
 ifeq ($(UNAME_S),Darwin)
 HOST_IP ?= $(shell route get 1.1.1.1 2>/dev/null | awk '/interface: /{print $$2}' | xargs -I {} ipconfig getifaddr {} 2>/dev/null)
 else
-# Host port for HTTPS. Evaluation machines cannot bind privileged ports, so
-# the proxy is published high; nginx still terminates TLS on 443 internally.
-HTTPS_PORT ?= 8443
-
 HOST_IP ?= $(shell ip -4 route get 1.1.1.1 2>/dev/null | awk '{print $$7; exit}')
 endif
 HOST_NAME ?= $(shell hostname)
@@ -306,6 +306,7 @@ evaluation:
 	esac; \
 	"$(MAKE)" certs-reset TLS_SAN="$$eval_san"
 	$(DOCKER_COMPOSE) up -d --force-recreate backend frontend
+	$(DOCKER_COMPOSE) restart proxy
 	@echo ""
 	@echo "──────────────────────────────────────────────────────────────────────"
 	@echo "  Open:  https://$(EVAL_HOST):$(HTTPS_PORT)"

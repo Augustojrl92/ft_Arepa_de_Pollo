@@ -30,9 +30,12 @@ class MultiplayerGameApiTests(TestCase):
 		self.first = self._create_user('first', 101)
 		self.second = self._create_user('second', 102)
 		self.stranger = self._create_user('stranger', 103)
+		self.third = self._create_user('third', 104)
 		first_list = FriendsList.objects.create(owner=self.first)
 		second_list = FriendsList.objects.create(owner=self.second)
+		third_list = FriendsList.objects.create(owner=self.third)
 		first_list.friends.add(second_list)
+		second_list.friends.add(third_list)
 		self._authenticate(self.first)
 
 	def _create_user(self, login, intra_id):
@@ -80,6 +83,23 @@ class MultiplayerGameApiTests(TestCase):
 		self.assertEqual(response.status_code, 200)
 		return match_id
 
+	def _create_two_invitations_for_second(self):
+		self._authenticate(self.first)
+		first_match = self.client.post(
+			'/api/games/matches/',
+			{'opponent_login': 'second', 'target_score': 3},
+			content_type='application/json',
+		)
+		self.assertEqual(first_match.status_code, 201)
+		self._authenticate(self.third)
+		third_match = self.client.post(
+			'/api/games/matches/',
+			{'opponent_login': 'second', 'target_score': 5},
+			content_type='application/json',
+		)
+		self.assertEqual(third_match.status_code, 201)
+		return first_match.json()['id'], third_match.json()['id']
+
 	def test_only_friends_can_be_invited(self):
 		response = self.client.post(
 			'/api/games/matches/',
@@ -97,6 +117,78 @@ class MultiplayerGameApiTests(TestCase):
 		self.assertEqual(payload['status'], 'active')
 		self.assertEqual(payload['current_round']['number'], 1)
 		self.assertEqual(payload['role'], 'opponent')
+
+	def test_only_one_invitation_can_be_accepted_and_other_inviter_can_cancel(self):
+		first_match_id, third_match_id = self._create_two_invitations_for_second()
+		self._authenticate(self.second)
+		accepted = self.client.patch(
+			f'/api/games/matches/{first_match_id}/',
+			{'action': 'accept'},
+			content_type='application/json',
+		)
+		blocked = self.client.patch(
+			f'/api/games/matches/{third_match_id}/',
+			{'action': 'accept'},
+			content_type='application/json',
+		)
+
+		self.assertEqual(accepted.status_code, 200)
+		self.assertEqual(blocked.status_code, 409)
+		self.assertEqual(blocked.json()['error'], 'Ya estas en una partida activa')
+		self.assertEqual(GameMatch.objects.get(pk=first_match_id).status, GameMatch.Status.ACTIVE)
+		self.assertEqual(GameMatch.objects.get(pk=third_match_id).status, GameMatch.Status.PENDING)
+
+		self._authenticate(self.third)
+		outgoing = self.client.get('/api/games/matches/').json()['outgoing']
+		waiting_match = next(match for match in outgoing if match['id'] == third_match_id)
+		self.assertTrue(waiting_match['opponent_busy'])
+		cancelled = self.client.patch(
+			f'/api/games/matches/{third_match_id}/',
+			{'action': 'cancel'},
+			content_type='application/json',
+		)
+		self.assertEqual(cancelled.status_code, 200)
+		self.assertEqual(cancelled.json()['status'], 'cancelled')
+
+	def test_pending_invitation_can_wait_until_active_match_finishes(self):
+		first_match_id, third_match_id = self._create_two_invitations_for_second()
+		self._authenticate(self.second)
+		self.client.patch(
+			f'/api/games/matches/{first_match_id}/',
+			{'action': 'accept'},
+			content_type='application/json',
+		)
+
+		self._authenticate(self.third)
+		waiting_match = next(
+			match for match in self.client.get('/api/games/matches/').json()['outgoing']
+			if match['id'] == third_match_id
+		)
+		self.assertTrue(waiting_match['opponent_busy'])
+
+		self._authenticate(self.first)
+		finished = self.client.patch(
+			f'/api/games/matches/{first_match_id}/',
+			{'action': 'forfeit'},
+			content_type='application/json',
+		)
+		self.assertEqual(finished.status_code, 200)
+
+		self._authenticate(self.third)
+		available_match = next(
+			match for match in self.client.get('/api/games/matches/').json()['outgoing']
+			if match['id'] == third_match_id
+		)
+		self.assertFalse(available_match['opponent_busy'])
+
+		self._authenticate(self.second)
+		accepted = self.client.patch(
+			f'/api/games/matches/{third_match_id}/',
+			{'action': 'accept'},
+			content_type='application/json',
+		)
+		self.assertEqual(accepted.status_code, 200)
+		self.assertEqual(accepted.json()['status'], 'active')
 
 	def test_choice_is_hidden_until_both_players_submit(self):
 		match_id = self._invite_and_accept()

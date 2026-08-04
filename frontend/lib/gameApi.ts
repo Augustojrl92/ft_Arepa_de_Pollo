@@ -29,6 +29,8 @@ export type MultiplayerMatch = {
 	opponent_score: number
 	winner_user_id: number | null
 	role: 'inviter' | 'opponent'
+	inviter_busy: boolean
+	opponent_busy: boolean
 	current_round: {
 		number: number
 		choice_submitted: boolean
