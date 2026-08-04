@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useTheme } from "next-themes"
 
 import Header from "@/components/Header"
+import Chat from "@/components/Chat"
 import Footer from "@/components/Footer"
 import { useAuthStore, useCoalitionStore, useUserStore } from "@/hooks"
 
@@ -175,6 +176,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 		<>
 			<Header />
 			<main className="aedlph-container flex-1">{children}</main>
+			<Chat/>
 			<Footer />
 		</>
 	)

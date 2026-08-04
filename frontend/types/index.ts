@@ -123,3 +123,42 @@ export interface RankingPage {
 	total: number
 	totalPages: number
 }
+
+export type ChatMessage = {
+  id: number;
+  author: "me" | "friend";
+  text: string;
+  time: string;
+};
+
+export type ChatConversation = {
+  id: number;
+  name: string;
+  login: string;
+  status: string;
+  lastMessage: string;
+  lastTime: string;
+  messages: ChatMessage[];
+  isTyping: boolean;
+};
+
+export type ChatUser = {
+  id: number;
+  name: string;
+  login: string;
+  status: string;
+};
+
+export type ChatWindowProps = {
+  open: boolean;
+  onClose: () => void;
+  selectedConversationId: number | null;
+  onSelectConversation: (conversationId: number) => void;
+  onBack: () => void;
+  conversations: ChatConversation[];
+  onOpenNewChat: () => void;
+  newMessage: string;
+  onNewMessageChange: (value: string) => void;
+  onSendMessage: (to_user_id: number, to_user_login: string, message: string) => void;
+  onTyping: ()=> void;
+};
