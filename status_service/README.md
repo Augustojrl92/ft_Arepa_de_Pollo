@@ -1,11 +1,16 @@
 # AEDLPH Status Service
 
-FastAPI microservice responsible for `/api/health/` and `/api/status/`.
-It checks PostgreSQL directly, reads the latest campus synchronization time,
-and probes Django through the internal Docker network.
+FastAPI microservice responsible for `/status`, `/api/health/`, and
+`/api/status/`. It checks PostgreSQL directly, reads the latest campus
+synchronization time, pings Redis, and probes Django, Next.js, and the Public
+API through the internal Docker network.
 
-The service is not published directly. Nginx exposes its endpoints through the
-same HTTPS origin as the frontend and the other APIs.
+The status HTML is rendered by this service rather than Next.js, so it remains
+available when the frontend is down. The service has no startup dependency on
+the components it monitors. Nginx is its only public entry point.
+
+`/healthz` is the container liveness endpoint. It deliberately does not inspect
+dependencies; `/api/health/` and `/api/status/` provide the aggregate result.
 
 ```bash
 make status-up
