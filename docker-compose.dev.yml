@@ -118,18 +118,16 @@ services:
       - ./.env
     environment:
       STATUS_BACKEND_URL: ${STATUS_BACKEND_URL:-http://backend:8000}
+      STATUS_FRONTEND_URL: ${STATUS_FRONTEND_URL:-http://frontend:3000/frontend-health.txt}
+      STATUS_PUBLIC_API_URL: ${STATUS_PUBLIC_API_URL:-http://public_api:8000/api/v1/health}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/1}
       STATUS_CHECK_TIMEOUT_SECONDS: ${STATUS_CHECK_TIMEOUT_SECONDS:-2}
     volumes:
       - ./status_service:/app
     expose:
       - "8000"
-    depends_on:
-      db:
-        condition: service_healthy
-      backend:
-        condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/', timeout=3)"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=3)"]
       interval: 10s
       timeout: 4s
       retries: 10

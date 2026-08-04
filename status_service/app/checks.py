@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime
-from urllib import request
+from urllib import error, request
 
 import psycopg
+import redis
 
 from app.config import Settings
 
@@ -37,21 +38,59 @@ def check_database(settings: Settings) -> tuple[CheckResult, datetime | None]:
     return CheckResult(status="ok"), row[0] if row else None
 
 
-def check_backend(settings: Settings) -> CheckResult:
+def check_http_service(
+    url: str,
+    label: str,
+    settings: Settings,
+    headers: dict[str, str] | None = None,
+) -> CheckResult:
     probe = request.Request(
-        f"{settings.backend_url}/",
+        url,
         headers={
             "Accept": "application/json",
-            "Host": "localhost",
             "User-Agent": "aedlph-status-service/1.0",
-            "X-Forwarded-Proto": "https",
+            **(headers or {}),
         },
     )
     try:
         with request.urlopen(probe, timeout=settings.check_timeout_seconds) as response:
             if 200 <= response.status < 300:
                 return CheckResult(status="ok")
-    except (OSError, ValueError):
+    except (error.URLError, OSError, TimeoutError, ValueError):
         pass
 
-    return CheckResult(status="error", error="Backend check failed")
+    return CheckResult(status="error", error=f"{label} check failed")
+
+
+def check_backend(settings: Settings) -> CheckResult:
+    return check_http_service(
+        f"{settings.backend_url}/",
+        "Backend",
+        settings,
+        headers={"Host": "localhost", "X-Forwarded-Proto": "https"},
+    )
+
+
+def check_frontend(settings: Settings) -> CheckResult:
+    return check_http_service(settings.frontend_url, "Frontend", settings)
+
+
+def check_public_api(settings: Settings) -> CheckResult:
+    return check_http_service(settings.public_api_url, "Public API", settings)
+
+
+def check_redis(settings: Settings) -> CheckResult:
+    client = redis.Redis.from_url(
+        settings.redis_url,
+        socket_connect_timeout=settings.check_timeout_seconds,
+        socket_timeout=settings.check_timeout_seconds,
+    )
+    try:
+        if client.ping():
+            return CheckResult(status="ok")
+    except (redis.RedisError, OSError, ValueError):
+        pass
+    finally:
+        client.close()
+
+    return CheckResult(status="error", error="Redis check failed")
