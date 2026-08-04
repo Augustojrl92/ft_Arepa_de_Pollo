@@ -5,8 +5,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import GameMatch
-from .events import broadcast_game_event
-from .services import GameError, create_invitation, resolve_invitation, serialize_match, submit_move
+from .events import broadcast_game_availability, broadcast_game_event
+from .services import GameError, create_invitation, get_busy_user_ids, resolve_invitation, serialize_match, submit_move
 
 
 def _error_response(error):
@@ -33,7 +33,16 @@ class MatchListView(APIView):
 			.prefetch_related('rounds')
 			.filter(Q(inviter=request.user) | Q(opponent=request.user))[:30]
 		)
-		serialized = [serialize_match(match, request.user, request=request) for match in matches]
+		participant_ids = {
+			user_id
+			for match in matches
+			for user_id in (match.inviter_id, match.opponent_id)
+		}
+		busy_user_ids = get_busy_user_ids(participant_ids)
+		serialized = [
+			serialize_match(match, request.user, request=request, busy_user_ids=busy_user_ids)
+			for match in matches
+		]
 		return Response({
 			'incoming': [item for item in serialized if item['status'] == 'pending' and item['role'] == 'opponent'],
 			'outgoing': [item for item in serialized if item['status'] == 'pending' and item['role'] == 'inviter'],
@@ -73,6 +82,8 @@ class MatchDetailView(APIView):
 			'forfeit': 'match.forfeited',
 		}.get(request.data.get('action'), 'match.updated')
 		broadcast_game_event(match, event_name)
+		if request.data.get('action') in {'accept', 'forfeit'}:
+			broadcast_game_availability({match.inviter_id, match.opponent_id})
 		return Response(serialize_match(match, request.user, request=request))
 
 
@@ -86,6 +97,8 @@ class MatchMoveView(APIView):
 			return _error_response(error)
 		match = _get_match(match.id, request.user)
 		broadcast_game_event(match, 'match.move_submitted')
+		if match.status == GameMatch.Status.COMPLETED:
+			broadcast_game_availability({match.inviter_id, match.opponent_id})
 		return Response(serialize_match(match, request.user, request=request))
 
 

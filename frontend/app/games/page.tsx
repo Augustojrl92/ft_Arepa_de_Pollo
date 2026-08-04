@@ -343,19 +343,21 @@ function MultiplayerLobby({ matches, friends, target, busy, socketStatus, onTarg
 	onResolve: (match: MultiplayerMatch, action: 'accept' | 'decline' | 'cancel') => void
 }) {
 	const unavailableIds = new Set([...matches.incoming, ...matches.outgoing, ...matches.active].flatMap((match) => [match.inviter.user_id, match.opponent.user_id]))
+	const busyFriendIds = new Set(matches.outgoing.filter((match) => match.opponent_busy).map((match) => match.opponent.user_id))
 	return (
 		<div className="game-lobby-grid">
 			<section className="game-panel game-invitations">
 				<div className="game-panel-heading"><h2><Clock3Icon size={18} /> Invitaciones</h2><GameLiveStatus status={socketStatus} /></div>
-				{matches.incoming.map((match) => <div className="game-invitation-row" key={match.id}><div><strong>{match.inviter.display_name}</strong><span>Primero a {match.target_score}</span></div><div className="game-row-actions"><button type="button" className="is-accept" disabled={busy} onClick={() => onResolve(match, 'accept')} title="Aceptar"><CheckIcon size={18} /></button><button type="button" disabled={busy} onClick={() => onResolve(match, 'decline')} title="Rechazar"><XIcon size={18} /></button></div></div>)}
-				{matches.outgoing.map((match) => <div className="game-invitation-row" key={match.id}><div><strong>{match.opponent.display_name}</strong><span>Esperando respuesta</span></div><button type="button" className="game-cancel-invite" disabled={busy} onClick={() => onResolve(match, 'cancel')}>Cancelar</button></div>)}
+				{matches.incoming.map((match) => <div className="game-invitation-row" key={match.id}><div><strong>{match.inviter.display_name}</strong><span>{match.inviter_busy ? 'Esta en una partida. Puedes esperar o rechazar.' : `Primero a ${match.target_score}`}</span></div><div className="game-row-actions"><button type="button" className="is-accept" disabled={busy || match.inviter_busy} onClick={() => onResolve(match, 'accept')} title={match.inviter_busy ? 'Este jugador esta en una partida' : 'Aceptar'}><CheckIcon size={18} /></button><button type="button" disabled={busy} onClick={() => onResolve(match, 'decline')} title="Rechazar"><XIcon size={18} /></button></div></div>)}
+				{matches.outgoing.map((match) => <div className="game-invitation-row" key={match.id}><div><strong>{match.opponent.display_name}</strong><span>{match.opponent_busy ? 'Esta en una partida. Puedes esperar o cancelar.' : 'Esperando respuesta'}</span></div><button type="button" className="game-cancel-invite" disabled={busy} onClick={() => onResolve(match, 'cancel')}>Cancelar</button></div>)}
 				{matches.incoming.length + matches.outgoing.length === 0 && <p className="game-panel-empty">No hay invitaciones pendientes.</p>}
 			</section>
 			<section className="game-panel game-friends-panel">
 				<div className="game-panel-heading"><h2><UsersIcon size={18} /> Invitar a un amigo</h2><div className="game-small-segment">{([3, 5] as const).map((score) => <button type="button" key={score} className={target === score ? 'is-active' : ''} onClick={() => onTarget(score)}>A {score}</button>)}</div></div>
 				{friends.length === 0 ? <p className="game-panel-empty">Agrega amigos desde Usuarios para poder invitarlos.</p> : <div className="game-friend-list">{friends.map((friend) => {
 					const unavailable = unavailableIds.has(friend.userId)
-					return <div className="game-friend-row" key={friend.userId}><div className="game-friend-identity">{friend.avatarUrl ? <Image src={friend.avatarUrl} alt="" width={40} height={40} unoptimized /> : <span>{friend.displayName.slice(0, 1).toUpperCase()}</span>}<div><strong>{friend.displayName}</strong><small><i className={friend.active ? 'is-online' : ''} /> {friend.active ? 'En linea' : 'Desconectado'}</small></div></div><button type="button" disabled={busy || unavailable} onClick={() => onInvite(friend)}><UserPlusIcon size={17} /> {unavailable ? 'Partida abierta' : 'Invitar'}</button></div>
+					const friendIsBusy = busyFriendIds.has(friend.userId)
+					return <div className="game-friend-row" key={friend.userId}><div className="game-friend-identity">{friend.avatarUrl ? <Image src={friend.avatarUrl} alt="" width={40} height={40} unoptimized /> : <span>{friend.displayName.slice(0, 1).toUpperCase()}</span>}<div><strong>{friend.displayName}</strong><small><i className={friend.active ? 'is-online' : ''} /> {friend.active ? 'En linea' : 'Desconectado'}</small></div></div><button type="button" disabled={busy || unavailable} onClick={() => onInvite(friend)}><UserPlusIcon size={17} /> {friendIsBusy ? 'En partida' : unavailable ? 'Partida abierta' : 'Invitar'}</button></div>
 				})}</div>}
 			</section>
 		</div>
