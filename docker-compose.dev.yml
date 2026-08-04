@@ -105,10 +105,35 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/api/health/ || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/ || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 10
+
+  status:
+    build:
+      context: ./status_service
+      dockerfile: Dockerfile.dev
+    env_file:
+      - ./.env
+    environment:
+      STATUS_BACKEND_URL: ${STATUS_BACKEND_URL:-http://backend:8000}
+      STATUS_CHECK_TIMEOUT_SECONDS: ${STATUS_CHECK_TIMEOUT_SECONDS:-2}
+    volumes:
+      - ./status_service:/app
+    expose:
+      - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/', timeout=3)"]
+      interval: 10s
+      timeout: 4s
+      retries: 10
+    restart: unless-stopped
 
   public_api:
     build:
@@ -149,6 +174,7 @@ services:
     depends_on:
       - frontend
       - backend
+      - status
       - public_api
       - mailpit
     restart: unless-stopped

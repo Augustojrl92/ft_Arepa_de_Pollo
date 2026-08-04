@@ -47,7 +47,7 @@ export default function StatusPage() {
 		}
 	}, [])
 
-	const isHealthy = status?.status === "ok" && status.database === "ok"
+	const isHealthy = status?.status === "ok" && status.backend === "ok" && status.database === "ok"
 
 	return (
 		<section className="py-8 space-y-6">
@@ -55,7 +55,7 @@ export default function StatusPage() {
 				<p className="text-sm font-semibold uppercase tracking-[0.2em] text-text-secondary">System status</p>
 				<h1 className="mt-2 text-4xl font-black">Estado de AEDLPH</h1>
 				<p className="mt-3 max-w-2xl text-text-secondary">
-					Estado real obtenido desde <code>/api/status/</code> con la salud del backend, la base de datos y la ultima sincronizacion registrada.
+					Estado obtenido desde el microservicio <code>/api/status/</code>, con comprobaciones independientes del backend y la base de datos.
 				</p>
 			</div>
 
@@ -92,8 +92,8 @@ export default function StatusPage() {
 					<div className="grid gap-4 md:grid-cols-3">
 						<StatCard
 							title="Backend"
-							value={status.status.toUpperCase()}
-							valueClassName={status.status === "ok" ? "text-3xl font-black text-green-500" : "text-3xl font-black text-red-500"}
+							value={status.backend.toUpperCase()}
+							valueClassName={status.backend === "ok" ? "text-3xl font-black text-green-500" : "text-3xl font-black text-red-500"}
 						/>
 						<StatCard
 							title="Base de datos"

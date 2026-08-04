@@ -210,6 +210,24 @@ api-downgrade:
 
 api-syncdb: api-migrate
 
+# Status service
+status-up:
+	$(DOCKER_COMPOSE) up -d --build status
+
+status-stop:
+	$(call stop_if_running,status)
+
+status-down:
+	$(DOCKER_COMPOSE) rm -sf status
+
+status-re: status-down status-up
+
+status-logs:
+	$(DOCKER_COMPOSE) logs -f status
+
+status-test:
+	$(DOCKER_COMPOSE) run --rm --no-deps status pytest -q
+
 
 
 # ─── Full stack ────────────────────────────────────────────────────────────────
@@ -351,6 +369,7 @@ dev-re: front-re
 			back-superuser back-shell back-test back-import-evaluations front-pwa \
 			db-backup db-restore db-backup-ls \
 			db-backup-auto-up db-backup-auto-stop db-backup-auto-logs \
+	        status-up status-stop status-down status-re status-logs status-test \
 	        full-up full-stop full-down full-re full-logs \
         fclean certs-reset evaluation \
 		up stop down logs migrate makemigrations initialize reinitialize superuser shell test \
