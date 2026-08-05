@@ -338,12 +338,6 @@ class OAuth42CallbackView(APIView):
 
 		updated_fields = []
 
-		# The email on the account is the handle its owner signs in with, and they
-		# chose it. 42's profile address is not authoritative over it: overwriting
-		# would silently lock the owner out of password login, since that lookup is
-		# by email. Only fill it in when the account has none — an account created
-		# by this callback. The 42 address is kept on CampusUser.email regardless,
-		# which is what the profile endpoint prefers, so nothing is lost.
 		if email and not user.email:
 			user.email = email
 			updated_fields.append("email")
@@ -354,14 +348,6 @@ class OAuth42CallbackView(APIView):
 			user.is_active = True
 			updated_fields.append("is_active")
 
-			# SECURITY: anyone who knows a campus email can submit a registration
-			# for it. That creates an inactive account holding *their* password,
-			# which is harmless only while the account stays inactive. Activating
-			# it here would hand the account to whoever filled in that form.
-			#
-			# 42 has proven who this person is; the unverified password has
-			# proven nothing. Discard it. The real owner can set one from
-			# Settings, which is the `has_password_set` path.
 			user.set_unusable_password()
 			if "password" not in updated_fields:
 				updated_fields.append("password")
@@ -498,16 +484,6 @@ class AuthLogoutView(APIView):
 		_clear_auth_cookies(response)
 		return response
 
-
-# --- Email / password authentication -----------------------------------------
-#
-# This is a second, independent credential provider. It never calls 42: it
-# authenticates against a password we store and verify ourselves, and issues the
-# same JWT cookies as the OAuth flow through `_set_auth_cookies`.
-#
-# Matching the email against the campus roster is an eligibility (authorisation)
-# rule, not part of authentication — it decides who may hold an account, not how
-# an account proves who it is.
 
 # Registration answers identically whether or not the address is eligible, so
 # the endpoint cannot be used to enumerate the campus roster.

@@ -10,21 +10,9 @@ from sync.projects import (
 )
 
 
-# Objective:
-# Provide a management command to sync approved delivered-project counters from 42 into `CampusUser`.
-# Expects:
-# - CLI options controlling request pacing, batch size, offset, and auto-batch mode.
-# Returns:
-# - Prints a processing summary to stdout after the sync finishes.
 class Command(BaseCommand):
 	help = 'Sincroniza el numero de proyectos entregados y aprobados para CampusUser.'
 
-	# Objective:
-	# Declare the CLI arguments supported by this command.
-	# Expects:
-	# - Django's argument parser for management commands.
-	# Returns:
-	# - No explicit return value; it mutates the parser in place.
 	def add_arguments(self, parser):
 		parser.add_argument('--request-interval', type=float, default=0.6)
 		parser.add_argument('--limit', type=int, default=100)
@@ -35,12 +23,6 @@ class Command(BaseCommand):
 		parser.add_argument('--bootstrap-cursors-from-snapshot', action='store_true')
 		parser.add_argument('--bootstrap-cursors-from-datetime', default=None)
 
-	# Objective:
-	# Execute the delivered-project sync for one slice or for the whole dataset in automatic batches.
-	# Expects:
-	# - Parsed CLI options coming from `add_arguments`.
-	# Returns:
-	# - No explicit return value; writes progress and summary information to stdout.
 	def handle(self, *args, **options):
 		request_interval = options['request_interval']
 		limit = options['limit']

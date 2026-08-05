@@ -10,16 +10,6 @@ if [ "$#" -gt 0 ]; then
 	exec "$@"
 fi
 
-# ── Schema bootstrap ─────────────────────────────────────────────────────────
-# On a fresh clone, or after `make fclean` removes the volumes, the database is
-# empty: no tables, so every request fails and the app looks hung. Applying
-# migrations here makes `docker compose up` sufficient on its own, and closes
-# the window where the server answers against a schema that does not exist.
-#
-# `migrate` is idempotent, so once the schema is current this costs a moment.
-# `makemigrations` is deliberately NOT run: generating migrations is an
-# authoring step that belongs in a commit, never at boot.
-
 echo "==> Waiting for the database to accept connections..."
 attempts=0
 until python - <<'PY' 2>/dev/null

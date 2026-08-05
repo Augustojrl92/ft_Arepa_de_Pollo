@@ -89,14 +89,6 @@ CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "False").lower() ==
 
 CORS_ALLOW_CREDENTIALS = True
 
-# ── HTTPS ────────────────────────────────────────────────────────────────────
-# TLS is terminated by the nginx proxy, so Django only ever sees plain HTTP on
-# the internal network. Without this it would consider every request insecure:
-# request.is_secure() would be False, redirects would be built as http://, and
-# it would refuse to set cookies marked Secure.
-#
-# Safe only because nothing but the proxy can reach this container — the app
-# ports are not published — so the header cannot be spoofed from outside.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 

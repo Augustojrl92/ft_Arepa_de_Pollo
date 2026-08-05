@@ -4,9 +4,9 @@
 
 ## Description
 
-AEDLPH is a web platform for the 42 coalitions tournament. It combines OAuth login, campus data synchronization, rankings, user profiles, achievements, chat, and a PWA experience so the application remains usable even when connectivity is limited.
+AEDLPH is a web platform for the 42 coalitions tournament. It combines OAuth login, campus data synchronization, rankings, user profiles, achievements, and chat.
 
-The project is built as a full-stack Django and Next.js application. The backend synchronizes data from the 42 API, persists local snapshots, and exposes APIs for the frontend. The frontend renders the dashboards, charts, status views, and supporting UX around authentication, offline access, and installation as a standalone app.
+The project is built as a full-stack Django and Next.js application. The backend synchronizes data from the 42 API, persists local snapshots, and exposes APIs for the frontend. The frontend renders the dashboards, charts, status views, and supporting UX around authentication and social features.
 
 ## Instructions
 
@@ -182,7 +182,6 @@ make back-logs
 
 ```bash
 make front-up
-make front-pwa
 make front-logs
 ```
 
@@ -191,7 +190,6 @@ make front-logs
 - Configuration lives in `.env` at the repository root; copy `.env.example` to get started.
 - `FT_REDIRECT_URI` must be registered verbatim on the 42 application, and now uses `https://`.
 - The cron-based sync jobs are registered through Django and executed in the backend container.
-- The PWA manifest is exposed from the Next.js app router and the service worker is served from `frontend/public/sw.js`.
 
 ## Resources
 
@@ -200,18 +198,17 @@ make front-logs
 - Django documentation: https://docs.djangoproject.com/
 - Next.js documentation: https://nextjs.org/docs
 - MDN Web Docs: https://developer.mozilla.org/
-- web.dev PWA guide: https://web.dev/progressive-web-apps/
 - 42 API documentation: https://api.intra.42.fr/apidoc
 
 ### AI usage
 
-AI was used to draft and refine the README structure, legal-page copy, and compliance-oriented summaries of the codebase. It was also used to cross-check the PWA, offline, and README requirements against the repository contents. The application design, feature set, and implementation details remain grounded in the code present in the repository.
+AI was used to draft and refine the README structure, legal-page copy, and compliance-oriented summaries of the codebase. It was also used to cross-check the README requirements against the repository contents. The application design, feature set, and implementation details remain grounded in the code present in the repository.
 
 ## Team Information
 
 The repository history shows these main contributors. The roles below reflect the main responsibilities visible in the codebase, not necessarily a formal staffing chart.
 
-- Fernando Morenilla - Frontend developer and PWA lead. Responsible for the app shell, routing, offline experience, and UI composition.
+- Fernando Morenilla - Frontend developer. Responsible for the app shell, routing, and UI composition.
 - Augusto Jesus Rodriguez Linares - Backend and sync lead. Responsible for the 42 data ingestion pipeline, snapshots, and cron-driven synchronization.
 - GGasset - Full-stack developer. Responsible for gameplay, coalition, and product-facing features across the interface.
 - Luis Ayala - Backend developer. Responsible for user data, preferences, and social/user models.
@@ -236,7 +233,6 @@ The work was organized around shared repository branches, Markdown design docume
 - Tailwind CSS
 - Zustand for client state
 - Recharts for visualizations
-- PWA support through a service worker and web manifest
 
 ### Backend
 
@@ -337,7 +333,6 @@ Key relationships:
 - Achievements and gamification storage. Main contributors: Francisco J Vizcaya, GGasset.
 - Chat and social surfaces in the project structure. Main contributors: GGasset, Fernando Morenilla.
 - Status page and backend health visibility. Main contributors: Fernando Morenilla, Augusto Jesus Rodriguez Linares.
-- PWA support with offline fallback, installability, and cached assets. Main contributors: Fernando Morenilla.
 
 ## Modules
 
@@ -441,7 +436,6 @@ Repository evidence:
 ### Fernando Morenilla
 
 - Frontend app shell and layout
-- PWA registration and offline behavior
 - Public legal pages and footer accessibility links
 - Status and UI integration work
 
@@ -474,11 +468,8 @@ Repository evidence:
 
 - 42 API throughput and volatility were handled with pagination, retries, and pacing.
 - Historical ranking data was handled with daily snapshot tables and indexed relationships.
-- Offline usability was handled with a precached app shell and a dedicated fallback page.
-- Installation readiness was handled with a manifest, standalone display mode, and cached icons.
 
 ## Compliance Notes
 
 - The repository includes public Privacy Policy and Terms of Service pages linked from the app footer.
-- The application includes a web manifest and service worker for PWA installation and offline support.
 - The documentation in `doc/` complements this README with architectural and functional references.

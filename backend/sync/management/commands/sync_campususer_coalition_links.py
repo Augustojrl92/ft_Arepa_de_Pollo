@@ -4,30 +4,12 @@ from sync.models import CampusUser
 from sync.services import _build_sync_context, fetch_coalitions_data
 
 
-# Objective:
-# Backfill local coalition link fields from `/v2/coalitions_users` without reloading the whole campus users dataset.
-# Expects:
-# - Optional request pacing through the CLI.
-# Returns:
-# - Prints a summary with fetched coalition-user rows and updated CampusUser rows.
 class Command(BaseCommand):
 	help = 'Sincroniza coalitions_user_id y datos de coalicion para CampusUser usando solo coalitions_users.'
 
-	# Objective:
-	# Declare the CLI arguments supported by this command.
-	# Expects:
-	# - Django's argument parser for management commands.
-	# Returns:
-	# - No explicit return value; it mutates the parser in place.
 	def add_arguments(self, parser):
 		parser.add_argument('--request-interval', type=float, default=0.25)
 
-	# Objective:
-	# Fetch coalition-user rows from 42 and update the matching local CampusUser records.
-	# Expects:
-	# - Parsed CLI options coming from `add_arguments`.
-	# Returns:
-	# - No explicit return value; writes a summary to stdout.
 	def handle(self, *args, **options):
 		request_interval = options['request_interval']
 		ctx = _build_sync_context()

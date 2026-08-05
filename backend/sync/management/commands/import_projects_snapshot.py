@@ -21,13 +21,6 @@ def _parse_int(value, field_name, line_number):
 		raise CommandError(f'Valor invalido para {field_name} en linea {line_number}: {value!r}') from exc
 
 
-# Objective:
-# Import delivered-project counters from a CSV snapshot into existing `CampusUser` rows.
-# Expects:
-# - CLI option `--path` with a CSV containing at least intra_id and project counter columns.
-# - Optional `--dry-run` to validate the file without writing to the database.
-# Returns:
-# - Updates existing users and prints import counters.
 class Command(BaseCommand):
 	help = 'Importa un snapshot CSV de proyectos entregados.'
 

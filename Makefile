@@ -5,15 +5,6 @@ CSV_PATH ?= /app/evaluations_snapshot_round_apr_oct_2026.csv
 DRY_RUN ?=
 BACKUP_FILE ?=
 
-# ─── TLS certificate subject names ────────────────────────────────────────────
-# Detected at run time so a new DHCP lease never requires editing a file. The
-# machine name is included because it is stable across leases: prefer
-# https://$(HOST_NAME).local over the IP for anything you have to register
-# somewhere, such as the 42 OAuth redirect URI.
-#
-# Override either part when needed:
-#   make certs-reset HOST_IP=10.11.12.13
-#   make certs-reset TLS_SAN=DNS:localhost,IP:127.0.0.1
 UNAME_S := $(shell uname -s 2>/dev/null)
 
 # Host port for HTTPS. Evaluation machines cannot bind privileged ports, so
@@ -148,9 +139,6 @@ back-syncapi:
 back-import-evaluations:
 	$(DOCKER_COMPOSE) exec -T backend python manage.py import_evaluations_snapshot --path $(CSV_PATH) $(DRY_RUN)
 
-front-pwa:
-	./scripts/run_frontend_pwa.sh
-
 db-backup:
 	./scripts/backup_db.sh
 
@@ -248,14 +236,6 @@ full-re: full-down full-up
 full-logs:
 	$(DOCKER_COMPOSE) logs -f
 
-# ─── TLS ───────────────────────────────────────────────────────────────────────
-# The proxy issues a self-signed certificate only when none exists, and keeps it
-# in a named volume so it survives rebuilds. Changing TLS_SAN therefore has no
-# effect on its own — the old certificate is still there. This throws it away so
-# the next start issues a new one for the current TLS_SAN.
-#
-# The volume is found by its compose label rather than by name, so this keeps
-# working whatever the project directory is called.
 certs-reset:
 	$(DOCKER_COMPOSE) rm -sf proxy
 	@vol="$$($(DOCKER) volume ls -q --filter label=com.docker.compose.volume=tls_certs)"; \
@@ -272,16 +252,6 @@ certs-reset:
 	@echo "Your browser cached an exception for the old certificate, so it will"
 	@echo "warn again on the first visit — accept it once more."
 
-# ─── Evaluation ────────────────────────────────────────────────────────────────
-# Repoints the stack from localhost to an address other machines can reach, then
-# reissues the certificate and restarts what needs restarting.
-#
-#   make evaluation                      # uses the detected LAN IP
-#   make evaluation EVAL_HOST=$(HOST_NAME).local   # stable across DHCP leases
-#   make evaluation EVAL_HOST=localhost  # put everything back
-#
-# The previous .env is kept as .env.bak. Rewriting is idempotent: it replaces
-# whatever host is currently configured, so running it twice is harmless.
 EVAL_HOST ?= $(HOST_IP)
 
 evaluation:
@@ -367,7 +337,7 @@ dev-re: front-re
 			back-up back-stop back-down back-re back-logs \
 			back-migrate back-makemigrations back-makemigrations-app \
 			back-showmigrations back-showmigrations-app back-syncdb \
-			back-superuser back-shell back-test back-import-evaluations front-pwa \
+			back-superuser back-shell back-test back-import-evaluations \
 			db-backup db-restore db-backup-ls \
 			db-backup-auto-up db-backup-auto-stop db-backup-auto-logs \
 	        status-up status-stop status-down status-re status-logs status-test \
