@@ -466,14 +466,14 @@ def get_achivements_for(login) -> list[UserAchievement] | None:
 
 		# Set to True to allow value progression after getting the achievement
 		completed = achievement.completion_date != None
-		if False or completed:
+		if False or not completed:
 			if check_func(achievement):
 				achievement.completion_date = datetime.now()
 				achievement.save(update_fields=['completion_date', 'progress'])
 
 				if not completed:
 					campus_user.experience += achievement.achievement.experience
-					campus_user.save(update_fields='experience')
+					campus_user.save(update_fields=['experience'])
 				completed = True
 	
 	if missing_func:

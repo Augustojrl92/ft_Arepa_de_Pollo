@@ -210,6 +210,13 @@ def submit_move(match_id, user, choice):
 		match.winner = match.inviter if match.inviter_score > match.opponent_score else match.opponent
 		match.completed_at = timezone.now()
 		match.save(update_fields=['inviter_score', 'opponent_score', 'status', 'winner', 'completed_at', 'updated_at'])
+
+		winner_user = match.winner
+		campus_profile = getattr(winner_user, 'campus_user_profile', None)
+		if campus_profile is not None:
+			campus_profile.today_rps_wins += 1
+			campus_profile.save(update_fields=['today_rps_wins'])
+
 	else:
 		match.save(update_fields=['inviter_score', 'opponent_score', 'updated_at'])
 		GameRound.objects.create(match=match, number=round_item.number + 1)

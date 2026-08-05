@@ -88,6 +88,8 @@ class CampusUser(models.Model):
 
 	experience = models.IntegerField(default=0)
 
+	today_rps_wins = models.IntegerField(default=0)
+
 	class Meta:
 		unique_together = ('intra_id', 'user_id')
 

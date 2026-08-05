@@ -33,7 +33,7 @@ from .services import (
 )
 from .events import broadcast_friend_event
 
-from achievement_functions import exp_to_lvl_ratio
+from .achievement_functions import exp_to_lvl_ratio
 
 
 logger = logging.getLogger(__name__)
@@ -422,7 +422,7 @@ class UserAchievementsView(APIView):
 
 				'n_achievements': len(serialized_achievements),
 				'achievements': serialized_achievements,
-				
+
 				'n_daily_challenges': len(serialized_daily_challenges),
 				'daily_challenges': serialized_daily_challenges,
 
