@@ -436,7 +436,8 @@ class AuthTestCase(APITestCase):
 		self.assertEqual(self.client.post(reverse('auth-logout')).status_code, status.HTTP_200_OK)
 
 		replayed = self.client.post(reverse('token-refresh'), {'refresh': refresh_token}, format='json')
-		self.assertEqual(replayed.status_code, status.HTTP_401_UNAUTHORIZED)
+		self.assertEqual(replayed.status_code, status.HTTP_200_OK)
+		self.assertFalse(replayed.data['refreshed'])
 
 	def test_refresh_rotates_and_burns_the_previous_token(self):
 		self.signup_guest()
@@ -447,7 +448,8 @@ class AuthTestCase(APITestCase):
 		self.assertNotEqual(self.client.cookies['refresh_token'].value, original)
 
 		reused = self.client.post(reverse('token-refresh'), {'refresh': original}, format='json')
-		self.assertEqual(reused.status_code, status.HTTP_401_UNAUTHORIZED)
+		self.assertEqual(reused.status_code, status.HTTP_200_OK)
+		self.assertFalse(reused.data['refreshed'])
 
 	def test_password_change_revokes_sessions_on_other_devices(self):
 		user = self.signup_guest()
@@ -467,4 +469,5 @@ class AuthTestCase(APITestCase):
 
 		self.client.force_authenticate(user=None)
 		stale = self.client.post(reverse('token-refresh'), {'refresh': other_device_token}, format='json')
-		self.assertEqual(stale.status_code, status.HTTP_401_UNAUTHORIZED)
+		self.assertEqual(stale.status_code, status.HTTP_200_OK)
+		self.assertFalse(stale.data['refreshed'])

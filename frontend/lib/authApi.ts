@@ -138,6 +138,12 @@ export const refreshAccessToken = async () => {
 			response.status,
 		)
 	}
+
+	const payload = await response.json().catch(() => null) as { refreshed?: boolean } | null
+
+	if (!payload?.refreshed) {
+		throw new ApiHttpError("No se ha podido renovar el token de sesión", 401)
+	}
 	})()
 
 	try {

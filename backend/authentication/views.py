@@ -432,25 +432,29 @@ class AuthTokenRefreshView(APIView):
 		refresh_token = request.data.get('refresh') or request.COOKIES.get('refresh_token')
 
 		if not refresh_token:
-			return Response({'error': 'Refresh token not provided'}, status=status.HTTP_400_BAD_REQUEST)
+			return Response({'refreshed': False, 'error': 'Refresh token not provided'}, status=status.HTTP_200_OK)
 
 		serializer = TokenRefreshSerializer(data={'refresh': refresh_token})
 
 		# TokenRefreshSerializer raises TokenError (not a DRF ValidationError)
 		# for expired, malformed or blacklisted tokens, so is_valid() would let
-		# it escape as a 500 instead of a 401.
+		# it escape as a 500 instead of a handled failure.
 		try:
 			is_valid = serializer.is_valid()
 		except TokenError:
 			is_valid = False
 
 		if not is_valid:
-			response = Response({'error': 'Invalid refresh token'}, status=status.HTTP_401_UNAUTHORIZED)
+			# Always 200: an expired/blacklisted refresh token is an expected
+			# outcome (the session ended), not a server error. Callers read the
+			# `refreshed` field instead of the HTTP status, which keeps this
+			# from showing up as a failed request in the browser console.
+			response = Response({'refreshed': False, 'error': 'Invalid refresh token'}, status=status.HTTP_200_OK)
 			_clear_auth_cookies(response)
 			return response
 
 		validated = serializer.validated_data
-		response = Response({'detail': 'Token refreshed'}, status=status.HTTP_200_OK)
+		response = Response({'refreshed': True}, status=status.HTTP_200_OK)
 
 		options = _cookie_options()
 		access_lifetime = int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
