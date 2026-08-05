@@ -106,6 +106,23 @@ class MultiplayerGameApiTests(TestCase):
 		self.assertEqual(third_match.status_code, 201)
 		return first_match.json()['id'], third_match.json()['id']
 
+	def _complete_match(self, target_score=3):
+		match_id = self._invite_and_accept(target_score=target_score)
+		for _round in range(target_score):
+			self._authenticate(self.first)
+			self.client.post(
+				f'/api/games/matches/{match_id}/move/',
+				{'choice': 'spock'},
+				content_type='application/json',
+			)
+			self._authenticate(self.second)
+			self.client.post(
+				f'/api/games/matches/{match_id}/move/',
+				{'choice': 'rock'},
+				content_type='application/json',
+			)
+		return match_id
+
 	def test_only_friends_can_be_invited(self):
 		response = self.client.post(
 			'/api/games/matches/',
@@ -257,6 +274,77 @@ class MultiplayerGameApiTests(TestCase):
 		self.assertEqual(response.status_code, 200)
 		self.assertEqual(response.json()['status'], 'completed')
 		self.assertEqual(response.json()['winner_user_id'], self.first.id)
+
+	def test_rematch_request_persists_for_both_players(self):
+		match_id = self._complete_match()
+		self._authenticate(self.first)
+		requested = self.client.post(f'/api/games/matches/{match_id}/rematch/')
+
+		self.assertEqual(requested.status_code, 201)
+		self.assertEqual(requested.json()['status'], 'completed')
+		self.assertEqual(requested.json()['rematch_status'], 'pending')
+		self.assertEqual(requested.json()['rematch_requested_by_user_id'], self.first.id)
+
+		self._authenticate(self.second)
+		incoming = self.client.get('/api/games/matches/').json()['rematch_incoming']
+		self.assertEqual([match['id'] for match in incoming], [match_id])
+
+		self._authenticate(self.first)
+		outgoing = self.client.get('/api/games/matches/').json()['rematch_outgoing']
+		self.assertEqual([match['id'] for match in outgoing], [match_id])
+
+	def test_accepting_rematch_starts_linked_match_for_both_players(self):
+		match_id = self._complete_match(target_score=5)
+		self._authenticate(self.first)
+		self.client.post(f'/api/games/matches/{match_id}/rematch/')
+		self._authenticate(self.second)
+
+		accepted = self.client.patch(
+			f'/api/games/matches/{match_id}/rematch/',
+			{'action': 'accept'},
+			content_type='application/json',
+		)
+
+		self.assertEqual(accepted.status_code, 200)
+		self.assertEqual(accepted.json()['status'], 'active')
+		self.assertEqual(accepted.json()['target_score'], 5)
+		new_match = GameMatch.objects.get(pk=accepted.json()['id'])
+		self.assertEqual(new_match.rematch_of_id, match_id)
+		self.assertEqual(new_match.rounds.count(), 1)
+		original = GameMatch.objects.get(pk=match_id)
+		self.assertEqual(original.rematch_status, GameMatch.RematchStatus.ACCEPTED)
+
+	def test_two_rematch_requests_are_treated_as_acceptance(self):
+		match_id = self._complete_match()
+		self._authenticate(self.first)
+		self.client.post(f'/api/games/matches/{match_id}/rematch/')
+		self._authenticate(self.second)
+
+		response = self.client.post(f'/api/games/matches/{match_id}/rematch/')
+
+		self.assertEqual(response.status_code, 201)
+		self.assertEqual(response.json()['status'], 'active')
+		self.assertEqual(GameMatch.objects.filter(rematch_of_id=match_id).count(), 1)
+
+	def test_rematch_can_be_rejected_and_requested_again(self):
+		match_id = self._complete_match()
+		self._authenticate(self.first)
+		self.client.post(f'/api/games/matches/{match_id}/rematch/')
+		self._authenticate(self.second)
+		rejected = self.client.patch(
+			f'/api/games/matches/{match_id}/rematch/',
+			{'action': 'reject'},
+			content_type='application/json',
+		)
+
+		self.assertEqual(rejected.status_code, 200)
+		self.assertEqual(rejected.json()['rematch_status'], 'rejected')
+		self.assertEqual(self.client.get('/api/games/matches/').json()['rematch_incoming'], [])
+
+		retry = self.client.post(f'/api/games/matches/{match_id}/rematch/')
+		self.assertEqual(retry.status_code, 201)
+		self.assertEqual(retry.json()['rematch_status'], 'pending')
+		self.assertEqual(retry.json()['rematch_requested_by_user_id'], self.second.id)
 
 	@patch('games.views.broadcast_game_event')
 	def test_invitation_emits_realtime_event(self, broadcast):

@@ -10,6 +10,13 @@ class GameMatch(models.Model):
 		CANCELLED = 'cancelled', 'Cancelled'
 		COMPLETED = 'completed', 'Completed'
 
+	class RematchStatus(models.TextChoices):
+		NONE = 'none', 'None'
+		PENDING = 'pending', 'Pending'
+		ACCEPTED = 'accepted', 'Accepted'
+		REJECTED = 'rejected', 'Rejected'
+		CANCELLED = 'cancelled', 'Cancelled'
+
 	inviter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='game_matches_invited')
 	opponent = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='game_matches_received')
 	status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
@@ -17,6 +24,21 @@ class GameMatch(models.Model):
 	inviter_score = models.PositiveSmallIntegerField(default=0)
 	opponent_score = models.PositiveSmallIntegerField(default=0)
 	winner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='game_matches_won')
+	rematch_status = models.CharField(max_length=16, choices=RematchStatus.choices, default=RematchStatus.NONE)
+	rematch_requested_by = models.ForeignKey(
+		settings.AUTH_USER_MODEL,
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name='game_rematches_requested',
+	)
+	rematch_of = models.OneToOneField(
+		'self',
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name='next_rematch',
+	)
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
 	accepted_at = models.DateTimeField(null=True, blank=True)
