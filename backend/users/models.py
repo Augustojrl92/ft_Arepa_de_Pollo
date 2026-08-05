@@ -56,6 +56,9 @@ class Achievement(models.Model):
 
 	initialized = False
 
+	experience = models.IntegerField(default=0)
+	daily = models.BooleanField(default=False)
+
 class UserAchievement(models.Model):
 	user = models.ForeignKey(CampusUser, on_delete=models.CASCADE)
 	achievement = models.ForeignKey(Achievement, on_delete=models.CASCADE)
