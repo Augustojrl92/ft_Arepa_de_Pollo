@@ -1,26 +1,25 @@
-# Named explicitly (rather than left to derive from the directory name) so its
-# containers/networks/volumes can never collide with docker-compose.prod.yml
-# if both are ever brought up on the same machine — see certs-reset, which
-# looks a volume up by this project's label.
-name: aedlph-dev
+# Production/evaluation stack: same five services as docker-compose.dev.yml,
+# but every service builds its Dockerfile.prod (no --reload / next dev, no
+# bind-mounted source) so the app runs as an immutable, built image — see
+# CLAUDE.md for why that matters (console warnings, HMR full-stack refresh,
+# volatile dev asset URLs all disappear once nothing runs `next dev`).
+#
+# A distinct project name keeps this stack's containers/networks/volumes from
+# colliding with docker-compose.dev.yml if both are ever brought up on the
+# same machine.
+name: aedlph-prod
 
 services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
-    # Deliberately not published: the proxy is the only way in, so there is no
-    # plain-HTTP port left for a browser to reach.
+      dockerfile: Dockerfile.prod
+      args:
+        # Empty means "same origin" — see docker-compose.dev.yml for why this
+        # never needs to change per machine.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
     expose:
       - "3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
-    environment:
-      # Empty means "same origin" — the browser calls /api/... on whatever host
-      # it loaded the page from, so this never needs updating per machine.
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-}
     restart: always
 
   db:
@@ -36,6 +35,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -68,10 +68,12 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Kept for evaluation convenience (password reset / verification email need
+  # somewhere to land without a real mailbox). Not published on a host port
+  # either way — reachable only through the proxy at /mailpit/, same as dev.
+  # Point EMAIL_HOST elsewhere in .env for a real SMTP provider instead.
   mailpit:
     image: axllent/mailpit:latest
-    # Not published: reached over TLS at https://<host>:<port>/mailpit/ like
-    # everything else, so there is no plain-HTTP way to read captured mail.
     expose:
       - "8025"
       - "1025"
@@ -79,9 +81,6 @@ services:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
       MP_MAX_MESSAGES: 500
-      # Mailpit serves its UI from / by default and emits absolute asset paths.
-      # Telling it the base path is what stops every asset 404ing behind the
-      # proxy — rewriting URLs in nginx would not be enough.
       MP_WEBROOT: /mailpit/
     healthcheck:
       test: ["CMD", "/mailpit", "readyz"]
@@ -93,16 +92,18 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.prod
     env_file:
       - ./.env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.prod
     volumes:
-      - ./backend:/app
       # Cron runs with a bare environment and sources this to get what the web
-      # process receives via env_file. Mounted outside /app because /app is
-      # itself a bind mount.
+      # process receives via env_file (see entrypoint.sh). Not a source mount.
       - ./.env:/etc/aedlph.env:ro
-    # Not published either — reachable only through the proxy.
+      # User-uploaded avatars (MEDIA_ROOT) must survive image rebuilds even
+      # though the app source itself is baked into the image, not mounted.
+      - media_data:/app/media
     expose:
       - "8000"
     depends_on:
@@ -115,11 +116,12 @@ services:
       interval: 10s
       timeout: 3s
       retries: 10
+    restart: always
 
   status:
     build:
       context: ./status_service
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.prod
     env_file:
       - ./.env
     environment:
@@ -128,8 +130,6 @@ services:
       STATUS_PUBLIC_API_URL: ${STATUS_PUBLIC_API_URL:-http://public_api:8000/api/v1/health}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/1}
       STATUS_CHECK_TIMEOUT_SECONDS: ${STATUS_CHECK_TIMEOUT_SECONDS:-2}
-    volumes:
-      - ./status_service:/app
     expose:
       - "8000"
     healthcheck:
@@ -142,16 +142,12 @@ services:
   public_api:
     build:
       context: ./public_api
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.prod
     env_file:
       - ./.env
     environment:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/1}
       PUBLIC_API_RATE_LIMIT_WINDOW_SECONDS: ${PUBLIC_API_RATE_LIMIT_WINDOW_SECONDS:-60}
-    volumes:
-      - ./public_api:/app
-    # Not published: the proxy is the only way in, so the public API is only
-    # reachable over TLS at https://<host>/api/v1/ like everything else.
     expose:
       - "8000"
     depends_on:
@@ -160,8 +156,7 @@ services:
       redis:
         condition: service_healthy
     restart: always
-  # Terminates TLS and is the single entry point. Everything else talks plain
-  # HTTP on the internal network only, which the subject allows.
+
   proxy:
     build:
       context: ./nginx
@@ -170,8 +165,6 @@ services:
       # nginx still listens on 443 inside the container.
       - "${HTTPS_PORT:-8443}:443"
     environment:
-      # Add the machine's LAN IP here when testing from another computer, e.g.
-      #   TLS_SAN=DNS:localhost,IP:127.0.0.1,IP:10.19.200.165
       TLS_SAN: ${TLS_SAN:-DNS:localhost,IP:127.0.0.1}
     volumes:
       - tls_certs:/etc/nginx/certs
@@ -187,3 +180,4 @@ volumes:
   postgres_data:
   redis_data:
   tls_certs:
+  media_data:

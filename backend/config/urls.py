@@ -14,11 +14,13 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+import re
+
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
-from django.contrib.staticfiles.urls import staticfiles_urlpatterns
-from django.urls import path, include
+from django.contrib.staticfiles.views import serve as staticfiles_serve
+from django.urls import path, re_path, include
+from django.views.static import serve as media_serve
 
 from .views import api_root, server_message
 from authentication import urls as auth_urls
@@ -38,6 +40,24 @@ urlpatterns = [
     path('api/chat/', include(chat_urls)),
 ]
 
-if settings.DEBUG:
-    urlpatterns += staticfiles_urlpatterns()
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Django's usual shortcuts here — staticfiles_urlpatterns() / static() — both
+# hard-code a DEBUG check *inside* the view itself (raising Http404, or in
+# static()'s case silently registering nothing at all), because Django's own
+# docs frame them as debug-server-only conveniences. There is no separate
+# static file server in this architecture, though — nginx forwards /static/
+# and /media/ straight to this backend (see nginx.conf) in both dev and prod
+# — so both are wired up directly against the underlying views, bypassing
+# that guard on purpose. This is what keeps user-uploaded avatars and the
+# admin UI working once DEBUG=False.
+urlpatterns += [
+    re_path(
+        r'^%s(?P<path>.*)$' % re.escape(settings.STATIC_URL.lstrip('/')),
+        staticfiles_serve,
+        kwargs={'insecure': True},
+    ),
+    re_path(
+        r'^%s(?P<path>.*)$' % re.escape(settings.MEDIA_URL.lstrip('/')),
+        media_serve,
+        kwargs={'document_root': settings.MEDIA_ROOT},
+    ),
+]
