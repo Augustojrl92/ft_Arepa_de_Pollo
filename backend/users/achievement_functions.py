@@ -1,5 +1,5 @@
 
-from .models import Achievement
+from .models import Achievement, UserAchievement
 
 def set_up_achievements():
 	altarian_achievement_name = "La respuesta a la vida, al universo, y a todo lo demás."
@@ -18,15 +18,29 @@ def set_up_achievements():
 	Achievement.completion_check_funcs[coalition_rank_name] = coalition_rank_completion
 	create_achievement_if_unexistant(coalition_rank_name, 'Sé el primero de tu coalición', 1)
 
+	private_achievement_name = 'Es tu primer día?'
+	Achievement.completion_check_funcs[private_achievement_name] = private_completion
+	create_achievement_if_unexistant(private_achievement_name, 'Unete a AEDLPH', 1)
 
-def create_achievement_if_unexistant(name: str, description: str, completion_points: int, icon_HTML: str | None = None) -> None:
+	Achievement.completion_check_funcs['Es tu primer día, eh?'] = private_completion
+
+def create_achievement_if_unexistant(name: str, description: str, completion_points: int, experience: int, daily: bool, icon_HTML: str | None = None) -> None:
 	if Achievement.objects.filter(name=name).count() > 0:
 		return
-	to_add = Achievement(name=name, description=description, completion_points=completion_points)
+	to_add = Achievement(name=name, description=description, completion_points=completion_points, experience=experience, daily=daily)
 	if icon_HTML != None:
 		to_add.icon_HTML = icon_HTML
 
 	to_add.save()
+
+
+def reset_daily_challenges():
+	achievements = list(UserAchievement.objects.iterator())
+	for achv in achievements:
+		if achv.achievement.daily:
+			achv.progress = 0
+			achv.completion_date = None
+			achv.save(update_fields=['progress', 'completion_date'])
 
 
 def dios_de_las_arepas_completion_check(user):
@@ -75,3 +89,8 @@ def altarians_completion(user):
 	user.progress = wallet
 
 	return wallet >= completion_points
+
+def private_completion(user):
+
+	user.progress = 1
+	return True
