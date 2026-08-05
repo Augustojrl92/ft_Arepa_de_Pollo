@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { fetchConversations } from "@/lib/chatApi";
+import { formatMessageTime } from "@/lib/chatFormat";
 import { ChatConversation } from "@/types";
 
 export default function useConversations(myLogin?: string) {
@@ -24,7 +25,7 @@ export default function useConversations(myLogin?: string) {
               login: row.login,
               status: "Desconectado",
               lastMessage: row.last_message,
-              lastTime: new Date(row.last_time).toLocaleTimeString(),
+              lastTime: formatMessageTime(row.last_time),
               messages: [],
               isTyping: false,
             }));

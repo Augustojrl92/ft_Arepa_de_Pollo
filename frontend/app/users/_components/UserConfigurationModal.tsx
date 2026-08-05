@@ -83,15 +83,15 @@ export function UserConfigurationModal({
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
 			<div
-				className="w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-2xl"
+				className="flex max-h-[90vh] w-full max-w-xl flex-col rounded-2xl border border-border bg-card shadow-2xl"
 				onClick={(event) => event.stopPropagation()}
 			>
-				<div className="mb-5 flex items-center justify-between">
+				<div className="flex items-center justify-between border-b border-border p-6 pb-5">
 					<h3 className="text-xl font-black">Configuración de cuenta</h3>
 					<X size={20} className="cursor-pointer hover:text-accent" onClick={onClose} />
 				</div>
 
-				<div className="space-y-4">
+				<div className="space-y-4 overflow-y-auto p-6">
 					<div>
 						<span className="mb-1 block text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">
 							Avatar personalizado
@@ -235,7 +235,7 @@ export function UserConfigurationModal({
 					</div>
 				</div>
 
-				<div className="mt-6 flex items-center justify-end gap-3">
+				<div className="flex items-center justify-end gap-3 border-t border-border p-6 pt-4">
 					<button
 						type="button"
 						onClick={onClose}
