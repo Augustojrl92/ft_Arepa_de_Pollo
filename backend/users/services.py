@@ -13,7 +13,7 @@ from django.utils import timezone
 
 from sync.models import CampusUser
 from .models import FriendsList, Achievement, UserAchievement
-from .achievement_functions import set_up_achievements
+from .achievement_functions import set_up_achievements, exp_to_lvl_ratio
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,6 @@ time_until_inactivity = 2 * 60
 
 from sync.models import CampusUser
 from .models import FriendsList, Achievement, UserAchievement
-from .achievement_functions import set_up_achievements
 
 time_until_inactivity = 2 * 60
 
@@ -77,7 +76,10 @@ def _serialize_user_details(user_login, request=None):
 		'general_rank': campus_user.general_rank,
 		'achievements': 'none',  # Placeholder for achievements data,
 		'active': active,
-		'experience': campus_user.experience,
+		'total_user_experience': campus_user.experience,
+		'current_level_experience': campus_user.experience % exp_to_lvl_ratio,
+		'total_level_experience': exp_to_lvl_ratio,
+		'level': campus_user.experience / exp_to_lvl_ratio,
 	}
 
 
@@ -130,7 +132,10 @@ def _serialize_friend_entry(friend_list, request=None):
 		'display_name': campus_user.display_name if campus_user else owner.username,
 		'avatar_url': avatar_url,
 		'active': active,
-		'experience': campus_user.experience,
+		'total_user_experience': campus_user.experience,
+		'current_level_experience': campus_user.experience % exp_to_lvl_ratio,
+		'total_level_experience': exp_to_lvl_ratio,
+		'level': campus_user.experience / exp_to_lvl_ratio,
 	}
 
 
