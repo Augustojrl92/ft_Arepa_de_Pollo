@@ -1,0 +1,35 @@
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+
+COPY . .
+
+# Inlined into the client bundle at build time by webpack, so it has to be
+# present before `next build` runs — setting it only at container runtime
+# (like the other services do via `environment:`) would not reach code that
+# is already bundled.
+ARG NEXT_PUBLIC_API_URL=
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
+RUN npm run build
+
+# ── Runtime image ────────────────────────────────────────────────────────────
+# `output: "standalone"` (next.config.ts) traces the production server down to
+# only the node_modules it needs, so the final image copies that self
+# contained folder instead of the full node_modules tree.
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+EXPOSE 3000
+
+CMD ["node", "server.js"]

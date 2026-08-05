@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Produces a self-contained .next/standalone server (server.js + only the
+  // node_modules it actually needs) so the production image doesn't have to
+  // ship the full node_modules tree. Ignored by `next dev`.
+  output: "standalone",
+
   // allowedDevOrigins: Array.from(new Set(["localhost", "127.0.0.1", apiHostname])),
   // Next rejects dev requests whose Origin is not the one it is served from,
   // which blocks opening the app from another machine on the LAN. These

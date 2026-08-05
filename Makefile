@@ -1,4 +1,5 @@
 DOCKER_COMPOSE = docker compose -f docker-compose.dev.yml
+DOCKER_COMPOSE_PROD = docker compose -f docker-compose.prod.yml
 MODE ?= full
 DOCKER ?= docker
 CSV_PATH ?= /app/evaluations_snapshot_round_apr_oct_2026.csv
@@ -248,6 +249,46 @@ full-re: full-down full-up
 full-logs:
 	$(DOCKER_COMPOSE) logs -f
 
+# ─── Production stack ────────────────────────────────────────────────────────
+# Same five services, built from each service's Dockerfile.prod: no `next
+# dev`/`--reload`, no bind-mounted source — see docker-compose.prod.yml.
+# Runs as an entirely separate compose project (name: aedlph-prod), so it can
+# coexist with the dev stack without port/volume/network collisions (besides
+# HTTPS_PORT itself, which both stacks publish — stop one before starting the
+# other if they'd share a port).
+prod-up:
+	TLS_SAN="$(TLS_SAN)" $(DOCKER_COMPOSE_PROD) up -d --build
+
+prod-stop:
+	$(DOCKER_COMPOSE_PROD) stop
+
+prod-down:
+	$(DOCKER_COMPOSE_PROD) down --remove-orphans
+
+prod-re: prod-down prod-up
+
+prod-logs:
+	$(DOCKER_COMPOSE_PROD) logs -f
+
+prod-syncapi:
+	$(DOCKER_COMPOSE_PROD) exec -T backend python manage.py sync_campus_users --mode=$(MODE)
+
+prod-certs-reset:
+	$(DOCKER_COMPOSE_PROD) rm -sf proxy
+	@vol="$$($(DOCKER) volume ls -q --filter label=com.docker.compose.project=aedlph-prod --filter label=com.docker.compose.volume=tls_certs)"; \
+	if [ -n "$$vol" ]; then \
+		$(DOCKER) volume rm $$vol; \
+	else \
+		echo "no tls_certs volume found, nothing to remove"; \
+	fi
+	@echo "Issuing certificate for: $(TLS_SAN)"
+	TLS_SAN="$(TLS_SAN)" $(DOCKER_COMPOSE_PROD) up -d proxy
+	@echo ""
+	@echo "Reach the app at https://localhost:$(HTTPS_PORT) or https://$(HOST_NAME).local:$(HTTPS_PORT)"
+
+prod-fclean:
+	$(DOCKER_COMPOSE_PROD) down --volumes --rmi all --remove-orphans
+
 # ─── TLS ───────────────────────────────────────────────────────────────────────
 # The proxy issues a self-signed certificate only when none exists, and keeps it
 # in a named volume so it survives rebuilds. Changing TLS_SAN therefore has no
@@ -258,7 +299,7 @@ full-logs:
 # working whatever the project directory is called.
 certs-reset:
 	$(DOCKER_COMPOSE) rm -sf proxy
-	@vol="$$($(DOCKER) volume ls -q --filter label=com.docker.compose.volume=tls_certs)"; \
+	@vol="$$($(DOCKER) volume ls -q --filter label=com.docker.compose.project=aedlph-dev --filter label=com.docker.compose.volume=tls_certs)"; \
 	if [ -n "$$vol" ]; then \
 		$(DOCKER) volume rm $$vol; \
 	else \
@@ -372,6 +413,7 @@ dev-re: front-re
 			db-backup-auto-up db-backup-auto-stop db-backup-auto-logs \
 	        status-up status-stop status-down status-re status-logs status-test \
 	        full-up full-stop full-down full-re full-logs \
+	        prod-up prod-stop prod-down prod-re prod-logs prod-syncapi prod-certs-reset prod-fclean \
         fclean certs-reset evaluation \
 		up stop down logs migrate makemigrations initialize reinitialize superuser shell test \
         dev-up dev-stop dev-down dev-re dev-logs
