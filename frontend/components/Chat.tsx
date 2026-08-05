@@ -8,6 +8,7 @@ import NewChatModal from "@/components/NewChatModal";
 import { ChatMessage, ChatConversation, ChatUser } from "@/types";
 import { useAuthStore } from "@/hooks";
 import { fetchMessagesWith } from "@/lib/chatApi";
+import { formatMessageTime } from "@/lib/chatFormat";
 
 export default function Chat() {
 	const { user } = useAuthStore();
@@ -30,7 +31,7 @@ export default function Chat() {
 			return current + 1;
 		});
 	}, [open, selectedConversationId]);
-	const { socketRef, sendMessage } = useChatSocket(myLogin, setFriends, selectedConversationId, setConversations, {
+	const { socketRef, sendMessage } = useChatSocket(myLogin, setFriends, setConversations, {
 		onMessageReceived: handleMessageReceived,
 	});
 
@@ -92,7 +93,8 @@ export default function Chat() {
 				id: index,
 				author: row.sender_login === myLogin ? 'me' : 'friend',
 				text: row.message,
-				time: new Date(row.date_time).toLocaleTimeString(),
+				date: row.date_time,
+				time: formatMessageTime(row.date_time),
 			}));
 
 			setConversations((prev) =>
@@ -117,7 +119,8 @@ export default function Chat() {
 				id: index,
 				author: row.sender_login === myLogin ? 'me' : 'friend',
 				text: row.message,
-				time: new Date(row.date_time).toLocaleTimeString(),
+				date: row.date_time,
+				time: formatMessageTime(row.date_time),
 			}));
 
 			setConversations((prev) =>
@@ -146,12 +149,13 @@ export default function Chat() {
 	};
 
 	const handleSendMessage = (to_user_id: number, to_user_login: string, message: string) => {
+		const now = new Date();
 		sendMessage({
 			type: 'chat_message',
 			to_user_id: to_user_id,
 			to_user_login: to_user_login,
 			message: message,
-			timestamp: new Date().toISOString(),
+			timestamp: now.toISOString(),
 		});
 		setConversations((prev) =>
 			prev.map((conv) => {
@@ -164,11 +168,12 @@ export default function Chat() {
 								id: conv.messages.length + 1,
 								author: 'me',
 								text: message,
-								time: new Date().toLocaleTimeString(),
+								date: now.toISOString(),
+								time: formatMessageTime(now),
 							},
 						],
 						lastMessage: message,
-						lastTime: new Date().toLocaleTimeString(),
+						lastTime: formatMessageTime(now),
 					};
 				}
 				return conv;

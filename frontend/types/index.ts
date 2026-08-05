@@ -127,6 +127,7 @@ export type ChatMessage = {
   id: number;
   author: "me" | "friend";
   text: string;
+  date: string;
   time: string;
 };
 export type ChatConversation = {
