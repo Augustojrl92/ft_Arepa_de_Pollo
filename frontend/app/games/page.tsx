@@ -176,12 +176,20 @@ function MultiplayerWinnerPanel({ match, currentUserId, rivalLogin, title, score
 	const pending = match.rematch_status === 'pending'
 	const requestedByMe = match.rematch_requested_by_user_id === currentUserId
 	const accepted = match.rematch_status === 'accepted'
+	const rejected = match.rematch_status === 'rejected'
+	const cancelled = match.rematch_status === 'cancelled'
+	const statusCopy = pending
+		? requestedByMe ? 'Has solicitado una revancha' : `${rivalLogin} quiere la revancha`
+		: accepted ? 'Preparando revancha'
+		: rejected ? `${rivalLogin} ha rechazado la revancha`
+		: cancelled ? 'Has cancelado la solicitud de revancha'
+		: 'Partida finalizada'
 
 	return (
 		<section className="game-winner-panel" role="status" aria-live="polite" aria-labelledby="multiplayer-winner-title">
 			<div className="game-winner-trophy"><TrophyIcon size={30} /></div>
 			<div className="game-winner-copy">
-				<p>{pending ? requestedByMe ? 'Has solicitado una revancha' : `${rivalLogin} quiere la revancha` : accepted ? 'Preparando revancha' : 'Partida finalizada'}</p>
+				<p>{statusCopy}</p>
 				<h2 id="multiplayer-winner-title">{title}</h2>
 				<strong>{score}</strong>
 			</div>
