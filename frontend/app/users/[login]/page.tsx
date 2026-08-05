@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
 
 import { useAuthStore, useCoalitionStore, useUserStore } from '@/hooks'
+import { fetchUserAchievements } from '@/lib/userApi'
 import { UserAchievements } from '../_components/UserAchievements'
 import { UserAllies } from '../_components/UserAllies'
 import { GamificationPanel } from '../_components/GamificationPanel'
@@ -58,12 +59,35 @@ export default function UserDetailPage({
 	const [isExportingData, setIsExportingData] = useState(false)
 	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
 	const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+	const [achievementsPayload, setAchievementsPayload] = useState<null | { login: string; n_achievements: number; achievements: Array<{ name: string; description: string; progress: number; completion_progress: number; completion_date: string | null; icon_HTML: string }> }>(null)
+	const [achievementsError, setAchievementsError] = useState<string | null>(null)
+
+	const achievementsToRender = achievementsPayload?.achievements ?? mockAchievements
 
 	useEffect(() => {
 		params.then((p) => {
 			setLogin(p.login)
 		})
 	}, [params])
+
+	useEffect(() => {
+		if (!login) {
+			return
+		}
+
+		setAchievementsError(null)
+		void (async () => {
+			try {
+				const payload = await fetchUserAchievements(login)
+				setAchievementsPayload(payload)
+				console.debug('User achievements loaded', login, payload)
+			} catch (error) {
+				const message = error instanceof Error ? error.message : 'Failed to fetch achievements'
+				setAchievementsError(message)
+				console.error('Failed to load achievements for', login, error)
+			}
+		})()
+	}, [login])
 
 	const isOwnProfile = useMemo(() => {
 		if (!user || !login) return false
@@ -286,11 +310,16 @@ export default function UserDetailPage({
 				}
 			/>
 			{isOwnProfile && <GamificationPanel />}
+		{achievementsError ? (
+			<div className="rounded-3xl border border-red-300 bg-red-50 p-4 px-6 text-sm text-red-700">
+				No se pudieron cargar los logros: {achievementsError}
+			</div>
+		) : null}
 			<section className="grid gap-6 px-6 lg:grid-cols-2">
 				{isOwnProfile && (
 					<>
 						<UserAllies currentLogin={profile.login} />
-						<UserAchievements achievements={mockAchievements} />
+						<UserAchievements achievements={achievementsToRender} />
 					</>
 				)}
 			</section>
