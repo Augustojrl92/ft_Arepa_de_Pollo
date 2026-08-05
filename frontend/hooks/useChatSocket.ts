@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { ChatUser, ChatConversation, ChatMessage, ChatNotification } from "@/types";
+import { formatMessageTime } from "@/lib/chatFormat";
 
 type SetFriends = React.Dispatch<React.SetStateAction<ChatUser[]>>;
 type SetConversations = React.Dispatch<React.SetStateAction<ChatConversation[]>>;
@@ -73,14 +74,12 @@ export function useChatNotifications() {
 export default function useChatSocket(
   myLogin: string | undefined,
   setFriends: SetFriends,
-  selectedConversationId: number | null = null,
   setConversations: SetConversations,
   options: UseChatSocketOptions = {}
 ) {
   const socketRef = useRef<WebSocket | null>(null);
   const onMessageReceivedRef = useRef(options.onMessageReceived);
   const typingTimeoutsRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
-  const { addNotification } = useChatNotifications();
   useEffect(() => {
     onMessageReceivedRef.current = options.onMessageReceived;
   }, [options.onMessageReceived]);
@@ -92,6 +91,12 @@ export default function useChatSocket(
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const chatSocket = new WebSocket(`${protocol}//${window.location.host}/ws/chat/`);
     socketRef.current = chatSocket;
+
+    chatSocket.onopen = () => {
+      if (isCleaningUp) {
+        chatSocket.close();
+      }
+    };
 
     chatSocket.onmessage = (event) => {
       try {
@@ -164,7 +169,8 @@ export default function useChatSocket(
               id: Date.now(),
               author: "friend",
               text: message,
-              time: new Date(timestamp).toLocaleTimeString(),
+              date: timestamp,
+              time: formatMessageTime(timestamp),
             };
 
             if (exists) {
@@ -224,14 +230,11 @@ export default function useChatSocket(
       isCleaningUp = true;
       Object.values(typingTimeoutsRef.current).forEach(clearTimeout);
       typingTimeoutsRef.current = {};
-      if (
-        chatSocket.readyState === WebSocket.OPEN ||
-        chatSocket.readyState === WebSocket.CONNECTING
-      ) {
+      if (chatSocket.readyState === WebSocket.OPEN) {
         chatSocket.close();
       }
     };
-  }, [myLogin, setFriends, setConversations, selectedConversationId, addNotification]);
+  }, [myLogin, setFriends, setConversations]);
 
   const sendMessage = (payload: ChatSocketOutgoingPayload) => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
