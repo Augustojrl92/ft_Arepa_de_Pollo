@@ -50,10 +50,11 @@ export default function ChatNotifications() {
 						<strong>Mensajes sin leer</strong>
 						<span>{notificationCount}</span>
 					</header>
-					{notificationCount === 0 && (
-						<p className={styles.empty}>No tienes mensajes sin leer.</p>
-					)}
-					{notifications.map((notification) => (
+					<div className={styles.list}>
+						{notificationCount === 0 && (
+							<p className={styles.empty}>No tienes mensajes sin leer.</p>
+						)}
+						{notifications.map((notification) => (
 						<div
 							key={notification.id}
 							className={styles.item}
@@ -91,6 +92,7 @@ export default function ChatNotifications() {
 							</button>
 						</div>
 					))}
+					</div>
 				</section>
 			)}
 		</div>

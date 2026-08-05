@@ -133,44 +133,46 @@ export default function Notifications() {
 				{isOpen && (
 					<section className={styles.menu} aria-label="Notificaciones">
 						<header className={styles.heading}><strong>Notificaciones</strong><span>{friendNotificationCount}</span></header>
-						{friendNotificationCount === 0 && <p className={styles.empty}>No tienes notificaciones pendientes.</p>}
-						{chatActivities.length > 0 && <p className={styles.sectionLabel}>Mensajes de chat</p>}
-						{chatActivities.map((activity) => (
-							<button
-								type="button"
-								className={styles.item}
-								key={activity.id}
-								onClick={() => {
-									setChatActivities((current) => current.filter((item) => item.id !== activity.id))
-									setIsOpen(false)
-								}}
-							>
-								<MessageCircleIcon className={styles.icon} size={18} />
-								<span className={styles.copy}><strong>{activity.login}</strong> te envió un mensaje.<small>{activity.message}</small></span>
-							</button>
-						))}
-						{friendActivities.length > 0 && <p className={styles.sectionLabel}>Actividad de amistad</p>}
-						{friendActivities.map((activity) => (
-							<Link
-								className={styles.item}
-								href={`/users/${encodeURIComponent(activity.login)}`}
-								key={activity.id}
-								onClick={() => {
-									setFriendActivities((current) => current.filter((item) => item.id !== activity.id))
-									setIsOpen(false)
-								}}
-							>
-								<CheckCircle2Icon className={styles.icon} size={18} />
-								<span className={styles.copy}><strong>{activity.login}</strong> aceptó tu solicitud de amistad.<small>Ahora forma parte de tus amigos</small></span>
-							</Link>
-						))}
-						{friendRequests.length > 0 && <p className={styles.sectionLabel}>Solicitudes de amistad</p>}
-						{friendRequests.map((request) => (
-							<Link className={styles.item} href={`/users/${encodeURIComponent(request.login)}`} key={`friend-${request.userId}`} onClick={() => setIsOpen(false)}>
-								<UserPlusIcon className={styles.icon} size={18} />
-								<span className={styles.copy}><strong>{request.login}</strong> quiere ser tu amigo.<small>Abre su perfil para responder</small></span>
-							</Link>
-						))}
+						<div className={styles.list}>
+							{friendNotificationCount === 0 && <p className={styles.empty}>No tienes notificaciones pendientes.</p>}
+							{chatActivities.length > 0 && <p className={styles.sectionLabel}>Mensajes de chat</p>}
+							{chatActivities.map((activity) => (
+								<button
+									type="button"
+									className={styles.item}
+									key={activity.id}
+									onClick={() => {
+										setChatActivities((current) => current.filter((item) => item.id !== activity.id))
+										setIsOpen(false)
+									}}
+								>
+									<MessageCircleIcon className={styles.icon} size={18} />
+									<span className={styles.copy}><strong>{activity.login}</strong> te envió un mensaje.<small>{activity.message}</small></span>
+								</button>
+							))}
+							{friendActivities.length > 0 && <p className={styles.sectionLabel}>Actividad de amistad</p>}
+							{friendActivities.map((activity) => (
+								<Link
+									className={styles.item}
+									href={`/users/${encodeURIComponent(activity.login)}`}
+									key={activity.id}
+									onClick={() => {
+										setFriendActivities((current) => current.filter((item) => item.id !== activity.id))
+										setIsOpen(false)
+									}}
+								>
+									<CheckCircle2Icon className={styles.icon} size={18} />
+									<span className={styles.copy}><strong>{activity.login}</strong> aceptó tu solicitud de amistad.<small>Ahora forma parte de tus amigos</small></span>
+								</Link>
+							))}
+							{friendRequests.length > 0 && <p className={styles.sectionLabel}>Solicitudes de amistad</p>}
+							{friendRequests.map((request) => (
+								<Link className={styles.item} href={`/users/${encodeURIComponent(request.login)}`} key={`friend-${request.userId}`} onClick={() => setIsOpen(false)}>
+									<UserPlusIcon className={styles.icon} size={18} />
+									<span className={styles.copy}><strong>{request.login}</strong> quiere ser tu amigo.<small>Abre su perfil para responder</small></span>
+								</Link>
+							))}
+						</div>
 					</section>
 				)}
 			</div>
