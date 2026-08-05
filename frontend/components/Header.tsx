@@ -4,7 +4,8 @@ import { LogOut, MenuIcon, XIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-
+import Notifications from '@/components/Notifications';
+import ChatNotifications from '@/components/ChatNotifications';
 import { useAuthStore } from '@/hooks';
 import NavLink, { navigation } from '@/components/NavLink';
 import NavProfile from '@/components/NavProfile';

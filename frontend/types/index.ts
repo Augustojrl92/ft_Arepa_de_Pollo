@@ -158,3 +158,11 @@ export type ChatWindowProps = {
   onSendMessage: (to_user_id: number, to_user_login: string, message: string) => void;
   onTyping: ()=> void;
 };
+
+export type ChatNotification = {
+	id: string;
+	from_login: string;
+	from_user_id: number;
+	message: string;
+	timestamp: string;
+};

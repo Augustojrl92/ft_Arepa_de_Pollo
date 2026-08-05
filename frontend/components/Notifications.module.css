@@ -96,6 +96,12 @@
 }
 
 .item {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
   min-height: 4.5rem;
   display: grid;
   grid-template-columns: 2rem minmax(0, 1fr);

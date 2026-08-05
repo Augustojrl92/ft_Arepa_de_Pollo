@@ -1,18 +1,89 @@
-import { useEffect, useRef } from "react";
-import { ChatUser, ChatConversation, ChatMessage } from "@/types";
+import { useEffect, useRef, useCallback, useState } from "react";
+import { ChatUser, ChatConversation, ChatMessage, ChatNotification } from "@/types";
 
 type SetFriends = React.Dispatch<React.SetStateAction<ChatUser[]>>;
 type SetConversations = React.Dispatch<React.SetStateAction<ChatConversation[]>>;
 
+type ChatMessageNotification = {
+  fromUserId: number;
+  fromUsername: string;
+  message: string;
+  timestamp: string;
+};
+
+type UseChatSocketOptions = {
+  onMessageReceived?: (notification: ChatMessageNotification) => void;
+};
+
+type FriendListEntry = {
+  user_id: number;
+  display_name: string;
+  login: string;
+  active: boolean;
+};
+
+type ChatSocketPayload = {
+  type?: string;
+  friends?: { friends?: FriendListEntry[] };
+  from_user_id?: number;
+  from_username?: string;
+  message?: string;
+  timestamp?: string;
+  user_id?: number;
+  status?: string;
+};
+
+type ChatSocketOutgoingPayload = {
+  type: string;
+  to_user_id?: number;
+  to_user_login?: string;
+  message?: string;
+  timestamp?: string;
+};
+
 const TYPING_TIMEOUT_MS = 3000;
+
+export function useChatNotifications() {
+	const [notifications, setNotifications] = useState<ChatNotification[]>([]);
+ 
+	const addNotification = useCallback((notification: Omit<ChatNotification, 'id'>) => {
+		const id = `${notification.from_login}-${Date.now()}`;
+		setNotifications((prev) => [
+			{ ...notification, id },
+			...prev,
+		]);
+	}, []);
+ 
+	const removeNotification = useCallback((id: string) => {
+		setNotifications((prev) => prev.filter((n) => n.id !== id));
+	}, []);
+ 
+	const clearAll = useCallback(() => {
+		setNotifications([]);
+	}, []);
+ 
+	return {
+		notifications,
+		addNotification,
+		removeNotification,
+		clearAll,
+	};
+}
 
 export default function useChatSocket(
   myLogin: string | undefined,
   setFriends: SetFriends,
-  setConversations: SetConversations
+  selectedConversationId: number | null = null,
+  setConversations: SetConversations,
+  options: UseChatSocketOptions = {}
 ) {
   const socketRef = useRef<WebSocket | null>(null);
+  const onMessageReceivedRef = useRef(options.onMessageReceived);
   const typingTimeoutsRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+  const { addNotification } = useChatNotifications();
+  useEffect(() => {
+    onMessageReceivedRef.current = options.onMessageReceived;
+  }, [options.onMessageReceived]);
 
   useEffect(() => {
     if (!myLogin) return;
@@ -21,13 +92,14 @@ export default function useChatSocket(
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const chatSocket = new WebSocket(`${protocol}//${window.location.host}/ws/chat/`);
     socketRef.current = chatSocket;
+
     chatSocket.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data) as ChatSocketPayload;
 
         if (data.type === "friends_list") {
           const friendsList = data.friends?.friends ?? [];
-          const mappedFriends: ChatUser[] = friendsList.map((friend: any) => ({
+          const mappedFriends: ChatUser[] = friendsList.map((friend) => ({
             id: friend.user_id,
             name: friend.display_name,
             login: friend.login,
@@ -38,7 +110,7 @@ export default function useChatSocket(
 
         if (data.type === "typing") {
           const fromUserId = data.from_user_id;
-
+          if (!fromUserId) return;
           setConversations((prev) =>
             prev.map((conv) =>
               conv.id === fromUserId ? { ...conv, isTyping: true } : conv
@@ -60,28 +132,49 @@ export default function useChatSocket(
         }
 
         if (data.type === "message") {
-          if (typingTimeoutsRef.current[data.from_user_id]) {
-            clearTimeout(typingTimeoutsRef.current[data.from_user_id]);
-            delete typingTimeoutsRef.current[data.from_user_id];
+          const fromUserId = data.from_user_id;
+          const fromUsername = data.from_username;
+          const message = data.message;
+          const timestamp = data.timestamp;
+          if (!fromUserId || !fromUsername || !message || !timestamp) return;
+
+          if (typingTimeoutsRef.current[fromUserId]) {
+            clearTimeout(typingTimeoutsRef.current[fromUserId]);
+            delete typingTimeoutsRef.current[fromUserId];
           }
 
+          onMessageReceivedRef.current?.({
+            fromUserId,
+            fromUsername,
+            message,
+            timestamp,
+          });
+
+          window.dispatchEvent(new CustomEvent("chat:message", {
+            detail: {
+              fromUserId,
+              fromUsername,
+              message,
+              timestamp,
+            },
+          }));
           setConversations((prev) => {
-            const exists = prev.some((conv) => conv.id === data.from_user_id);
+            const exists = prev.some((conv) => conv.id === fromUserId);            
             const newMessage: ChatMessage = {
               id: Date.now(),
               author: "friend",
-              text: data.message,
-              time: new Date(data.timestamp).toLocaleTimeString(),
+              text: message,
+              time: new Date(timestamp).toLocaleTimeString(),
             };
 
             if (exists) {
               return prev.map((conv) =>
-                conv.id === data.from_user_id
+                conv.id === fromUserId
                   ? {
                       ...conv,
                       isTyping: false,
                       messages: [...conv.messages, newMessage],
-                      lastMessage: data.message,
+                      lastMessage: message,                      
                       lastTime: newMessage.time,
                     }
                   : conv
@@ -90,11 +183,11 @@ export default function useChatSocket(
 
             return [
               {
-                id: data.from_user_id,
-                name: data.from_username,
-                login: data.from_username,
+                id: fromUserId,
+                name: fromUsername,
+                login: fromUsername,
                 status: "En línea",
-                lastMessage: data.message,
+                lastMessage: message,
                 lastTime: newMessage.time,
                 messages: [newMessage],
                 isTyping: false,
@@ -106,6 +199,7 @@ export default function useChatSocket(
         }
 
         if (data.type === "status_update") {
+          if (!data.user_id) return;
           setFriends((prev) =>
             prev.map((friend) =>
               friend.id === data.user_id
@@ -137,9 +231,9 @@ export default function useChatSocket(
         chatSocket.close();
       }
     };
-  }, [myLogin, setFriends, setConversations]);
+  }, [myLogin, setFriends, setConversations, selectedConversationId, addNotification]);
 
-  const sendMessage = (payload: any) => {
+  const sendMessage = (payload: ChatSocketOutgoingPayload) => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify(payload));
     } else {

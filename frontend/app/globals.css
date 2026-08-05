@@ -1467,5 +1467,22 @@ html.dark {
       opacity: 1;
     }
   }
+  .chat-notification-badge {
+    position: absolute;
+    top: -0.15rem;
+    right: -0.15rem;
+    min-width: 1.4rem;
+    height: 1.4rem;
+    display: grid;
+    place-items: center;
+    border: 2px solid var(--color-card);
+    border-radius: 9999px;
+    padding-inline: 0.2rem;
+    background: #fb7185;
+    color: #ffffff;
+    font-size: 0.7rem;
+    font-weight: 850;
+    line-height: 1;
+  }
 }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { BellIcon, CheckCircle2Icon, Gamepad2Icon, UserPlusIcon } from 'lucide-react'
+import { BellIcon, CheckCircle2Icon, Gamepad2Icon, MessageCircleIcon, UserPlusIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
@@ -15,10 +15,18 @@ type FriendActivity = {
 	login: string
 }
 
+type ChatActivity = {
+	id: string
+	login: string
+	message: string
+}
+
+
 export default function Notifications() {
 	const [invitations, setInvitations] = useState<MultiplayerMatch[]>([])
 	const [busyOutgoingInvitations, setBusyOutgoingInvitations] = useState<MultiplayerMatch[]>([])
 	const [friendRequests, setFriendRequests] = useState<FriendEntry[]>([])
+	const [chatActivities, setChatActivities] = useState<ChatActivity[]>([])
 	const [friendActivities, setFriendActivities] = useState<FriendActivity[]>([])
 	const [isOpen, setIsOpen] = useState(false)
 	const containerRef = useRef<HTMLDivElement>(null)
@@ -59,7 +67,29 @@ export default function Notifications() {
 		}
 	}, [])
 
-	const friendNotificationCount = friendRequests.length + friendActivities.length
+
+
+	// const friendNotificationCount = friendRequests.length + friendActivities.length
+	useEffect(() => {
+		const handleChatMessage = (event: Event) => {
+			const detail = (event as CustomEvent<{ fromUserId: number; fromUsername: string; message: string; timestamp: string }>).detail
+			if (!detail?.fromUserId || !detail.fromUsername) return
+
+			setChatActivities((current) => [
+				{
+					id: `${detail.fromUserId}-${detail.timestamp}-${Date.now()}`,
+					login: detail.fromUsername,
+					message: detail.message,
+				},
+				...current,
+			])
+		}
+
+		window.addEventListener('chat:message', handleChatMessage)
+		return () => window.removeEventListener('chat:message', handleChatMessage)
+	}, [])
+
+	const friendNotificationCount = friendRequests.length + friendActivities.length + chatActivities.length
 	const gameNotificationCount = invitations.length + busyOutgoingInvitations.length
 
 	useEffect(() => {
@@ -104,6 +134,21 @@ export default function Notifications() {
 					<section className={styles.menu} aria-label="Notificaciones">
 						<header className={styles.heading}><strong>Notificaciones</strong><span>{friendNotificationCount}</span></header>
 						{friendNotificationCount === 0 && <p className={styles.empty}>No tienes notificaciones pendientes.</p>}
+						{chatActivities.length > 0 && <p className={styles.sectionLabel}>Mensajes de chat</p>}
+						{chatActivities.map((activity) => (
+							<button
+								type="button"
+								className={styles.item}
+								key={activity.id}
+								onClick={() => {
+									setChatActivities((current) => current.filter((item) => item.id !== activity.id))
+									setIsOpen(false)
+								}}
+							>
+								<MessageCircleIcon className={styles.icon} size={18} />
+								<span className={styles.copy}><strong>{activity.login}</strong> te envió un mensaje.<small>{activity.message}</small></span>
+							</button>
+						))}
 						{friendActivities.length > 0 && <p className={styles.sectionLabel}>Actividad de amistad</p>}
 						{friendActivities.map((activity) => (
 							<Link
