@@ -23,7 +23,7 @@ info() {
 }
 
 # Objective:
-# - Resolve the repository paths and compose file used for the temporary PWA frontend flow.
+# - Resolve the repository paths and compose files used for the temporary PWA frontend flow.
 # Expects:
 # - The repo to keep the existing `docker-compose.dev.yml` layout.
 # Returns:
@@ -31,7 +31,7 @@ info() {
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
 COMPOSE_FILE="$REPO_ROOT/docker-compose.dev.yml"
-PROJECT_NAME="$(basename "$REPO_ROOT")"
+PWA_COMPOSE_FILE="$REPO_ROOT/docker-compose.pwa.yml"
 
 # Objective:
 # - Validate local prerequisites before replacing the normal frontend container.
@@ -43,55 +43,31 @@ command -v docker >/dev/null 2>&1 || fail "docker no está instalado o no está 
 docker compose version >/dev/null 2>&1 || fail "docker compose no está disponible."
 docker info >/dev/null 2>&1 || fail "No se puede acceder al daemon de Docker. Comprueba que Docker está arrancado y que tienes permisos."
 [ -f "$COMPOSE_FILE" ] || fail "No se encuentra el archivo de compose: $COMPOSE_FILE"
+[ -f "$PWA_COMPOSE_FILE" ] || fail "No se encuentra el archivo de compose PWA: $PWA_COMPOSE_FILE"
 
 # Objective:
-# - Remove stale temporary frontend containers left by previous PWA test attempts.
-# Expects:
-# - Temporary containers created by `docker compose run` to follow the standard
-#   `${project}-frontend-run-*` naming pattern.
-# Returns:
-# - Deletes any matching temporary frontend containers if they exist.
-cleanup_temporary_frontend_runs() {
-	temporary_container_ids="$(
-		docker ps -aq --filter "name=${PROJECT_NAME}-frontend-run-" 2>/dev/null || true
-	)"
-	if [ -n "$temporary_container_ids" ]; then
-		docker rm -f $temporary_container_ids >/dev/null 2>&1 || true
-	fi
-}
-
-# Objective:
-# - Restore the normal frontend service when the temporary PWA session finishes.
+# - Restore the normal frontend and proxy services when the PWA session finishes.
 # Expects:
 # - The compose project to contain the standard `frontend` service.
 # Returns:
 # - Best-effort restart of the normal dev frontend container.
 restore_frontend() {
-	info "Restaurando el frontend normal..."
-	cleanup_temporary_frontend_runs
-	docker compose -f "$COMPOSE_FILE" rm -sf frontend >/dev/null 2>&1 || true
-	docker compose -f "$COMPOSE_FILE" up -d frontend >/dev/null 2>&1 || true
+	info "Restaurando el frontend normal tras la prueba PWA..."
+	docker compose -f "$COMPOSE_FILE" up -d --force-recreate frontend proxy >/dev/null 2>&1 || true
 }
 
 trap restore_frontend EXIT
 
-cleanup_temporary_frontend_runs
-info "Deteniendo el frontend normal para liberar el puerto 3000..."
-docker compose -f "$COMPOSE_FILE" rm -sf frontend >/dev/null 2>&1 || true
-
-info "Arrancando frontend temporal en modo PWA..."
-info "Este proceso ejecuta 'npm run build' y despues 'npm run start'."
-info "Cuando salgas con Ctrl+C, se volvera a levantar el frontend normal."
+info "Arrancando la PWA a traves del proxy HTTPS..."
+info "Abre https://localhost:8443/status y comprueba el service worker."
+info "Cuando salgas con Ctrl+C, se restaurara el frontend normal."
 
 # Objective:
-# - Run a temporary production-like frontend so the service worker can register.
+# - Run the normal frontend service in production mode so nginx continues to
+#   expose it at the application's HTTPS entry point.
 # Expects:
 # - The bind-mounted `/app` source tree to be available inside the container.
 # - Backend and db already running if the UI needs live data.
 # Returns:
-# - A foreground frontend session on port 3000 suitable for installability and offline tests.
-docker compose -f "$COMPOSE_FILE" run --rm --service-ports frontend sh -lc '
-	cd /app &&
-	NEXT_PUBLIC_ENABLE_PWA=true npm run build &&
-	NEXT_PUBLIC_ENABLE_PWA=true npm run start
-'
+# - A foreground HTTPS session suitable for installability and offline tests.
+docker compose -f "$COMPOSE_FILE" -f "$PWA_COMPOSE_FILE" up --build --force-recreate frontend proxy
