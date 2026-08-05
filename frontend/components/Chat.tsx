@@ -2,7 +2,6 @@
 import { MessageCircleIcon } from "lucide-react";
 import { useMemo, useState, useCallback } from "react";
 import useChatSocket from "@/hooks/useChatSocket";
-// import { useChatNotifications } from "@/hooks/useChatSocket";
 import useConversations from "@/hooks/useConversations";
 import ChatWindow from "@/components/ChatWindow";
 import NewChatModal from "@/components/NewChatModal";
@@ -21,7 +20,6 @@ export default function Chat() {
 	const [unreadMessages, setUnreadMessages] = useState(0);
 	const [friends, setFriends] = useState<ChatUser[]>([]);
 	const { conversations, setConversations } = useConversations(myLogin);
-	// const { notifications } = useChatNotifications();
 
 	const handleMessageReceived = useCallback((notification: { fromUserId: number }) => {
 		setUnreadMessages((current) => {

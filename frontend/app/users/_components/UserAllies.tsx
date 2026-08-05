@@ -204,7 +204,7 @@ export function UserAllies({ currentLogin }: UserAlliesProps) {
 				{isFriendsLoading && <p className="rounded-lg border border-border bg-surface/40 p-3 text-sm text-text-secondary">Actualizando aliados...</p>}
 
 				{allyTab === 'allies' && (
-					<div className="grid gap-3 sm:grid-cols-2">
+					<div className="grid max-h-112 gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
 						{allies.map((ally) => (
 							<Link key={ally.login} href={`/users/${ally.login}`} className="rounded-xl border border-border bg-surface/50 p-3">
 								<div className="flex items-center gap-4">
@@ -225,36 +225,38 @@ export function UserAllies({ currentLogin }: UserAlliesProps) {
 
 				{allyTab === 'sent' && (
 					<div className="space-y-3">
-						{sentRequests.length === 0 && (
-							<p className="rounded-lg border border-border bg-surface/40 p-3 text-sm text-text-secondary">No tienes solicitudes enviadas pendientes.</p>
-						)}
-						{sentRequests.map((request) => (
-							<Link
-								key={request.userId}
-								href={`/users/${request.login}`}
-								className="flex items-center justify-between rounded-lg border border-border bg-surface/40 p-3"
-							>
-								<div className="flex items-center gap-3">
-									<img src={request.avatarUrl} alt={`Avatar de ${request.login}`} className="h-15 w-15 rounded-full border border-border object-cover" />
-									<div className="flex-1 min-w-0">
-										<p className="truncate text-sm font-semibold">{request.login}</p>
-										<p className="truncate text-xs text-text-secondary">{request.displayName}</p>
+						<div className="max-h-96 space-y-3 overflow-y-auto pr-1">
+							{sentRequests.length === 0 && (
+								<p className="rounded-lg border border-border bg-surface/40 p-3 text-sm text-text-secondary">No tienes solicitudes enviadas pendientes.</p>
+							)}
+							{sentRequests.map((request) => (
+								<Link
+									key={request.userId}
+									href={`/users/${request.login}`}
+									className="flex items-center justify-between rounded-lg border border-border bg-surface/40 p-3"
+								>
+									<div className="flex items-center gap-3">
+										<img src={request.avatarUrl} alt={`Avatar de ${request.login}`} className="h-15 w-15 rounded-full border border-border object-cover" />
+										<div className="flex-1 min-w-0">
+											<p className="truncate text-sm font-semibold">{request.login}</p>
+											<p className="truncate text-xs text-text-secondary">{request.displayName}</p>
+										</div>
 									</div>
-								</div>
-								<div className="flex flex-col gap-2">
-									<button
-										type="button"
-										onClick={(event) => {
-											event.preventDefault()
-											void onWithdrawAllyRequest(request.login)
-										}}
-										className="cursor-pointer rounded-md border border-[#ff355b] bg-[#ff355b]/12 px-3 py-1.5 text-xs font-semibold text-text hover:bg-[#ff355b]/25 transition-colors"
-									>
-										Retirar solicitud
-									</button>
-								</div>
-							</Link>
-						))}
+									<div className="flex flex-col gap-2">
+										<button
+											type="button"
+											onClick={(event) => {
+												event.preventDefault()
+												void onWithdrawAllyRequest(request.login)
+											}}
+											className="cursor-pointer rounded-md border border-[#ff355b] bg-[#ff355b]/12 px-3 py-1.5 text-xs font-semibold text-text hover:bg-[#ff355b]/25 transition-colors"
+										>
+											Retirar solicitud
+										</button>
+									</div>
+								</Link>
+							))}
+						</div>
 
 						<div className="rounded-xl border border-border bg-surface/40 p-3">
 							<div className="flex items-center justify-between gap-3">
@@ -317,7 +319,7 @@ export function UserAllies({ currentLogin }: UserAlliesProps) {
 				)}
 
 				{allyTab === 'received' && (
-					<div className="space-y-3">
+					<div className="max-h-112 space-y-3 overflow-y-auto pr-1">
 						{incomingRequests.length === 0 && (
 							<p className="rounded-lg border border-border bg-surface/40 p-3 text-sm text-text-secondary">No tienes solicitudes pendientes.</p>
 						)}

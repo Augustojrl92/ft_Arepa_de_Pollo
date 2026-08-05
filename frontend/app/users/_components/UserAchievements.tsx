@@ -22,7 +22,7 @@ export function UserAchievements({ achievements }: UserAchievementsProps) {
 				</span>
 			</div>
 
-			<div className="grid gap-4 sm:grid-cols-2">
+			<div className="grid max-h-112 gap-4 overflow-y-auto pr-1 sm:grid-cols-2">
 				{achievements.map((achievement) => {
 					const Icon = iconByAchievement[achievement.icon]
 					const statusLabel = achievement.completed ? 'Completado' : 'En progreso'
