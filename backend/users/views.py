@@ -9,6 +9,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from authentication.emails import send_account_deleted_email
 from authentication.permissions import IsStudentOrAdmin
 
 from sync.models import CampusUser
@@ -310,7 +311,17 @@ class UserMeAccountView(APIView):
 
 	def delete(self, request):
 		user = request.user
+		recipient = user.email
+		label = user.username
+
 		delete_user_account(user)
+
+		if recipient:
+			try:
+				send_account_deleted_email(recipient, label)
+			except Exception:
+				logger.exception('Account %s deleted but the confirmation email failed', label)
+
 		return Response(
 			{'detail': 'Account deleted successfully'},
 			status=status.HTTP_200_OK,
