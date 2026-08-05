@@ -31,14 +31,13 @@ export default function PrivacyPage() {
             <li>- Synchronize campus, coalition, and ranking data from the 42 API.</li>
             <li>- Render dashboards, charts, achievements, and social features.</li>
             <li>- Remember UI preferences such as theme and pagination size.</li>
-            <li>- Support offline access through cached assets and the PWA shell.</li>
           </ul>
         </section>
 
         <section className="space-y-3">
           <h2 className="text-2xl font-bold text-text">Storage and retention</h2>
           <p className="leading-7 text-text-secondary">
-            The application stores data in the project database and may keep limited browser storage for session and offline features. Historical snapshots are retained so rankings and trends can be shown over time. When data is no longer needed, it should be removed according to the project rules and user requests.
+            The application stores data in the project database and may keep limited browser storage for the session. Historical snapshots are retained so rankings and trends can be shown over time. When data is no longer needed, it should be removed according to the project rules and user requests.
           </p>
         </section>
 

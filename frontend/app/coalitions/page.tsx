@@ -8,7 +8,7 @@ export default function CoalitionsPage() {
 
 	const orderedCoalitions = [...coalitions].sort((a, b) => b.score - a.score)
 
-	// Mostrar skeleton mientras se cargan las coaliciones inicialmente
+	// Show skeleton while coalitions are loading for the first time
 	if (isCoalitionsLoading && coalitions.length === 0) {
 		return (
 			<section className="py-5">

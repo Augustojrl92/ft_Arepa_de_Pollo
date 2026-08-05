@@ -69,7 +69,7 @@ export const useCoalitionStore = create<CoalitionState>()(
 					isCoalitionsLoading: false,
 				})
 			} catch (error) {
-				const message = error instanceof Error ? error.message : "Failed to fetch coalitions"
+				const message = error instanceof Error ? error.message : "No se han podido obtener las coaliciones"
 
 				set({ error: message, isCoalitionsLoading: false })
 			}
@@ -91,7 +91,7 @@ export const useCoalitionStore = create<CoalitionState>()(
 					isRankingLoading: false,
 				})
 			} catch (error) {
-				const message = error instanceof Error ? error.message : "Failed to fetch ranking"
+				const message = error instanceof Error ? error.message : "No se ha podido obtener la clasificación"
 
 				set({ error: message, isRankingLoading: false })
 			}
@@ -107,7 +107,7 @@ export const useCoalitionStore = create<CoalitionState>()(
 					error: null,
 				}))
 			} catch (error) {
-				const message = error instanceof Error ? error.message : "Failed to fetch coalition details"
+				const message = error instanceof Error ? error.message : "No se han podido obtener los detalles de la coalición"
 
 				set({ error: message })
 			}

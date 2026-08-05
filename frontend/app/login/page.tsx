@@ -98,14 +98,14 @@ export default function Login() {
 							href="/privacy"
 							className="px-2 py-1.5 sm:px-3 transition-all duration-200 hover:underline"
 						>
-							Privacy Policy
+							Política de Privacidad
 						</Link>
 						<div className="h-3 w-px bg-border/60 shrink-0" aria-hidden="true" />
 						<Link
 							href="/terms"
 							className="px-2 py-1.5 sm:px-3 transition-all duration-200 hover:underline"
 						>
-							Terms of Service
+							Términos de Servicio
 						</Link>
 					</nav>
 				</div>

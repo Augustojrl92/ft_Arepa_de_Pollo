@@ -19,7 +19,7 @@ export default function TournamentCard() {
 					<h2 className="font-bold">Coalition Tournament</h2>
 				</div>
 				<span className="text-xs bg-card-hover px-3 py-1 rounded-lg">
-					Actualizado {lastUpdate || "Unknown"}
+					Actualizado {lastUpdate || "Desconocido"}
 				</span>
 			</div>
 			<div className="flex flex-col gap-3 w-full">

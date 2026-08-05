@@ -67,7 +67,7 @@ export default function Header() {
 					</ul>
 					<div className="aedlph-container flex items-center justify-between gap-2 border-t border-border py-3">
 						<Link href={userProfilePath} className="flex items-center gap-3" onClick={() => setMenuOpen(false)}>
-							<img className="h-9 w-9 rounded-full bg-border object-cover" src={user?.avatar} alt={`Avatar of ${user?.username}`} />
+							<img className="h-9 w-9 rounded-full bg-border object-cover" src={user?.avatar} alt={`Avatar de ${user?.username}`} />
 							<span className="text-sm font-medium">{user?.username ?? 'Perfil'}</span>
 						</Link>
 						<button

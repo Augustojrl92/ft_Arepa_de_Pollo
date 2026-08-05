@@ -57,24 +57,24 @@ export function UserDeleteAccountModal({
 			>
 				<div className="mb-5 flex items-center justify-between gap-4">
 					<div>
-						<p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ff355b]">Danger zone</p>
-						<h3 className="mt-2 text-2xl font-black text-text">Delete account permanently</h3>
+						<p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ff355b]">Zona de peligro</p>
+						<h3 className="mt-2 text-2xl font-black text-text">Eliminar cuenta permanentemente</h3>
 					</div>
 					<X size={20} className="cursor-pointer hover:text-[#ff355b]" onClick={onClose} />
 				</div>
 
 				<div className="space-y-4 text-sm leading-6 text-text-secondary">
 					<p>
-						This action will permanently delete your AEDLPH account and remove the associated personal records stored by the platform. It cannot be undone.
+						Esta acción eliminará tu cuenta de AEDLPH de forma permanente, junto con los datos personales asociados almacenados por la plataforma. No se puede deshacer.
 					</p>
 					<p>
-						Type your username <span className="font-semibold text-text">{login}</span> to confirm.
+						Escribe tu nombre de usuario <span className="font-semibold text-text">{login}</span> para confirmar.
 					</p>
 				</div>
 
 				<div className="mt-4">
 					<label htmlFor="delete-account-confirmation" className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">
-						Confirm username
+						Confirmar nombre de usuario
 					</label>
 					<input
 						id="delete-account-confirmation"
@@ -88,7 +88,7 @@ export function UserDeleteAccountModal({
 
 				<div className="mt-6 flex flex-wrap justify-end gap-3">
 					<CustomButton type="button" variant="outline" size="sm" onClick={onClose}>
-						Cancel
+						Cancelar
 					</CustomButton>
 					<CustomButton
 						type="button"
@@ -101,7 +101,7 @@ export function UserDeleteAccountModal({
 						}}
 						disabled={!canDelete || isSubmitting}
 					>
-						{isSubmitting ? 'Deleting...' : 'Delete account'}
+						{isSubmitting ? 'Eliminando...' : 'Eliminar cuenta'}
 					</CustomButton>
 				</div>
 			</div>

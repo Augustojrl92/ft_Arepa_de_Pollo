@@ -1,5 +1,5 @@
 import { FriendsPayload, UserDetails } from '@/types';
-import { ApiHttpError, authFetch, authFetchJson } from './authApi';
+import { authFetch, authFetchJson } from './authApi';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 const USER_BASE_URL = `${API_URL}/api/users/`;
@@ -153,7 +153,7 @@ const parseAttachmentFilename = (contentDisposition: string | null) => {
 export async function fetchUserDetails(login: string): Promise<UserDetails> {
 	const payload = await authFetchJson<UserDetailsResponse>(`${USER_BASE_URL}details/?login=${encodeURIComponent(login)}`, {
 		method: 'GET',
-	}, "Failed to fetch user details");
+	}, "No se han podido obtener los datos del usuario");
 
 	return {
 		id: payload.id,
@@ -175,7 +175,7 @@ export async function fetchUserDetails(login: string): Promise<UserDetails> {
 export async function fetchMyFriends(): Promise<FriendsPayload> {
 	const payload = await authFetchJson<FriendsPayloadResponse>(`${USER_BASE_URL}friends/me/`, {
 		method: 'GET',
-	}, 'Failed to fetch friends data');
+	}, 'No se han podido obtener los amigos');
 
 	return toFriendsPayload(payload);
 }
@@ -183,7 +183,7 @@ export async function fetchMyFriends(): Promise<FriendsPayload> {
 export async function fetchMyPendingFriendRequests(): Promise<FriendsPayload> {
 	const payload = await authFetchJson<FriendsPayloadResponse>(`${USER_BASE_URL}friends/pending/`, {
 		method: 'GET',
-	}, 'Failed to fetch pending friend requests');
+	}, 'No se han podido obtener las solicitudes de amistad pendientes');
 
 	return toFriendsPayload(payload);
 }
@@ -198,18 +198,16 @@ export async function sendHeartbeat(): Promise<void> {
 				'Content-Type': 'application/json',
 			},
 			body: JSON.stringify({ login: login ?? '' }),
-		}, 'Failed to send heartbeat');
-	} catch (error) {
-		if (error instanceof ApiHttpError && (error.status === 401 || error.status === 400)) {
-			return
-		}
+		}, 'No se ha podido enviar el heartbeat');
+	} catch {
+		// Heartbeat is best-effort; a failed request is never worth surfacing.
 	}
 }
 
 export async function searchFriendRequestUsers(query: string): Promise<Array<{ login: string; displayName: string; avatarUrl: string }>> {
 	const payload = await authFetchJson<{ results: Array<{ login: string; display_name: string; avatar_url: string }> }>(`${USER_BASE_URL}friends/requests/?q=${encodeURIComponent(query)}`, {
 		method: 'GET',
-	}, 'Failed to search users');
+	}, 'No se han podido buscar usuarios');
 
 	return payload.results.map((result) => ({
 		login: result.login,
@@ -225,7 +223,7 @@ export async function createFriendRequest(login: string): Promise<FriendsPayload
 			'Content-Type': 'application/json',
 		},
 		body: JSON.stringify({ login }),
-	}, 'Failed to send friend request');
+	}, 'No se ha podido enviar la solicitud de amistad');
 
 	return toFriendsPayload(payload.friends);
 }
@@ -237,7 +235,7 @@ export async function resolveFriendRequest(login: string, action: 'accept' | 're
 			'Content-Type': 'application/json',
 		},
 		body: JSON.stringify({ login, action }),
-	}, `Failed to ${action} friend request`);
+	}, `No se ha podido ${action === 'accept' ? 'aceptar' : 'rechazar'} la solicitud de amistad`);
 
 	return toFriendsPayload(payload.friends);
 }
@@ -249,7 +247,7 @@ export async function withdrawFriendRequest(login: string): Promise<FriendsPaylo
 			'Content-Type': 'application/json',
 		},
 		body: JSON.stringify({ login }),
-	}, 'Failed to withdraw friend request');
+	}, 'No se ha podido retirar la solicitud de amistad');
 
 	return toFriendsPayload(payload.friends);
 }
@@ -261,7 +259,7 @@ export async function removeFriend(login: string): Promise<FriendsPayload> {
 			'Content-Type': 'application/json',
 		},
 		body: JSON.stringify({ login }),
-	}, 'Failed to remove friend');
+	}, 'No se ha podido eliminar al amigo');
 
 	return toFriendsPayload(payload.friends);
 }
@@ -273,7 +271,7 @@ export async function uploadMyAvatar(file: File): Promise<AvatarResult> {
 	const payload = await authFetchJson<AvatarResponse>(`${USER_BASE_URL}preferences/avatar/`, {
 		method: 'PUT',
 		body: formData,
-	}, 'Failed to upload avatar');
+	}, 'No se ha podido subir el avatar');
 
 	return {
 		avatarUrl: payload.avatar_url,
@@ -284,7 +282,7 @@ export async function uploadMyAvatar(file: File): Promise<AvatarResult> {
 export async function removeMyAvatar(): Promise<AvatarResult> {
 	const payload = await authFetchJson<AvatarResponse>(`${USER_BASE_URL}preferences/avatar/`, {
 		method: 'DELETE',
-	}, 'Failed to remove avatar');
+	}, 'No se ha podido eliminar el avatar');
 
 	return {
 		avatarUrl: payload.avatar_url,
@@ -295,7 +293,7 @@ export async function removeMyAvatar(): Promise<AvatarResult> {
 export async function fetchMyPreferences(): Promise<UserPreferencesPayload> {
 	const payload = await authFetchJson<PreferencesResponse>(`${USER_BASE_URL}preferences/`, {
 		method: 'GET',
-	}, 'Failed to fetch preferences');
+	}, 'No se han podido obtener las preferencias');
 
 	return {
 		rankingPerPage: toRankingPerPage(payload.items_per_page),
@@ -317,7 +315,7 @@ export async function updateMyPreferences(preferences: UserPreferencesPayload): 
 			receive_notifications: preferences.notificationsEnabled,
 			theme_mode: preferences.theme,
 		}),
-	}, 'Failed to update preferences');
+	}, 'No se han podido actualizar las preferencias');
 
 	return {
 		rankingPerPage: toRankingPerPage(payload.items_per_page),
@@ -330,7 +328,7 @@ export async function updateMyPreferences(preferences: UserPreferencesPayload): 
 export async function fetchUserPointsHistory(login: string) {
 	const payload = await authFetchJson<UserPointsHistoryResponse>(`${USER_BASE_URL}points-history/?login=${encodeURIComponent(login)}`, {
 		method: 'GET',
-	}, 'Failed to fetch user points history');
+	}, 'No se ha podido obtener el historial de puntos del usuario');
 
 	return {
 		user: {
@@ -351,7 +349,7 @@ export async function fetchUserPointsHistory(login: string) {
 export async function exportMyData(): Promise<UserExportResult> {
 	const response = await authFetch(`${USER_BASE_URL}me/export/`, {
 		method: 'GET',
-	}, 'Failed to export user data')
+	}, 'No se han podido exportar los datos del usuario')
 
 	return {
 		blob: await response.blob(),
@@ -362,5 +360,5 @@ export async function exportMyData(): Promise<UserExportResult> {
 export async function deleteMyAccount(): Promise<{ detail: string }> {
 	return authFetchJson<{ detail: string }>(`${USER_BASE_URL}me/`, {
 		method: 'DELETE',
-	}, 'Failed to delete user account')
+	}, 'No se ha podido eliminar la cuenta del usuario')
 }

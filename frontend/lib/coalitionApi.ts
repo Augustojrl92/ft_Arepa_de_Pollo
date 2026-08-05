@@ -93,7 +93,7 @@ type CoalitionPointsHistoryApiResponse = {
 export const fetchCoalitions = async (): Promise<{ coalitions: Coalition[], lastUpdate: string | null }> => {
 	const payload = await authFetchJson<CoalitionApiResponse>(COALITION_BASE_URL, {
 		method: "GET",
-	}, "Failed to fetch coalitions")
+	}, "No se han podido obtener las coaliciones")
 	const coalitions = payload.coalitions ?? []
 	const lastUpdate = payload.last_time_update ?? null
 
@@ -136,7 +136,7 @@ const fetchRankingPage = async ({
 
 	const payload = await authFetchJson<RankingApiResponse>(`${COALITION_BASE_URL}users-ranking/?${params.toString()}`, {
 		method: "GET",
-	}, "Failed to fetch ranking")
+	}, "No se ha podido obtener la clasificación")
 	const ranking = payload.users ?? []
 
 	return {
@@ -209,7 +209,7 @@ export const fetchRanking = async ({
 export const fetchCoalitionDetails = async (slug: string) => {
 	const payload = await authFetchJson<CoalitionDetailsApiResponse>(`${COALITION_BASE_URL}details/?coalition=${encodeURIComponent(slug)}`, {
 		method: "GET",
-	}, "Failed to fetch coalition details")
+	}, "No se han podido obtener los detalles de la coalición")
 	const coalition = payload.coalition
 
 	return {
@@ -241,7 +241,7 @@ export const fetchCoalitionDetails = async (slug: string) => {
 export const fetchCoalitionPointsHistory = async (slug: string) => {
 	const payload = await authFetchJson<CoalitionPointsHistoryApiResponse>(`${COALITION_BASE_URL}points-history/?coalition=${encodeURIComponent(slug)}`, {
 		method: "GET",
-	}, "Failed to fetch coalition points history")
+	}, "No se ha podido obtener el historial de puntos de la coalición")
 
 	return {
 		coalition: {

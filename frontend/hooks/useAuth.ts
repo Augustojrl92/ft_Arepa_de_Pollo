@@ -121,7 +121,7 @@ export const useAuthStore = create<AuthState>()(
           }
 
           const hasLocalUser = Boolean(get().user)
-          const message = error instanceof Error ? error.message : "Temporary auth error"
+          const message = error instanceof Error ? error.message : "Error temporal de autenticación"
           set({
             status: hasLocalUser ? "authenticated" : "unauthenticated",
             error: message,
