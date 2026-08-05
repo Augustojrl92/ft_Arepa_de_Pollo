@@ -1,6 +1,8 @@
 
 from .models import Achievement, UserAchievement
 
+exp_to_lvl_ratio = 500
+
 def set_up_achievements():
 	altarian_achievement_name = "La respuesta a la vida, al universo, y a todo lo demás."
 	Achievement.completion_check_funcs[altarian_achievement_name] = altarians_completion
