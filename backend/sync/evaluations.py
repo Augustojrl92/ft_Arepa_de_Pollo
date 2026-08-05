@@ -44,16 +44,6 @@ def _retry_delay(response, attempt, fallback_cap=60):
 			pass
 	return min(2 ** attempt, fallback_cap)
 
-# Objective:
-# Fetch a single filled `as_corrector` page from the 42 API.
-# Expects:
-# - login: 42 login to query.
-# - ctx: sync context containing base_url and auth headers.
-# - page/per_page: pagination values for the API request.
-# - request_interval: delay between requests to reduce API pressure.
-# - extra_params: optional extra filters such as a filled_at range.
-# Returns:
-# - A successful `requests.Response` object for the requested page.
 def _request_evaluations_page(login, ctx, page=1, per_page=100, request_interval=0.6, extra_params=None):
 	params = {
 		'page': page,
@@ -92,15 +82,6 @@ def _request_evaluations_page(login, ctx, page=1, per_page=100, request_interval
 	response.raise_for_status()
 	return response
 
-# Objective:
-# Get the number of evaluations for a user after applying the provided filters.
-# Expects:
-# - login: 42 login to query.
-# - ctx: optional sync context; a fresh one is built if missing.
-# - request_interval: delay between requests.
-# - extra_params: optional API filters, for example a season date range.
-# Returns:
-# - An integer count, using the `x-total` response header when available.
 def _fetch_evaluations_count(login, ctx=None, request_interval=0.6, extra_params=None):
 	ctx = ctx or _build_sync_context()
 	first_response = _request_evaluations_page(
@@ -116,14 +97,6 @@ def _fetch_evaluations_count(login, ctx=None, request_interval=0.6, extra_params
 
 	return len(first_response.json())
 
-# Objective:
-# Get the user's lifetime number of completed evaluations as corrector.
-# Expects:
-# - login: 42 login to query.
-# - ctx: optional sync context.
-# - request_interval: delay between requests.
-# Returns:
-# - The total number of completed evaluations for the user.
 def fetch_user_evaluations_done_total(login, ctx=None, request_interval=0.6):
 	return _fetch_evaluations_count(
 		login=login,
@@ -131,14 +104,6 @@ def fetch_user_evaluations_done_total(login, ctx=None, request_interval=0.6):
 		request_interval=request_interval,
 	)
 
-# Objective:
-# Get the user's completed evaluations inside the current season window.
-# Expects:
-# - login: 42 login to query.
-# - ctx: optional sync context.
-# - request_interval: delay between requests.
-# Returns:
-# - The number of completed evaluations whose `filled_at` falls inside the configured season range.
 def fetch_user_evaluations_done_current_season(login, ctx=None, request_interval=0.6):
 	return _fetch_evaluations_count(
 		login=login,
@@ -149,13 +114,6 @@ def fetch_user_evaluations_done_current_season(login, ctx=None, request_interval
 		},
 	)
 
-# Objective:
-# Sync evaluation counters from 42 into local `CampusUser` rows.
-# Expects:
-# - queryset: optional user queryset or list; defaults to every CampusUser with login.
-# - request_interval: delay between requests.
-# Returns:
-# - A summary dict with processed and updated row counts.
 def sync_users_evaluations_done_total(queryset=None, request_interval=0.6):
 	users = queryset if queryset is not None else CampusUser.objects.exclude(login='').order_by('id')
 	ctx = _build_sync_context()
@@ -204,15 +162,6 @@ def sync_users_evaluations_done_total(queryset=None, request_interval=0.6):
 		'skipped_missing': skipped_missing,
 	}
 
-# Objective:
-# Execute the evaluation sync in batches to avoid processing the whole dataset at once.
-# Expects:
-# - queryset: base queryset to iterate.
-# - batch_size: number of users per batch.
-# - request_interval: delay between requests.
-# - progress_callback: optional callable invoked after each batch.
-# Returns:
-# - A summary dict with processed users, updated users, and executed batches.
 def sync_users_evaluations_done_total_in_batches(queryset, batch_size=100, request_interval=0.6, progress_callback=None):
 	total_processed = 0
 	total_updated = 0
@@ -250,15 +199,6 @@ def sync_users_evaluations_done_total_in_batches(queryset, batch_size=100, reque
 		'batches': batch_index,
 	}
 
-# Objective:
-# Fetch one coalition score page ordered from newest to oldest.
-# Expects:
-# - coalition_id: coalition identifier in 42.
-# - ctx: sync context containing base_url and auth headers.
-# - page/per_page: pagination values for the API request.
-# - request_interval: delay between requests to reduce API pressure.
-# Returns:
-# - A successful `requests.Response` object for the requested page.
 def _request_coalition_scores_page(coalition_id, ctx, page=1, per_page=100, request_interval=0.25):
 	time.sleep(max(request_interval, 0))
 	last_exc = None
@@ -293,27 +233,12 @@ def _request_coalition_scores_page(coalition_id, ctx, page=1, per_page=100, requ
 	response.raise_for_status()
 	return response
 
-# Objective:
-# Decide whether a score row counts as one completed correction event.
-# Expects:
-# - score_event: row returned by `/v2/coalitions/:id/scores`.
-# Returns:
-# - True only for evaluation score events that can be mapped to a coalition user.
 def _is_evaluation_score_event(score_event):
 	return (
 		score_event.get('reason') == EVALUATION_SCORE_REASON
 		and score_event.get('coalitions_user_id') is not None
 	)
 
-# Objective:
-# Collect every new score row for one coalition since the stored cursor.
-# Expects:
-# - coalition: local coalition model instance.
-# - cursor: stored cursor row for that coalition.
-# - ctx: sync context containing base_url and auth headers.
-# - request_interval: delay between requests.
-# Returns:
-# - A dict with the newest seen score metadata, collected new rows, and whether the cursor was bootstrapped.
 def _collect_new_coalition_scores(coalition, cursor, ctx, request_interval=0.25):
 	first_page = _request_coalition_scores_page(
 		coalition_id=coalition.coalition_id,
@@ -376,12 +301,6 @@ def _collect_new_coalition_scores(coalition, cursor, ctx, request_interval=0.25)
 		'newest_created_at': newest_created_at,
 	}
 
-# Objective:
-# Apply new evaluation score events to local counters using coalitions_user_id as the local join key.
-# Expects:
-# - score_rows: new coalition score rows ordered from newest to oldest.
-# Returns:
-# - A summary dict with scanned rows, evaluation rows, and updated users.
 def _apply_evaluation_score_rows(score_rows):
 	events_by_coalitions_user_id = {}
 
@@ -445,13 +364,6 @@ def _apply_evaluation_score_rows(score_rows):
 		'updated_users': len(users_to_update),
 	}
 
-# Objective:
-# Increment local evaluation counters by reading recent coalition score events instead of recounting every user.
-# Expects:
-# - coalition_queryset: optional local coalition queryset; defaults to every synced coalition.
-# - request_interval: delay between requests.
-# Returns:
-# - A summary dict with processed coalitions, bootstrapped cursors, scanned rows, evaluation rows, and updated users.
 def sync_evaluations_from_coalition_scores(coalition_queryset=None, request_interval=0.25):
 	coalitions = coalition_queryset if coalition_queryset is not None else Coalition.objects.order_by('coalition_id')
 	ctx = _build_sync_context()
@@ -495,15 +407,6 @@ def sync_evaluations_from_coalition_scores(coalition_queryset=None, request_inte
 		'updated_users': total_updated_users,
 	}
 
-# Objective:
-# Find the newest coalition score row at or before a cutoff datetime.
-# Expects:
-# - coalition: local coalition model instance.
-# - cutoff: datetime used as the cursor boundary.
-# - ctx: sync context containing base_url and auth headers.
-# - request_interval: delay between requests.
-# Returns:
-# - A tuple `(score_id, created_at, exact_boundary_found)`.
 def _find_evaluation_score_cursor_at_or_before(coalition, cutoff, ctx, request_interval=0.25):
 	page = 1
 	cutoff = _ensure_aware_datetime(cutoff)
@@ -528,14 +431,6 @@ def _find_evaluation_score_cursor_at_or_before(coalition, cutoff, ctx, request_i
 
 	return 0, None, False
 
-# Objective:
-# Rebuild evaluation score cursors from a snapshot datetime so incremental sync can recover the gap.
-# Expects:
-# - cutoff: datetime representing the snapshot time already present in local counters.
-# - coalition_queryset: optional local coalition queryset; defaults to every synced coalition.
-# - request_interval: delay between requests.
-# Returns:
-# - A summary dict with processed and positioned cursor counts.
 def bootstrap_evaluation_score_cursors_from_datetime(cutoff, coalition_queryset=None, request_interval=0.25):
 	coalitions = coalition_queryset if coalition_queryset is not None else Coalition.objects.order_by('coalition_id')
 	ctx = _build_sync_context()

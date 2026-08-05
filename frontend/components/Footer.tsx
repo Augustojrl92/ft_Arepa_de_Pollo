@@ -18,21 +18,21 @@ export default function Footer() {
               href="/status"
               className="px-2 py-1.5 sm:px-3 text-text-secondary transition-all duration-200 hover:text-accent"
             >
-              Status
+              Estado
             </Link>
             <div className="h-3 w-px bg-border/60 shrink-0" aria-hidden="true" />
             <Link
               href="/privacy"
               className="px-2 py-1.5 sm:px-3 text-text-secondary transition-all duration-200 hover:text-accent"
             >
-              Privacy Policy
+              Política de Privacidad
             </Link>
             <div className="h-3 w-px bg-border/60 shrink-0" aria-hidden="true" />
             <Link
               href="/terms"
               className="px-2 py-1.5 sm:px-3 text-text-secondary transition-all duration-200 hover:text-accent"
             >
-              Terms of Service
+              Términos de Servicio
             </Link>
           </nav>
           

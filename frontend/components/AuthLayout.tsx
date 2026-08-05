@@ -8,6 +8,7 @@ import Header from "@/components/Header"
 import Chat from "@/components/Chat"
 import Footer from "@/components/Footer"
 import { useAuthStore, useCoalitionStore, useUserStore } from "@/hooks"
+import { refreshAccessToken } from "@/lib/authApi"
 
 const GUEST_ROUTE = "/guest"
 
@@ -20,7 +21,6 @@ const PUBLIC_ROUTES = [
 	"/privacy",
 	"/terms",
 	"/status",
-	"/offline",
 ]
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -150,6 +150,25 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 			window.clearInterval(intervalId)
 		}
 	}, [initializeAuth, isAuthenticated, isReady])
+
+	// Proactively refresh before the 15-minute access token expires, so
+	// periodic calls (heartbeat, polling) don't trip a visible 401 first.
+	useEffect(() => {
+		if (!isReady || !isAuthenticated) {
+			return
+		}
+
+		const intervalId = window.setInterval(() => {
+			void refreshAccessToken().catch(() => {
+				// A failed proactive refresh means the session already ended;
+				// the next real request's own 401 handling takes it from here.
+			})
+		}, 12 * 60 * 1000)
+
+		return () => {
+			window.clearInterval(intervalId)
+		}
+	}, [isAuthenticated, isReady])
 
 	if (!isReady) {
 		return null

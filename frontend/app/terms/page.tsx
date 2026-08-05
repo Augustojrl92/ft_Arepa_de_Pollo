@@ -20,7 +20,7 @@ export default function TermsPage() {
         <section className="space-y-3">
           <h2 className="text-2xl font-bold text-text">1. Service purpose</h2>
           <p className="leading-7 text-text-secondary">
-            AEDLPH is a learning project built for the 42 curriculum. It provides coalition rankings, user dashboards, synced campus data, achievements, social features, and PWA support. The platform may change as the project evolves.
+            AEDLPH is a learning project built for the 42 curriculum. It provides coalition rankings, user dashboards, synced campus data, achievements, and social features. The platform may change as the project evolves.
           </p>
         </section>
 
@@ -34,7 +34,7 @@ export default function TermsPage() {
         <section className="space-y-3">
           <h2 className="text-2xl font-bold text-text">3. Acceptable use</h2>
           <ul className="space-y-2 text-text-secondary">
-            <li>- Do not attempt to abuse the 42 API, the backend, or the PWA cache.</li>
+            <li>- Do not attempt to abuse the 42 API or the backend.</li>
             <li>- Do not submit malicious content, spam, or abusive messages.</li>
             <li>- Do not interfere with rankings, snapshots, or other shared data.</li>
             <li>- Respect the community rules that apply to the 42 environment and to the project itself.</li>
@@ -44,7 +44,7 @@ export default function TermsPage() {
         <section className="space-y-3">
           <h2 className="text-2xl font-bold text-text">4. Availability and limitations</h2>
           <p className="leading-7 text-text-secondary">
-            AEDLPH depends on external services, local synchronization jobs, and the development environment used to host it. The team may keep the service unavailable while fixing bugs, updating data, or changing the implementation. Offline mode is limited to the cached shell and the pages that have been designed to work without network access.
+            AEDLPH depends on external services, local synchronization jobs, and the development environment used to host it. The team may keep the service unavailable while fixing bugs, updating data, or changing the implementation.
           </p>
         </section>
 

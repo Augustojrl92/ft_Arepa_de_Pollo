@@ -121,7 +121,7 @@ export const postSetPassword = (
 
 let refreshInFlight: Promise<void> | null = null
 
-const refreshAccessToken = async () => {
+export const refreshAccessToken = async () => {
 	if (refreshInFlight) {
 		return refreshInFlight
 	}
@@ -134,9 +134,15 @@ const refreshAccessToken = async () => {
 
 	if (!response.ok) {
 		throw new ApiHttpError(
-			await getErrorMessage(response, "Failed to refresh auth token"),
+			await getErrorMessage(response, "No se ha podido renovar el token de sesión"),
 			response.status,
 		)
+	}
+
+	const payload = await response.json().catch(() => null) as { refreshed?: boolean } | null
+
+	if (!payload?.refreshed) {
+		throw new ApiHttpError("No se ha podido renovar el token de sesión", 401)
 	}
 	})()
 
@@ -194,7 +200,7 @@ export const authFetchJson = async <T>(
 export const getProfile = async () => {
 	const response = await authFetch(`${AUTH_BASE_URL}/profile/`, {
 		method: "GET",
-	}, "Failed to fetch user profile")
+	}, "No se ha podido obtener el perfil del usuario")
 
 	return response.json()
 }
@@ -207,7 +213,7 @@ export const postLogout = async () => {
 
 	if (!response.ok) {
 		throw new ApiHttpError(
-			await getErrorMessage(response, "Failed to logout"),
+			await getErrorMessage(response, "No se ha podido cerrar sesión"),
 			response.status,
 		)
 	}

@@ -71,7 +71,7 @@ export const useUserStore = create<UserState>()(
 				const userDetails = await fetchUserDetails(login)
 				set({ user: userDetails, isLoading: false })
 			} catch {
-				set({ error: 'Failed to fetch user details', isLoading: false })
+				set({ error: 'No se han podido obtener los datos del usuario', isLoading: false })
 			}
 		},
 
@@ -81,7 +81,7 @@ export const useUserStore = create<UserState>()(
 				const friends = await fetchMyFriends()
 				set({ friends, isFriendsLoading: false })
 			} catch {
-				set({ error: 'Failed to fetch friends', isFriendsLoading: false })
+				set({ error: 'No se han podido obtener los amigos', isFriendsLoading: false })
 			}
 		},
 
@@ -92,7 +92,7 @@ export const useUserStore = create<UserState>()(
 				set({ isPreferencesLoading: false })
 				return preferences
 			} catch (err) {
-				const message = err instanceof Error ? err.message : 'Failed to fetch preferences'
+				const message = err instanceof Error ? err.message : 'No se han podido obtener las preferencias'
 				set({ preferencesError: message, isPreferencesLoading: false })
 				throw err
 			}
@@ -105,7 +105,7 @@ export const useUserStore = create<UserState>()(
 				set({ isPreferencesLoading: false })
 				return savedPreferences
 			} catch (err) {
-				const message = err instanceof Error ? err.message : 'Failed to update preferences'
+				const message = err instanceof Error ? err.message : 'No se han podido actualizar las preferencias'
 				set({ preferencesError: message, isPreferencesLoading: false })
 				throw err
 			}
@@ -132,7 +132,7 @@ export const useUserStore = create<UserState>()(
 					isFriendsLoading: false,
 				}))
 			} catch {
-				set({ error: 'Failed to fetch pending friend requests', isFriendsLoading: false })
+				set({ error: 'No se han podido obtener las solicitudes de amistad pendientes', isFriendsLoading: false })
 			}
 		},
 
@@ -142,7 +142,7 @@ export const useUserStore = create<UserState>()(
 				const friends = await createFriendRequest(login)
 				set({ friends, isFriendsLoading: false })
 			} catch (err) {
-				set({ error: err instanceof Error ? err.message : 'Failed to send friend request', isFriendsLoading: false })
+				set({ error: err instanceof Error ? err.message : 'No se ha podido enviar la solicitud de amistad', isFriendsLoading: false })
 			}
 		},
 
@@ -152,7 +152,7 @@ export const useUserStore = create<UserState>()(
 				const friends = await resolveFriendRequest(login, 'accept')
 				set({ friends, isFriendsLoading: false })
 			} catch (err) {
-				set({ error: err instanceof Error ? err.message : 'Failed to accept friend request', isFriendsLoading: false })
+				set({ error: err instanceof Error ? err.message : 'No se ha podido aceptar la solicitud de amistad', isFriendsLoading: false })
 			}
 		},
 
@@ -162,7 +162,7 @@ export const useUserStore = create<UserState>()(
 				const friends = await resolveFriendRequest(login, 'reject')
 				set({ friends, isFriendsLoading: false })
 			} catch (err) {
-				set({ error: err instanceof Error ? err.message : 'Failed to reject friend request', isFriendsLoading: false })
+				set({ error: err instanceof Error ? err.message : 'No se ha podido rechazar la solicitud de amistad', isFriendsLoading: false })
 			}
 		},
 
@@ -172,7 +172,7 @@ export const useUserStore = create<UserState>()(
 				const friends = await withdrawFriendRequest(login)
 				set({ friends, isFriendsLoading: false })
 			} catch (err) {
-				set({ error: err instanceof Error ? err.message : 'Failed to withdraw friend request', isFriendsLoading: false })
+				set({ error: err instanceof Error ? err.message : 'No se ha podido retirar la solicitud de amistad', isFriendsLoading: false })
 			}
 		},
 
@@ -182,7 +182,7 @@ export const useUserStore = create<UserState>()(
 				const friends = await removeFriend(login)
 				set({ friends, isFriendsLoading: false })
 			} catch (err) {
-				set({ error: err instanceof Error ? err.message : 'Failed to remove friend', isFriendsLoading: false })
+				set({ error: err instanceof Error ? err.message : 'No se ha podido eliminar al amigo', isFriendsLoading: false })
 			}
 		},
 
@@ -194,7 +194,7 @@ export const useUserStore = create<UserState>()(
 				const avatarUrl = avatarResult.avatarUrl
 				return avatarUrl
 			} catch (err) {
-				const message = err instanceof Error ? err.message : 'Failed to upload avatar'
+				const message = err instanceof Error ? err.message : 'No se ha podido subir el avatar'
 				set({ avatarError: message, isAvatarLoading: false })
 				throw err
 			}
@@ -208,7 +208,7 @@ export const useUserStore = create<UserState>()(
 				const avatarUrl = avatarResult.avatarUrl
 				return avatarUrl
 			} catch (err) {
-				const message = err instanceof Error ? err.message : 'Failed to remove avatar'
+				const message = err instanceof Error ? err.message : 'No se ha podido eliminar el avatar'
 				set({ avatarError: message, isAvatarLoading: false })
 				throw err
 			}

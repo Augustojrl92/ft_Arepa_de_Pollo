@@ -47,15 +47,15 @@ class CoalitionProjectCursor(models.Model):
 class CampusUser(models.Model):
 	django_user = models.OneToOneField(User, on_delete=models.SET_NULL, related_name='campus_user_profile', null=True, blank=True)
 
-	# IDs principales
+	# Primary IDs
 	intra_id = models.PositiveBigIntegerField(unique=True)
 	user_id = models.PositiveBigIntegerField()
 
-	# Datos de progreso en el cursus
+	# Cursus progress data
 	grade = models.CharField(max_length=64, blank=True)
 	level = models.DecimalField(max_digits=8, decimal_places=2, default=0)
 
-	# Datos del usuario embebido en la respuesta
+	# User data embedded in the response
 	login = models.CharField(max_length=255, blank=True)
 	email = models.EmailField(max_length=255, blank=True)
 	display_name = models.CharField(max_length=255, blank=True)
@@ -70,7 +70,7 @@ class CampusUser(models.Model):
 	is_active = models.BooleanField(default=True)
 	last_active_time = models.PositiveIntegerField(default=0)
 
-	# Coalicion
+	# Coalition
 	coalition_id = models.PositiveIntegerField(null=True, blank=True)
 	coalitions_user_id = models.PositiveBigIntegerField(null=True, blank=True, db_index=True)
 	coalition_name = models.CharField(max_length=255, blank=True)
@@ -82,7 +82,7 @@ class CampusUser(models.Model):
 	evaluations_done_current_season = models.PositiveIntegerField(default=0)
 	evaluations_synced_at = models.DateTimeField(null=True, blank=True)
 
-	# Timestamps del registro de cursus_users
+	# Timestamps of the cursus_users record
 	created_at = models.DateTimeField()
 	updated_at = models.DateTimeField()
 

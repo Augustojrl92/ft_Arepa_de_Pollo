@@ -3,7 +3,6 @@ import { Inter } from "next/font/google";
 import { Suspense } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import AuthLayout from "@/components/AuthLayout";
-import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import { HeartbeatProvider } from "@/components/HeartbeatProvider";
 import "./globals.css";
 
@@ -11,7 +10,6 @@ export const metadata: Metadata = {
   title: "AEDLPH",
   description: "Plataforma AEDLPH",
   applicationName: "AEDLPH",
-  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {
@@ -34,7 +32,6 @@ export default function RootLayout({
         className={`${inter.className} antialiased flex flex-col min-h-screen bg-surface text-text`}
       >
         <ThemeProvider>
-          <ServiceWorkerRegistration />
           <HeartbeatProvider>
             <Suspense fallback={<main className="aedlph-container flex-1">{children}</main>}>
               <AuthLayout>{children}</AuthLayout>

@@ -14,7 +14,7 @@ export async function fetchMessagesWith(login: string) {
   }>(
     `${CHAT_BASE_URL}/messages/${login}/`,
     { method: 'GET' },
-    'Failed to fetch messages',
+    'No se han podido obtener los mensajes',
   )
   return data.messages
 }
@@ -31,7 +31,7 @@ export async function fetchConversations() {
   }>(
     `${CHAT_BASE_URL}/conversations/`,
     { method: 'GET' },
-    'Failed to fetch conversations',
+    'No se han podido obtener las conversaciones',
   )
   return data.conversations
 }

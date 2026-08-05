@@ -71,9 +71,9 @@ def _request_42_token():
 	expires_in = int(data.get('expires_in', 0))
 
 	if not access_token:
-		raise ValueError('La respuesta de /oauth/token no incluye access_token')
+		raise ValueError('The /oauth/token response does not include an access_token')
 
-	# Margen de seguridad de 30s para evitar usar un token a punto de expirar.
+	# 30s safety margin to avoid using a token that is about to expire.
 	_TOKEN_CACHE['access_token'] = access_token
 	_TOKEN_CACHE['expires_at'] = int(time.time()) + max(expires_in - 30, 0)
 

@@ -37,16 +37,6 @@ def _is_newer_than_user_sync(event_at, synced_at):
 	return _ensure_aware_datetime(event_at) > _ensure_aware_datetime(synced_at)
 
 
-# Objective:
-# Fetch one `projects_users` page with finished projects for a single 42 login.
-# Expects:
-# - login: 42 login to query.
-# - ctx: sync context containing base_url and auth headers.
-# - page/per_page: pagination values for the API request.
-# - request_interval: delay between requests to reduce API pressure.
-# - extra_params: optional filters, for example a marked_at range.
-# Returns:
-# - A successful `requests.Response` object for the requested page.
 def _request_projects_page(login, ctx, page=1, per_page=100, request_interval=0.6, extra_params=None):
 	params = {
 		'page': page,
@@ -88,39 +78,16 @@ def _request_projects_page(login, ctx, page=1, per_page=100, request_interval=0.
 	return response
 
 
-# Objective:
-# Decide whether a project row counts as one delivered project for this app.
-# Expects:
-# - project_user: row returned by `/v2/users/:login/projects_users`.
-# - cursus_id: 42 cursus id to keep; this excludes piscine rows from other cursus ids.
-# Returns:
-# - True only for approved finished projects in the configured cursus.
 def _is_delivered_project(project_user, cursus_id):
 	cursus_ids = project_user.get('cursus_ids') or []
 	cursus_ids = {str(value) for value in cursus_ids}
 	return project_user.get('validated?') is True and str(cursus_id) in cursus_ids
 
 
-# Objective:
-# Count approved finished projects from already fetched API rows.
-# Expects:
-# - rows: project rows returned by the 42 API.
-# - cursus_id: 42 cursus id to keep.
-# Returns:
-# - Number of rows that count as delivered projects for this app.
 def _count_delivered_project_rows(rows, cursus_id):
 	return sum(1 for row in rows if _is_delivered_project(row, cursus_id))
 
 
-# Objective:
-# Count approved finished projects for a user after applying the provided filters.
-# Expects:
-# - login: 42 login to query.
-# - ctx: optional sync context; a fresh one is built if missing.
-# - request_interval: delay between requests.
-# - extra_params: optional API filters, for example a season date range.
-# Returns:
-# - An integer count after excluding failed projects and piscine projects.
 def _fetch_projects_count(login, ctx=None, request_interval=0.6, extra_params=None):
 	ctx = ctx or _build_sync_context()
 	first_response = _request_projects_page(
@@ -149,14 +116,6 @@ def _fetch_projects_count(login, ctx=None, request_interval=0.6, extra_params=No
 	return count
 
 
-# Objective:
-# Get the user's lifetime number of approved delivered projects.
-# Expects:
-# - login: 42 login to query.
-# - ctx: optional sync context.
-# - request_interval: delay between requests.
-# Returns:
-# - The total number of approved finished projects for the user in the configured cursus.
 def fetch_user_projects_delivered_total(login, ctx=None, request_interval=0.6):
 	return _fetch_projects_count(
 		login=login,
@@ -165,14 +124,6 @@ def fetch_user_projects_delivered_total(login, ctx=None, request_interval=0.6):
 	)
 
 
-# Objective:
-# Get the user's approved delivered projects inside the current season window.
-# Expects:
-# - login: 42 login to query.
-# - ctx: optional sync context.
-# - request_interval: delay between requests.
-# Returns:
-# - The number of approved finished projects whose `marked_at` falls inside the configured season range.
 def fetch_user_projects_delivered_current_season(login, ctx=None, request_interval=0.6):
 	return _fetch_projects_count(
 		login=login,
@@ -184,13 +135,6 @@ def fetch_user_projects_delivered_current_season(login, ctx=None, request_interv
 	)
 
 
-# Objective:
-# Sync delivered project counters from 42 into local `CampusUser` rows.
-# Expects:
-# - queryset: optional user queryset or list; defaults to every CampusUser with login.
-# - request_interval: delay between requests.
-# Returns:
-# - A summary dict with processed and updated row counts.
 def sync_users_projects_delivered(queryset=None, request_interval=0.6):
 	users = queryset if queryset is not None else CampusUser.objects.exclude(login='').order_by('id')
 	ctx = _build_sync_context()
@@ -239,15 +183,6 @@ def sync_users_projects_delivered(queryset=None, request_interval=0.6):
 	}
 
 
-# Objective:
-# Fetch one coalition score page ordered from newest to oldest.
-# Expects:
-# - coalition_id: coalition identifier in 42.
-# - ctx: sync context containing base_url and auth headers.
-# - page/per_page: pagination values for the API request.
-# - request_interval: delay between requests to reduce API pressure.
-# Returns:
-# - A successful `requests.Response` object for the requested page.
 def _request_coalition_scores_page(coalition_id, ctx, page=1, per_page=100, request_interval=0.25):
 	time.sleep(max(request_interval, 0))
 	last_exc = None
@@ -285,14 +220,6 @@ def _request_coalition_scores_page(coalition_id, ctx, page=1, per_page=100, requ
 	return response
 
 
-# Objective:
-# Fetch a single projects_user row to validate cursus/user data before incrementing counters.
-# Expects:
-# - project_user_id: 42 ProjectsUser id from a coalition score event.
-# - ctx: sync context containing base_url and auth headers.
-# - request_interval: delay between requests to reduce API pressure.
-# Returns:
-# - Parsed JSON payload for the requested projects_user row.
 def _fetch_project_user(project_user_id, ctx, request_interval=0.25):
 	time.sleep(max(request_interval, 0))
 	last_exc = None
@@ -325,12 +252,6 @@ def _fetch_project_user(project_user_id, ctx, request_interval=0.25):
 	return response.json()
 
 
-# Objective:
-# Decide whether a coalition score row may represent one delivered project event.
-# Expects:
-# - score_event: row returned by `/v2/coalitions/:id/scores`.
-# Returns:
-# - True only for project validation score events with a ProjectsUser id.
 def _is_project_score_event(score_event):
 	return (
 		score_event.get('reason') == PROJECT_SCORE_REASON
@@ -339,15 +260,6 @@ def _is_project_score_event(score_event):
 	)
 
 
-# Objective:
-# Collect every new project score row for one coalition since the stored cursor.
-# Expects:
-# - coalition: local coalition model instance.
-# - cursor: stored cursor row for that coalition.
-# - ctx: sync context containing base_url and auth headers.
-# - request_interval: delay between requests.
-# Returns:
-# - A dict with the newest seen score metadata, collected new rows, and whether the cursor was bootstrapped.
 def _collect_new_coalition_project_scores(coalition, cursor, ctx, request_interval=0.25):
 	first_page = _request_coalition_scores_page(
 		coalition_id=coalition.coalition_id,
@@ -411,14 +323,6 @@ def _collect_new_coalition_project_scores(coalition, cursor, ctx, request_interv
 	}
 
 
-# Objective:
-# Apply new project score events to local counters after validating each ProjectsUser payload.
-# Expects:
-# - score_rows: new coalition score rows ordered from newest to oldest.
-# - ctx: sync context containing base_url and auth headers.
-# - request_interval: delay between requests.
-# Returns:
-# - A summary dict with scanned rows, project rows, and updated users.
 def _apply_project_score_rows(score_rows, ctx, request_interval=0.25):
 	events_by_intra_id = {}
 	seen_project_user_ids = set()
@@ -493,13 +397,6 @@ def _apply_project_score_rows(score_rows, ctx, request_interval=0.25):
 	}
 
 
-# Objective:
-# Increment local delivered-project counters by reading recent coalition score events.
-# Expects:
-# - coalition_queryset: optional local coalition queryset; defaults to every synced coalition.
-# - request_interval: delay between requests.
-# Returns:
-# - A summary dict with processed coalitions, bootstrapped cursors, scanned rows, project rows, and updated users.
 def sync_projects_from_coalition_scores(coalition_queryset=None, request_interval=0.25):
 	coalitions = coalition_queryset if coalition_queryset is not None else Coalition.objects.order_by('coalition_id')
 	ctx = _build_sync_context()
@@ -548,15 +445,6 @@ def sync_projects_from_coalition_scores(coalition_queryset=None, request_interva
 	}
 
 
-# Objective:
-# Find the newest coalition score row at or before a cutoff datetime.
-# Expects:
-# - coalition: local coalition model instance.
-# - cutoff: datetime used as the cursor boundary.
-# - ctx: sync context containing base_url and auth headers.
-# - request_interval: delay between requests.
-# Returns:
-# - A tuple `(score_id, created_at, exact_boundary_found)`.
 def _find_project_score_cursor_at_or_before(coalition, cutoff, ctx, request_interval=0.25):
 	page = 1
 	cutoff = _ensure_aware_datetime(cutoff)
@@ -582,14 +470,6 @@ def _find_project_score_cursor_at_or_before(coalition, cutoff, ctx, request_inte
 	return 0, None, False
 
 
-# Objective:
-# Rebuild project score cursors from a snapshot datetime so incremental sync can recover the gap.
-# Expects:
-# - cutoff: datetime representing the snapshot time already present in local counters.
-# - coalition_queryset: optional local coalition queryset; defaults to every synced coalition.
-# - request_interval: delay between requests.
-# Returns:
-# - A summary dict with processed and positioned cursor counts.
 def bootstrap_project_score_cursors_from_datetime(cutoff, coalition_queryset=None, request_interval=0.25):
 	coalitions = coalition_queryset if coalition_queryset is not None else Coalition.objects.order_by('coalition_id')
 	ctx = _build_sync_context()
@@ -622,15 +502,6 @@ def bootstrap_project_score_cursors_from_datetime(cutoff, coalition_queryset=Non
 	}
 
 
-# Objective:
-# Execute the delivered-project sync in batches to avoid processing the whole dataset at once.
-# Expects:
-# - queryset: base queryset to iterate.
-# - batch_size: number of users per batch.
-# - request_interval: delay between requests.
-# - progress_callback: optional callable invoked after each batch.
-# Returns:
-# - A summary dict with processed users, updated users, and executed batches.
 def sync_users_projects_delivered_in_batches(queryset, batch_size=100, request_interval=0.6, progress_callback=None):
 	total_processed = 0
 	total_updated = 0

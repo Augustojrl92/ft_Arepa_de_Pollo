@@ -202,10 +202,10 @@ export function UserConfigurationModal({
 
 					<div className="rounded-xl border border-border bg-surface/40 p-3">
 						<div className="space-y-2">
-							<p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">GDPR</p>
-							<p className="text-sm font-semibold text-text">Export and account removal</p>
+							<p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">RGPD</p>
+							<p className="text-sm font-semibold text-text">Exportar y eliminar cuenta</p>
 							<p className="text-xs leading-6 text-text-secondary">
-								Download a copy of your stored data or start the permanent account deletion flow.
+								Descarga una copia de tus datos guardados o inicia el proceso de eliminación permanente de la cuenta.
 							</p>
 						</div>
 						<div className="mt-3 flex flex-wrap gap-2">
@@ -220,7 +220,7 @@ export function UserConfigurationModal({
 								}}
 								disabled={!onExportData || isExporting}
 							>
-								{isExporting ? 'Exporting...' : 'Export My Data'}
+								{isExporting ? 'Exportando...' : 'Exportar mis datos'}
 							</CustomButton>
 							<CustomButton
 								type="button"
@@ -229,7 +229,7 @@ export function UserConfigurationModal({
 								onClick={onRequestDeleteAccount}
 								disabled={!onRequestDeleteAccount}
 							>
-								Delete Account
+								Eliminar cuenta
 							</CustomButton>
 						</div>
 					</div>

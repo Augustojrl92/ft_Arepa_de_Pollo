@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 export const navigation = [
-	{ title: 'Leaderboard', href: '/leaderboard' },
-	{ title: 'Coalitions', href: '/coalitions' },
+	{ title: 'Clasificación', href: '/leaderboard' },
+	{ title: 'Coaliciones', href: '/coalitions' },
 ];
 
 export default function NavLink() {

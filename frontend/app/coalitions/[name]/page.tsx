@@ -47,7 +47,7 @@ export default function CoalitionDetailPage({
 	if (isLoading || !name) {
 		return (
 			<section className="p-4">
-				<div className="animate-pulse">Loading...</div>
+				<div className="animate-pulse">Cargando...</div>
 			</section>
 		)
 	}
@@ -57,10 +57,10 @@ export default function CoalitionDetailPage({
 			<section className="p-4">
 				<Link href="/coalitions" className="flex items-center gap-2 text-text-secondary hover:text-text mb-6">
 					<ArrowLeft size={20} />
-					Back to Coalitions
+					Volver a Coaliciones
 				</Link>
 				<CardContainer className="text-center py-8">
-					<p className="text-text-secondary">Coalition &quot;{name}&quot; not found</p>
+					<p className="text-text-secondary">Coalición &quot;{name}&quot; no encontrada</p>
 				</CardContainer>
 			</section>
 		)

@@ -5,12 +5,6 @@ from django.core.management.base import BaseCommand
 from sync.models import CampusUser
 
 
-# Objective:
-# Export delivered-project counters from `CampusUser` into a CSV snapshot.
-# Expects:
-# - CLI option `--path` with the output file path.
-# Returns:
-# - Writes the CSV file and prints the exported row count.
 class Command(BaseCommand):
 	help = 'Exporta un snapshot CSV de proyectos entregados.'
 

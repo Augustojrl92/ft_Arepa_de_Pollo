@@ -24,7 +24,7 @@ export function AuthShell({
 					<Link href="/login" className="text-4xl font-black tracking-tight text-accent">
 						AEDLPH
 					</Link>
-					<span className="text-sm text-text-secondary">Improved 42 Coalitions</span>
+					<span className="text-sm text-text-secondary">Coaliciones de 42 mejoradas</span>
 				</div>
 
 				<CardContainer className="w-full flex flex-col gap-6">

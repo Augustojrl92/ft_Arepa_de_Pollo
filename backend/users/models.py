@@ -28,7 +28,8 @@ class UserPreferences(models.Model):
 		identifier = login or self.user.username
 		return f'Preferences for [{identifier}]'
 
-# Pongo esta clase aqui a falta de archivos más apropiados y ya que los logros respectan a los usuarios
+# This class lives here for lack of a more appropriate file, and because
+# achievements relate to users.
 class Achievement(models.Model):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -37,7 +38,6 @@ class Achievement(models.Model):
 			Achievement.initialized = True
 
 		# Insert achievement completion check functions below: 🠳🠳🠳
-		#Achievement.completion_check_funcs['Dios de las arepas'] = dios_de_las_arepas_completion_check # Augusto no me odies por esto
 
 
 	# HTML for the achievement icon to be inserted into the page. The default value is a copy of the html of the div of a mock up icon

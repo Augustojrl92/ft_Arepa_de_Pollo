@@ -10,7 +10,7 @@ export default function Home() {
 	const { isCoalitionsLoading, coalitions } = useCoalitionStore()
 	const user = useAuthStore((state) => state.user)
 
-	// Mostrar skeletons mientras se cargan las coaliciones
+	// Show skeletons while coalitions are loading
 	if (isCoalitionsLoading && coalitions.length === 0) {
 		return (
 			<>
