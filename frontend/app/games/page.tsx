@@ -181,7 +181,7 @@ function MultiplayerWinnerPanel({ match, currentUserId, rivalLogin, title, score
 		<section className="game-winner-panel" role="status" aria-live="polite" aria-labelledby="multiplayer-winner-title">
 			<div className="game-winner-trophy"><TrophyIcon size={30} /></div>
 			<div className="game-winner-copy">
-				<p>{pending ? requestedByMe ? 'Revancha solicitada' : `${rivalLogin} quiere la revancha` : accepted ? 'Preparando revancha' : 'Partida finalizada'}</p>
+				<p>{pending ? requestedByMe ? 'Has solicitado una revancha' : `${rivalLogin} quiere la revancha` : accepted ? 'Preparando revancha' : 'Partida finalizada'}</p>
 				<h2 id="multiplayer-winner-title">{title}</h2>
 				<strong>{score}</strong>
 			</div>
@@ -192,11 +192,11 @@ function MultiplayerWinnerPanel({ match, currentUserId, rivalLogin, title, score
 					</button>
 				) : pending ? (
 					<>
-						<button type="button" onClick={() => onResolve('accept')} disabled={busy} title="Aceptar revancha">
-							<CheckIcon size={18} /> Aceptar
+						<button type="button" className="is-rematch-accept" onClick={() => onResolve('accept')} disabled={busy} title="Aceptar revancha" aria-label="Aceptar revancha">
+							<CheckIcon size={20} />
 						</button>
-						<button type="button" className="is-secondary" onClick={() => onResolve('reject')} disabled={busy} title="Rechazar revancha">
-							<XIcon size={18} /> Rechazar
+						<button type="button" className="is-rematch-reject" onClick={() => onResolve('reject')} disabled={busy} title="Rechazar revancha" aria-label="Rechazar revancha">
+							<XIcon size={20} />
 						</button>
 					</>
 				) : accepted ? (
