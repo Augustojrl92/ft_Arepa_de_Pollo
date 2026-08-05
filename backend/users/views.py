@@ -388,25 +388,34 @@ class UserAchievementsView(APIView):
 				status=status.HTTP_404_NOT_FOUND
 			)
 		
-		serialized = []
+		serialized_achievements = []
+		serialized_daily_challenges = []
 		for achv in achvs:
 			completion_date = achv.completion_date
 			if completion_date != None:
 				completion_date = completion_date.isoformat()
-			serialized.append({
+			serialized_item = {
 				'name': achv.achievement.name,
 				'description': achv.achievement.description,
 				'progress': achv.progress, 
 				'completion_progress': achv.achievement.completion_points,
 				'completion_date': completion_date,
+				'experience': achv.achievement.experience,
 				'icon_HTML': achv.achievement.icon_HTML
-			})
+			}
+			if achv.achievement.daily:
+				serialized_daily_challenges.append(serialized_item)
+			else:
+				serialized_achievements.append(serialized_item)
+			
 		
 		return Response(
 			{
 				'login': login,
-				'n_achievements': len(achvs),
-				'achievements': serialized
+				'n_achievements': len(serialized_achievements),
+				'achievements': serialized_achievements,
+				'n_daily_challenges': len(serialized_daily_challenges),
+				'daily_challenges': serialized_daily_challenges,
 			},
 			status=status.HTTP_200_OK
 		)
