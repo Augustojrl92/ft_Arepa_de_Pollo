@@ -1079,6 +1079,23 @@ html.dark {
     color: var(--color-accent);
   }
 
+  .game-winner-panel button.is-rematch-accept,
+  .game-winner-panel button.is-rematch-reject {
+    min-width: 3rem;
+    width: 3rem;
+    padding: 0.55rem;
+  }
+
+  .game-winner-panel button.is-rematch-accept {
+    background: #22c55e;
+    color: #052e16;
+  }
+
+  .game-winner-panel button.is-rematch-reject {
+    background: #dc2626;
+    color: #fff;
+  }
+
   .game-winner-panel button:disabled {
     cursor: wait;
     opacity: 0.65;
@@ -1468,4 +1485,3 @@ html.dark {
     }
   }
 }
-

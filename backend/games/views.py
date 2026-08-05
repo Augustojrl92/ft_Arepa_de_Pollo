@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 
 from .models import GameMatch
 from .events import broadcast_game_availability, broadcast_game_event
-from .services import GameError, create_invitation, get_busy_user_ids, resolve_invitation, serialize_match, submit_move
+from .services import GameError, create_invitation, get_busy_user_ids, resolve_invitation, resolve_rematch, serialize_match, submit_move
 
 
 def _error_response(error):
@@ -16,7 +16,7 @@ def _error_response(error):
 def _get_match(match_id, user):
 	return (
 		GameMatch.objects
-		.select_related('inviter', 'opponent', 'winner', 'inviter__campus_user_profile', 'opponent__campus_user_profile')
+		.select_related('inviter', 'opponent', 'winner', 'rematch_requested_by', 'next_rematch', 'inviter__campus_user_profile', 'opponent__campus_user_profile')
 		.prefetch_related('rounds')
 		.filter(Q(inviter=user) | Q(opponent=user), pk=match_id)
 		.first()
@@ -29,7 +29,7 @@ class MatchListView(APIView):
 	def get(self, request):
 		matches = (
 			GameMatch.objects
-			.select_related('inviter', 'opponent', 'winner', 'inviter__campus_user_profile', 'opponent__campus_user_profile')
+			.select_related('inviter', 'opponent', 'winner', 'rematch_requested_by', 'next_rematch', 'inviter__campus_user_profile', 'opponent__campus_user_profile')
 			.prefetch_related('rounds')
 			.filter(Q(inviter=request.user) | Q(opponent=request.user))[:30]
 		)
@@ -48,6 +48,14 @@ class MatchListView(APIView):
 			'outgoing': [item for item in serialized if item['status'] == 'pending' and item['role'] == 'inviter'],
 			'active': [item for item in serialized if item['status'] == 'active'],
 			'recent': [item for item in serialized if item['status'] in {'completed', 'declined', 'cancelled'}][:10],
+			'rematch_incoming': [
+				item for item in serialized
+				if item['rematch_status'] == 'pending' and item['rematch_requested_by_user_id'] != request.user.id
+			],
+			'rematch_outgoing': [
+				item for item in serialized
+				if item['rematch_status'] == 'pending' and item['rematch_requested_by_user_id'] == request.user.id
+			],
 		})
 
 	def post(self, request):
@@ -106,17 +114,23 @@ class MatchRematchView(APIView):
 	permission_classes = [IsAuthenticated]
 
 	def post(self, request, match_id):
-		match = _get_match(match_id, request.user)
-		if not match:
-			return Response({'error': 'Match not found'}, status=status.HTTP_404_NOT_FOUND)
-		if match.status != GameMatch.Status.COMPLETED:
-			return Response({'error': 'Only completed matches can have a rematch'}, status=status.HTTP_409_CONFLICT)
-		opponent = match.opponent if request.user.id == match.inviter_id else match.inviter
-		profile = getattr(opponent, 'campus_user_profile', None)
 		try:
-			new_match = create_invitation(request.user, profile.login if profile else opponent.username, match.target_score)
+			match, event_name = resolve_rematch(match_id, request.user, 'request')
 		except GameError as error:
 			return _error_response(error)
-		new_match = _get_match(new_match.id, request.user)
-		broadcast_game_event(new_match, 'rematch.created')
-		return Response(serialize_match(new_match, request.user, request=request), status=status.HTTP_201_CREATED)
+		match = _get_match(match.id, request.user)
+		broadcast_game_event(match, event_name)
+		if match.status == GameMatch.Status.ACTIVE:
+			broadcast_game_availability({match.inviter_id, match.opponent_id})
+		return Response(serialize_match(match, request.user, request=request), status=status.HTTP_201_CREATED)
+
+	def patch(self, request, match_id):
+		try:
+			match, event_name = resolve_rematch(match_id, request.user, request.data.get('action'))
+		except GameError as error:
+			return _error_response(error)
+		match = _get_match(match.id, request.user)
+		broadcast_game_event(match, event_name)
+		if match.status == GameMatch.Status.ACTIVE:
+			broadcast_game_availability({match.inviter_id, match.opponent_id})
+		return Response(serialize_match(match, request.user, request=request))
