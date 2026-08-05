@@ -12,8 +12,6 @@ export default function useChatSocket(
   setConversations: SetConversations
 ) {
   const socketRef = useRef<WebSocket | null>(null);
-  // Un timeout por usuario: cada vez que llega "typing" se reinicia; si no
-  // llega otro en TYPING_TIMEOUT_MS, se asume que dejó de escribir.
   const typingTimeoutsRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
   useEffect(() => {
@@ -62,8 +60,6 @@ export default function useChatSocket(
         }
 
         if (data.type === "message") {
-          // Alguien que estaba "escribiendo" y ahora mandó el mensaje: apaga
-          // el indicador de inmediato en vez de esperar el timeout.
           if (typingTimeoutsRef.current[data.from_user_id]) {
             clearTimeout(typingTimeoutsRef.current[data.from_user_id]);
             delete typingTimeoutsRef.current[data.from_user_id];

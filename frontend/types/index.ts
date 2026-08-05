@@ -123,14 +123,12 @@ export interface RankingPage {
 	total: number
 	totalPages: number
 }
- 
 export type ChatMessage = {
   id: number;
   author: "me" | "friend";
   text: string;
   time: string;
 };
- 
 export type ChatConversation = {
   id: number;
   name: string;
@@ -141,14 +139,12 @@ export type ChatConversation = {
   messages: ChatMessage[];
   isTyping: boolean;
 };
- 
 export type ChatUser = {
   id: number;
   name: string;
   login: string;
   status: string;
 };
- 
 export type ChatWindowProps = {
   open: boolean;
   onClose: () => void;

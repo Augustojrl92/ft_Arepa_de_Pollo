@@ -1,19 +1,19 @@
 import { useEffect, useState, useCallback } from "react";
 import { fetchConversations } from "@/lib/chatApi";
 import { ChatConversation } from "@/types";
- 
+
 export default function useConversations(myLogin?: string) {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
- 
+
   const loadConversations = useCallback(() => {
     if (!myLogin) return;
- 
+
     let isCancelled = false;
- 
+
     fetchConversations()
       .then((rows) => {
         if (isCancelled) return;
- 
+
         setConversations((prev) => {
           const existingIds = new Set(prev.map((c) => c.id));
           const newOnes: ChatConversation[] = rows
@@ -28,22 +28,18 @@ export default function useConversations(myLogin?: string) {
               messages: [],
               isTyping: false,
             }));
- 
           return [...prev, ...newOnes];
         });
       })
       .catch((err) => console.error("Error cargando conversaciones:", err));
- 
     return () => {
       isCancelled = true;
     };
   }, [myLogin]);
- 
   useEffect(() => {
     const cleanup = loadConversations();
     return cleanup;
   }, [loadConversations]);
- 
+
   return { conversations, setConversations, loadConversations } as const;
 }
- 
