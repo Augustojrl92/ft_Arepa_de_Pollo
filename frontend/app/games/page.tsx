@@ -25,6 +25,7 @@ import {
 	MatchList,
 	MultiplayerMatch,
 	requestRematch,
+	resolveRematch,
 	submitMatchMove,
 	updateMatchInvitation,
 } from '@/lib/gameApi'
@@ -62,7 +63,7 @@ type SavedGame = {
 
 const STORAGE_KEY = 'aedlph.rpsls.game'
 const EMPTY_GAME: SavedGame = { playerScore: 0, cpuScore: 0, ties: 0, target: 3, history: [] }
-const EMPTY_MATCHES: MatchList = { incoming: [], outgoing: [], active: [], recent: [] }
+const EMPTY_MATCHES: MatchList = { incoming: [], outgoing: [], active: [], recent: [], rematch_incoming: [], rematch_outgoing: [] }
 
 const resultCopy: Record<RpslsResult, string> = {
 	win: 'Ronda ganada',
@@ -155,6 +156,66 @@ function WinnerPanel({ title, score, onRematch, onReload, pending = false }: {
 				</button>
 				<button type="button" className="is-secondary" onClick={onReload}>
 					<RefreshCwIcon size={18} /> Recargar pagina
+				</button>
+			</div>
+		</section>
+	)
+}
+
+function MultiplayerWinnerPanel({ match, currentUserId, rivalLogin, title, score, busy, onRequest, onResolve, onExit }: {
+	match: MultiplayerMatch
+	currentUserId: number
+	rivalLogin: string
+	title: string
+	score: string
+	busy: boolean
+	onRequest: () => void
+	onResolve: (action: 'accept' | 'reject' | 'cancel') => void
+	onExit: () => void
+}) {
+	const pending = match.rematch_status === 'pending'
+	const requestedByMe = match.rematch_requested_by_user_id === currentUserId
+	const accepted = match.rematch_status === 'accepted'
+	const rejected = match.rematch_status === 'rejected'
+	const cancelled = match.rematch_status === 'cancelled'
+	const statusCopy = pending
+		? requestedByMe ? 'Has solicitado una revancha' : `${rivalLogin} quiere la revancha`
+		: accepted ? 'Preparando revancha'
+		: rejected ? `${rivalLogin} ha rechazado la revancha`
+		: cancelled ? 'Has cancelado la solicitud de revancha'
+		: 'Partida finalizada'
+
+	return (
+		<section className="game-winner-panel" role="status" aria-live="polite" aria-labelledby="multiplayer-winner-title">
+			<div className="game-winner-trophy"><TrophyIcon size={30} /></div>
+			<div className="game-winner-copy">
+				<p>{statusCopy}</p>
+				<h2 id="multiplayer-winner-title">{title}</h2>
+				<strong>{score}</strong>
+			</div>
+			<div className="game-winner-actions">
+				{pending && requestedByMe ? (
+					<button type="button" onClick={() => onResolve('cancel')} disabled={busy}>
+						<XIcon size={18} /> Cancelar solicitud
+					</button>
+				) : pending ? (
+					<>
+						<button type="button" className="is-rematch-accept" onClick={() => onResolve('accept')} disabled={busy} title="Aceptar revancha" aria-label="Aceptar revancha">
+							<CheckIcon size={20} />
+						</button>
+						<button type="button" className="is-rematch-reject" onClick={() => onResolve('reject')} disabled={busy} title="Rechazar revancha" aria-label="Rechazar revancha">
+							<XIcon size={20} />
+						</button>
+					</>
+				) : accepted ? (
+					<button type="button" disabled><RotateCcwIcon size={18} /> Iniciando partida</button>
+				) : (
+					<button type="button" onClick={onRequest} disabled={busy}>
+						<RotateCcwIcon size={18} /> Revancha
+					</button>
+				)}
+				<button type="button" className="is-secondary" onClick={onExit} disabled={busy}>
+					<RefreshCwIcon size={18} /> Recargar
 				</button>
 			</div>
 		</section>
@@ -274,11 +335,13 @@ function GameLiveStatus({ status }: { status: GameSocketStatus }) {
 	return <span className={`game-live-badge is-${status}`}><span /> {labels[status]}</span>
 }
 
-function MultiplayerArena({ match, currentUserId, onMove, onRematch, onForfeit, busy, socketStatus }: {
+function MultiplayerArena({ match, currentUserId, onMove, onRequestRematch, onResolveRematch, onExit, onForfeit, busy, socketStatus }: {
 	match: MultiplayerMatch
 	currentUserId: number
 	onMove: (choice: RpslsChoice) => void
-	onRematch: () => void
+	onRequestRematch: () => void
+	onResolveRematch: (action: 'accept' | 'reject' | 'cancel') => void
+	onExit: () => void
 	onForfeit: () => void
 	busy: boolean
 	socketStatus: GameSocketStatus
@@ -313,7 +376,7 @@ function MultiplayerArena({ match, currentUserId, onMove, onRematch, onForfeit, 
 				<div className="game-player-choice"><span>Ultima jugada rival</span><div>{rivalLatestChoice ? CHOICE_DETAILS[rivalLatestChoice].symbol : rivalSubmitted ? '✓' : '·'}</div><strong>{rivalLatestChoice ? CHOICE_DETAILS[rivalLatestChoice].label : rivalSubmitted ? 'Eleccion guardada' : 'Esperando'}</strong></div>
 			</div>
 			{finished
-				? <WinnerPanel title={match.winner_user_id === currentUserId ? 'Has ganado' : `${rival.display_name} ha ganado`} score={`${myScore} - ${rivalScore}`} onRematch={onRematch} onReload={() => window.location.reload()} pending={busy} />
+				? <MultiplayerWinnerPanel match={match} currentUserId={currentUserId} rivalLogin={rival.login} title={match.winner_user_id === currentUserId ? 'Has ganado' : `${rival.display_name} ha ganado`} score={`${myScore} - ${rivalScore}`} busy={busy} onRequest={onRequestRematch} onResolve={onResolveRematch} onExit={onExit} />
 				: <ChoiceButtons disabled={busy || submitted} selected={null} onChoice={onMove} />}
 			<div className="games-detail-grid">
 				<section className="game-panel">
@@ -332,7 +395,7 @@ function MultiplayerArena({ match, currentUserId, onMove, onRematch, onForfeit, 
 	)
 }
 
-function MultiplayerLobby({ matches, friends, target, busy, socketStatus, onTarget, onInvite, onResolve }: {
+function MultiplayerLobby({ matches, friends, target, busy, socketStatus, onTarget, onInvite, onResolve, onRematchResolve }: {
 	matches: MatchList
 	friends: FriendEntry[]
 	target: 3 | 5
@@ -341,6 +404,7 @@ function MultiplayerLobby({ matches, friends, target, busy, socketStatus, onTarg
 	onTarget: (target: 3 | 5) => void
 	onInvite: (friend: FriendEntry) => void
 	onResolve: (match: MultiplayerMatch, action: 'accept' | 'decline' | 'cancel') => void
+	onRematchResolve: (match: MultiplayerMatch, action: 'accept' | 'reject' | 'cancel') => void
 }) {
 	const unavailableIds = new Set([...matches.incoming, ...matches.outgoing, ...matches.active].flatMap((match) => [match.inviter.user_id, match.opponent.user_id]))
 	const busyFriendIds = new Set(matches.outgoing.filter((match) => match.opponent_busy).map((match) => match.opponent.user_id))
@@ -348,9 +412,17 @@ function MultiplayerLobby({ matches, friends, target, busy, socketStatus, onTarg
 		<div className="game-lobby-grid">
 			<section className="game-panel game-invitations">
 				<div className="game-panel-heading"><h2><Clock3Icon size={18} /> Invitaciones</h2><GameLiveStatus status={socketStatus} /></div>
+				{matches.rematch_incoming.map((match) => {
+					const requester = match.inviter.user_id === match.rematch_requested_by_user_id ? match.inviter : match.opponent
+					return <div className="game-invitation-row" key={`rematch-in-${match.id}`}><div><strong>{requester.login}</strong><span>Quiere jugar una revancha contigo</span></div><div className="game-row-actions"><button type="button" className="is-accept" disabled={busy} onClick={() => onRematchResolve(match, 'accept')} title="Aceptar revancha"><CheckIcon size={18} /></button><button type="button" disabled={busy} onClick={() => onRematchResolve(match, 'reject')} title="Rechazar revancha"><XIcon size={18} /></button></div></div>
+				})}
+				{matches.rematch_outgoing.map((match) => {
+					const recipient = match.inviter.user_id === match.rematch_requested_by_user_id ? match.opponent : match.inviter
+					return <div className="game-invitation-row" key={`rematch-out-${match.id}`}><div><strong>{recipient.login}</strong><span>Esperando respuesta a la revancha</span></div><button type="button" className="game-cancel-invite" disabled={busy} onClick={() => onRematchResolve(match, 'cancel')}>Cancelar</button></div>
+				})}
 				{matches.incoming.map((match) => <div className="game-invitation-row" key={match.id}><div><strong>{match.inviter.display_name}</strong><span>{match.inviter_busy ? 'Esta en una partida. Puedes esperar o rechazar.' : `Primero a ${match.target_score}`}</span></div><div className="game-row-actions"><button type="button" className="is-accept" disabled={busy || match.inviter_busy} onClick={() => onResolve(match, 'accept')} title={match.inviter_busy ? 'Este jugador esta en una partida' : 'Aceptar'}><CheckIcon size={18} /></button><button type="button" disabled={busy} onClick={() => onResolve(match, 'decline')} title="Rechazar"><XIcon size={18} /></button></div></div>)}
 				{matches.outgoing.map((match) => <div className="game-invitation-row" key={match.id}><div><strong>{match.opponent.display_name}</strong><span>{match.opponent_busy ? 'Esta en una partida. Puedes esperar o cancelar.' : 'Esperando respuesta'}</span></div><button type="button" className="game-cancel-invite" disabled={busy} onClick={() => onResolve(match, 'cancel')}>Cancelar</button></div>)}
-				{matches.incoming.length + matches.outgoing.length === 0 && <p className="game-panel-empty">No hay invitaciones pendientes.</p>}
+				{matches.incoming.length + matches.outgoing.length + matches.rematch_incoming.length + matches.rematch_outgoing.length === 0 && <p className="game-panel-empty">No hay invitaciones pendientes.</p>}
 			</section>
 			<section className="game-panel game-friends-panel">
 				<div className="game-panel-heading"><h2><UsersIcon size={18} /> Invitar a un amigo</h2><div className="game-small-segment">{([3, 5] as const).map((score) => <button type="button" key={score} className={target === score ? 'is-active' : ''} onClick={() => onTarget(score)}>A {score}</button>)}</div></div>
@@ -379,7 +451,13 @@ function FriendsGame() {
 			const next = await fetchMatches()
 			setMatches(next)
 			const all = [...next.active, ...next.recent, ...next.incoming, ...next.outgoing]
-			setSelected((current) => all.find((match) => match.id === current?.id) ?? next.active[0] ?? null)
+			setSelected((current) => {
+				const refreshed = all.find((match) => match.id === current?.id)
+				const rematch = refreshed?.rematch_match_id
+					? next.active.find((match) => match.id === refreshed.rematch_match_id)
+					: null
+				return rematch ?? refreshed ?? next.active[0] ?? null
+			})
 			setError(null)
 		} catch (refreshError) {
 			setError(refreshError instanceof Error ? refreshError.message : 'No se pudo sincronizar el juego')
@@ -395,12 +473,12 @@ function FriendsGame() {
 		})
 	}, [refresh])
 
-	const runAction = async (action: () => Promise<MultiplayerMatch>) => {
+	const runAction = async (action: () => Promise<MultiplayerMatch>, selectResult = true) => {
 		setBusy(true)
 		setError(null)
 		try {
 			const match = await action()
-			setSelected(match.status === 'active' || match.status === 'completed' ? match : null)
+			setSelected(selectResult && (match.status === 'active' || match.status === 'completed') ? match : null)
 			await refresh()
 		} catch (actionError) {
 			setError(actionError instanceof Error ? actionError.message : 'No se pudo completar la accion')
@@ -414,7 +492,7 @@ function FriendsGame() {
 	return (
 		<>
 			{error && <div className="game-error" role="alert">{error}</div>}
-			{selected && (selected.status === 'active' || selected.status === 'completed') ? <MultiplayerArena match={selected} currentUserId={user.id} busy={busy} socketStatus={socketStatus} onMove={(choice) => void runAction(() => submitMatchMove(selected.id, choice))} onRematch={() => void runAction(() => requestRematch(selected.id))} onForfeit={() => { if (window.confirm('¿Seguro que quieres abandonar? La victoria sera para tu rival.')) void runAction(() => updateMatchInvitation(selected.id, 'forfeit')) }} /> : <MultiplayerLobby matches={matches} friends={friends} target={target} busy={busy} socketStatus={socketStatus} onTarget={setTarget} onInvite={(friend) => void runAction(() => createMatchInvitation(friend.login, target))} onResolve={(match, action) => void runAction(() => updateMatchInvitation(match.id, action))} />}
+			{selected && (selected.status === 'active' || selected.status === 'completed') ? <MultiplayerArena match={selected} currentUserId={user.id} busy={busy} socketStatus={socketStatus} onMove={(choice) => void runAction(() => submitMatchMove(selected.id, choice))} onRequestRematch={() => void runAction(() => requestRematch(selected.id))} onResolveRematch={(action) => void runAction(() => resolveRematch(selected.id, action), action === 'accept' || action === 'reject')} onExit={() => { setSelected(null); void refresh() }} onForfeit={() => { if (window.confirm('¿Seguro que quieres abandonar? La victoria sera para tu rival.')) void runAction(() => updateMatchInvitation(selected.id, 'forfeit')) }} /> : <MultiplayerLobby matches={matches} friends={friends} target={target} busy={busy} socketStatus={socketStatus} onTarget={setTarget} onInvite={(friend) => void runAction(() => createMatchInvitation(friend.login, target))} onResolve={(match, action) => void runAction(() => updateMatchInvitation(match.id, action))} onRematchResolve={(match, action) => void runAction(() => resolveRematch(match.id, action), action === 'accept')} />}
 		</>
 	)
 }

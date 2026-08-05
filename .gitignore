@@ -2,6 +2,8 @@
 .DS_Store
 Thumbs.db
 
+.venv
+.vscode
 # Variables de entorno (nunca subir secretos)
 .env
 .env.*

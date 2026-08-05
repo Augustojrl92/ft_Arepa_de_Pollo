@@ -103,6 +103,29 @@ class DirectChatConsumer(AsyncWebsocketConsumer):
             }
         )
 
+    async def handle_typing(self, data):
+        to_user_id = data.get('to_user_id')
+        if not to_user_id:
+            return
+
+        recipient_group_name = f'user_{to_user_id}'
+
+        await self.channel_layer.group_send(
+            recipient_group_name,
+            {
+                'type': 'typing_event',
+                'from_user_id': self.user.id,
+                'from_username': self.user.username,
+            }
+        )
+
+    async def typing_event(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'typing',
+            'from_user_id': event['from_user_id'],
+            'from_username': event['from_username'],
+        }))
+
     async def receive_message(self, event):
         await self.send(text_data=json.dumps({
             'type': 'message',
