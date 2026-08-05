@@ -1,7 +1,10 @@
 import { ArrowLeftIcon, PlusIcon, XIcon } from "lucide-react";
-import React, { useEffect, useRef } from "react";
+import Link from "next/link";
+import React from "react";
+import { useRef, useEffect } from "react";
 import { ChatWindowProps } from "@/types";
- 
+import { formatDayLabel, getDayKey } from "@/lib/chatFormat";
+
 export default function ChatWindow({
   open,
   onClose,
@@ -17,13 +20,12 @@ export default function ChatWindow({
 }: ChatWindowProps) {
   const selectedConversation = conversations.find((c) => c.id === selectedConversationId);
   const threadRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = threadRef.current;
-    if (el) {
-      el.scrollTop = el.scrollHeight;
-    }
-  }, [selectedConversation?.messages, selectedConversation?.isTyping, selectedConversationId]);
+useEffect(() => {
+  const el = threadRef.current;
+  if (el) {
+    el.scrollTop = el.scrollHeight;
+  }
+}, [selectedConversation?.messages, selectedConversation?.isTyping, selectedConversationId]);
   return (
     <div className={open ? "chat-container is-open" : "chat-container"}>
       <div className="chat-header">
@@ -34,7 +36,13 @@ export default function ChatWindow({
             </button>
           ) : null}
           <div>
-            <div className="header-title">{selectedConversation ? selectedConversation.name : "Mensajes"}</div>
+            {selectedConversation ? (
+              <Link href={`/users/${encodeURIComponent(selectedConversation.login)}`} className="header-title header-title-link">
+                {selectedConversation.login}
+              </Link>
+            ) : (
+              <div className="header-title">Mensajes</div>
+            )}
             {selectedConversation ? (
               <div className="chat-subtitle">{selectedConversation.isTyping ? "Escribiendo..." : selectedConversation.status}</div>
             ) : (
@@ -55,14 +63,21 @@ export default function ChatWindow({
         {selectedConversation ? (
           <div className="chat-thread-container">
             <div className="chat-thread" ref={threadRef}>
-              {selectedConversation.messages.map((message) => (
-                <div key={message.id} className={message.author === "me" ? "chat-message is-me" : "chat-message is-friend"}>
-                  <p>{message.text}</p>
-                  <span>{message.time}</span>
-                </div>
-              ))}
+              {selectedConversation.messages.map((message, index) => {
+                const previousMessage = selectedConversation.messages[index - 1];
+                const showDayDivider = !previousMessage || getDayKey(message.date) !== getDayKey(previousMessage.date);
+                return (
+                  <React.Fragment key={message.id}>
+                    {showDayDivider ? <div className="chat-day-divider">{formatDayLabel(message.date)}</div> : null}
+                    <div className={message.author === "me" ? "chat-message is-me" : "chat-message is-friend"}>
+                      <p>{message.text}</p>
+                      <span>{message.time}</span>
+                    </div>
+                  </React.Fragment>
+                );
+              })}
               {selectedConversation.isTyping ? (
-                <div className="chat-typing-bubble" aria-label={`${selectedConversation.name} está escribiendo`}>
+                <div className="chat-typing-bubble" aria-label={`${selectedConversation.login} está escribiendo`}>
                   <span className="chat-typing-dot" />
                   <span className="chat-typing-dot" />
                   <span className="chat-typing-dot" />
@@ -107,10 +122,10 @@ export default function ChatWindow({
                 className="chat-list-item"
                 onClick={() => onSelectConversation(conversation.id)}
               >
-                <div className="chat-avatar">{conversation.name.slice(0, 1)}</div>
+                <div className="chat-avatar">{conversation.login.slice(0, 1)}</div>
                 <div className="chat-list-content">
                   <div className="chat-list-row">
-                    <strong>{conversation.name}</strong>
+                    <strong>{conversation.login}</strong>
                     <span>{conversation.lastTime}</span>
                   </div>
                   <div className="chat-list-status">{conversation.status}</div>

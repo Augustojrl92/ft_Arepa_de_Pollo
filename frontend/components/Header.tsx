@@ -4,7 +4,6 @@ import { LogOut, MenuIcon, XIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-
 import { useAuthStore } from '@/hooks';
 import NavLink, { navigation } from '@/components/NavLink';
 import NavProfile from '@/components/NavProfile';

@@ -152,3 +152,11 @@ class FriendRealtimeEventTests(TestCase):
 		self.assertEqual({user.id for user in users}, {self.sender.id, self.receiver.id})
 		self.assertEqual(event_name, 'friend.request.accepted')
 		self.assertEqual(actor.id, self.receiver.id)
+
+	def test_get_or_create_friends_payload_accepts_lazy_users(self):
+		lazy_user = SimpleLazyObject(lambda: self.user)
+
+		payload = get_or_create_friends_payload_for_user(lazy_user)
+
+		self.assertEqual(payload['owner_user_id'], self.user.id)
+		self.assertEqual(payload['friends_count'], 0)

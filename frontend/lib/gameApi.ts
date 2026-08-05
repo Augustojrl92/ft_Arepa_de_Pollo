@@ -28,6 +28,9 @@ export type MultiplayerMatch = {
 	inviter_score: number
 	opponent_score: number
 	winner_user_id: number | null
+	rematch_status: 'none' | 'pending' | 'accepted' | 'rejected' | 'cancelled'
+	rematch_requested_by_user_id: number | null
+	rematch_match_id: number | null
 	role: 'inviter' | 'opponent'
 	inviter_busy: boolean
 	opponent_busy: boolean
@@ -46,6 +49,8 @@ export type MatchList = {
 	outgoing: MultiplayerMatch[]
 	active: MultiplayerMatch[]
 	recent: MultiplayerMatch[]
+	rematch_incoming: MultiplayerMatch[]
+	rematch_outgoing: MultiplayerMatch[]
 }
 
 export function fetchMatches(): Promise<MatchList> {
@@ -80,4 +85,12 @@ export function requestRematch(matchId: number): Promise<MultiplayerMatch> {
 	return authFetchJson<MultiplayerMatch>(`${GAME_BASE_URL}/${matchId}/rematch/`, {
 		method: 'POST',
 	}, 'No se pudo solicitar la revancha')
+}
+
+export function resolveRematch(matchId: number, action: 'accept' | 'reject' | 'cancel'): Promise<MultiplayerMatch> {
+	return authFetchJson<MultiplayerMatch>(`${GAME_BASE_URL}/${matchId}/rematch/`, {
+		method: 'PATCH',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ action }),
+	}, 'No se pudo responder a la revancha')
 }

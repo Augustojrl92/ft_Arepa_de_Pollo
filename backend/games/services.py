@@ -76,7 +76,9 @@ def _ensure_participant(match, user):
 def _has_open_match(first_user, second_user):
 	return GameMatch.objects.filter(
 		Q(inviter=first_user, opponent=second_user) | Q(inviter=second_user, opponent=first_user),
-		status__in=[GameMatch.Status.PENDING, GameMatch.Status.ACTIVE],
+	).filter(
+		Q(status__in=[GameMatch.Status.PENDING, GameMatch.Status.ACTIVE])
+		| Q(status=GameMatch.Status.COMPLETED, rematch_status=GameMatch.RematchStatus.PENDING)
 	).exists()
 
 
@@ -223,6 +225,86 @@ def submit_move(match_id, user, choice):
 	return match
 
 
+def _start_rematch(match):
+	existing = GameMatch.objects.select_related('inviter', 'opponent').filter(rematch_of=match).first()
+	if existing:
+		return existing
+
+	participant_ids = {match.inviter_id, match.opponent_id}
+	list(
+		get_user_model().objects.select_for_update()
+		.filter(pk__in=participant_ids)
+		.order_by('pk')
+	)
+	if get_busy_user_ids(participant_ids):
+		raise GameError('A player is already in an active match', 409)
+
+	new_match = GameMatch.objects.create(
+		inviter=match.inviter,
+		opponent=match.opponent,
+		status=GameMatch.Status.ACTIVE,
+		target_score=match.target_score,
+		accepted_at=timezone.now(),
+		rematch_of=match,
+	)
+	GameRound.objects.create(match=new_match, number=1)
+	match.rematch_status = GameMatch.RematchStatus.ACCEPTED
+	match.save(update_fields=['rematch_status', 'updated_at'])
+	return new_match
+
+
+@transaction.atomic
+def resolve_rematch(match_id, user, action='request'):
+	match = (
+		GameMatch.objects.select_for_update()
+		.select_related('inviter', 'opponent')
+		.filter(pk=match_id)
+		.first()
+	)
+	if not match:
+		raise GameError('Match not found', 404)
+	_ensure_participant(match, user)
+	if match.status != GameMatch.Status.COMPLETED:
+		raise GameError('Only completed matches can have a rematch', 409)
+
+	existing = GameMatch.objects.select_related('inviter', 'opponent').filter(rematch_of=match).first()
+	if existing:
+		if action in {'request', 'accept'}:
+			return existing, 'rematch.accepted'
+		raise GameError('This rematch has already started', 409)
+
+	if action == 'request':
+		if match.rematch_status == GameMatch.RematchStatus.PENDING:
+			if match.rematch_requested_by_id == user.id:
+				return match, 'rematch.pending'
+			return _start_rematch(match), 'rematch.accepted'
+		match.rematch_status = GameMatch.RematchStatus.PENDING
+		match.rematch_requested_by = user
+		match.save(update_fields=['rematch_status', 'rematch_requested_by', 'updated_at'])
+		return match, 'rematch.requested'
+
+	if match.rematch_status != GameMatch.RematchStatus.PENDING:
+		raise GameError('There is no pending rematch request', 409)
+
+	if action == 'accept':
+		if match.rematch_requested_by_id == user.id:
+			raise GameError('The requester cannot accept their own rematch', 403)
+		return _start_rematch(match), 'rematch.accepted'
+	if action == 'reject':
+		if match.rematch_requested_by_id == user.id:
+			raise GameError('The requester cannot reject their own rematch', 403)
+		match.rematch_status = GameMatch.RematchStatus.REJECTED
+		match.save(update_fields=['rematch_status', 'updated_at'])
+		return match, 'rematch.rejected'
+	if action == 'cancel':
+		if match.rematch_requested_by_id != user.id:
+			raise GameError('Only the requester can cancel the rematch', 403)
+		match.rematch_status = GameMatch.RematchStatus.CANCELLED
+		match.save(update_fields=['rematch_status', 'updated_at'])
+		return match, 'rematch.cancelled'
+	raise GameError('Action must be request, accept, reject or cancel')
+
+
 def serialize_match(match, user, request=None, busy_user_ids=None):
 	_ensure_participant(match, user)
 	if busy_user_ids is None:
@@ -248,6 +330,7 @@ def serialize_match(match, user, request=None, busy_user_ids=None):
 				'opponent_choice_submitted': bool(opponent_choice),
 			}
 
+	next_rematch = getattr(match, 'next_rematch', None)
 	return {
 		'id': match.id,
 		'status': match.status,
@@ -257,6 +340,9 @@ def serialize_match(match, user, request=None, busy_user_ids=None):
 		'inviter_score': match.inviter_score,
 		'opponent_score': match.opponent_score,
 		'winner_user_id': match.winner_id,
+		'rematch_status': match.rematch_status,
+		'rematch_requested_by_user_id': match.rematch_requested_by_id,
+		'rematch_match_id': next_rematch.id if next_rematch else None,
 		'role': 'inviter' if is_inviter else 'opponent',
 		'inviter_busy': match.inviter_id in busy_user_ids,
 		'opponent_busy': match.opponent_id in busy_user_ids,
