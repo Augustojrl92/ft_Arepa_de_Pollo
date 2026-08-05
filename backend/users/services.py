@@ -76,10 +76,6 @@ def _serialize_user_details(user_login, request=None):
 		'general_rank': campus_user.general_rank,
 		'achievements': 'none',  # Placeholder for achievements data,
 		'active': active,
-		'total_user_experience': campus_user.experience,
-		'current_level_experience': campus_user.experience % exp_to_lvl_ratio,
-		'total_level_experience': exp_to_lvl_ratio,
-		'level': campus_user.experience / exp_to_lvl_ratio,
 	}
 
 
@@ -132,10 +128,6 @@ def _serialize_friend_entry(friend_list, request=None):
 		'display_name': campus_user.display_name if campus_user else owner.username,
 		'avatar_url': avatar_url,
 		'active': active,
-		'total_user_experience': campus_user.experience,
-		'current_level_experience': campus_user.experience % exp_to_lvl_ratio,
-		'total_level_experience': exp_to_lvl_ratio,
-		'level': campus_user.experience / exp_to_lvl_ratio,
 	}
 
 
