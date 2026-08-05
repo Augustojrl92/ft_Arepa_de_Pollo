@@ -33,6 +33,8 @@ from .services import (
 )
 from .events import broadcast_friend_event
 
+from achievement_functions import exp_to_lvl_ratio
+
 
 logger = logging.getLogger(__name__)
 
@@ -380,7 +382,8 @@ class UserAchievementsView(APIView):
 				{'error': 'User login is required'},
 				status=status.HTTP_400_BAD_REQUEST,
 			)
-		
+
+		campus_user = CampusUser.objects.filter(login=login).first()
 		achvs = get_achivements_for(login)
 		if achvs == None:
 			return Response(
@@ -400,7 +403,6 @@ class UserAchievementsView(APIView):
 				'progress': achv.progress, 
 				'completion_progress': achv.achievement.completion_points,
 				'completion_date': completion_date,
-				'experience': achv.achievement.experience,
 				'icon_HTML': achv.achievement.icon_HTML
 			}
 			if achv.achievement.daily:
@@ -412,10 +414,18 @@ class UserAchievementsView(APIView):
 		return Response(
 			{
 				'login': login,
+
+				'total_user_experience': campus_user.experience,
+				'current_level_experience': campus_user.experience % exp_to_lvl_ratio,
+				'total_level_experience': exp_to_lvl_ratio,
+				'level': campus_user.experience / exp_to_lvl_ratio,
+
 				'n_achievements': len(serialized_achievements),
 				'achievements': serialized_achievements,
+				
 				'n_daily_challenges': len(serialized_daily_challenges),
 				'daily_challenges': serialized_daily_challenges,
+
 			},
 			status=status.HTTP_200_OK
 		)
