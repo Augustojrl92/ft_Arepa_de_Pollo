@@ -80,3 +80,4 @@ gzip -dc "$backup_file" | docker compose -f "$COMPOSE_FILE" exec -T "$DB_SERVICE
 '
 
 info "Restore completado y validado correctamente."
+warn "Si restauraste una copia de otra maquina o usuario, cierra sesion o borra las cookies del navegador antes de probar login."
