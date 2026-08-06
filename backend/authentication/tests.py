@@ -303,11 +303,32 @@ class AuthTestCase(APITestCase):
 		mail.outbox = []
 
 		response = self.register(GUEST_EMAIL, password='Different-Password-9')
-		self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+		self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+		self.assertEqual(response.data['error'], 'Este correo ya está registrado. Inicia sesión o recupera tu contraseña.')
 
 		user.refresh_from_db()
 		self.assertTrue(user.check_password(VALID_PASSWORD))
-		self.assertEqual(len(mail.outbox), 1)
+		self.assertTrue(user.is_active)
+		self.assertEqual(User.objects.filter(email__iexact=GUEST_EMAIL).count(), 1)
+		self.assertEqual(len(mail.outbox), 0)
+
+	def test_retrying_a_pending_registration_is_rejected_without_creating_a_duplicate(self):
+		first = self.register()
+		user = User.objects.get(email=GUEST_EMAIL)
+		original_password_hash = user.password
+		mail.outbox = []
+
+		retry = self.register(GUEST_EMAIL.upper(), password='Different-Password-9')
+
+		self.assertEqual(first.status_code, status.HTTP_202_ACCEPTED)
+		self.assertEqual(retry.status_code, status.HTTP_409_CONFLICT)
+		self.assertEqual(retry.data['error'], 'Este correo ya está registrado. Inicia sesión o recupera tu contraseña.')
+		self.assertEqual(User.objects.filter(email__iexact=GUEST_EMAIL).count(), 1)
+		user.refresh_from_db()
+		self.assertEqual(user.password, original_password_hash)
+		self.assertEqual(len(mail.outbox), 0)
+
+		self.assertFalse(user.is_active)
 
 	# --- signing in -----------------------------------------------------------
 
