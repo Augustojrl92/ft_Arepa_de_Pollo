@@ -276,6 +276,22 @@ class AuthTestCase(APITestCase):
 
 		self.assertEqual(User.objects.get(username='jdoe').email, 'jdoe@student.42madrid.com')
 
+	@patch('authentication.views.requests.get')
+	@patch('authentication.views.requests.post')
+	def test_42_login_reuses_existing_account_with_the_same_email(self, mock_post, mock_get):
+		user = self.signup_guest('jdoe@student.42madrid.com')
+		self.client.cookies.clear()
+		self._mock_42(mock_post, mock_get)
+
+		response = self._callback('login')
+
+		self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+		self.assertEqual(User.objects.filter(email__iexact='jdoe@student.42madrid.com').count(), 1)
+		user.refresh_from_db()
+		self.assertEqual(user.username, 'jdoe')
+		self.campus_user.refresh_from_db()
+		self.assertEqual(self.campus_user.django_user_id, user.pk)
+
 	# --- credentials ----------------------------------------------------------
 
 	def test_password_is_hashed_with_argon2_and_salted(self):

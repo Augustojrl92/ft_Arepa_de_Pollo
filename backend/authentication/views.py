@@ -190,6 +190,27 @@ def _upsert_campus_user_from_42_payload(user, user_42):
 	campus_user.save()
 	return campus_user
 
+
+def _resolve_user_for_42_login(login, email):
+	"""Return the account proved by 42 without creating email duplicates."""
+	user_by_login = User.objects.filter(username=login).first()
+	user_by_email = User.objects.filter(email__iexact=email).first() if email else None
+
+	if user_by_login is not None:
+		if user_by_email is not None and user_by_email.pk != user_by_login.pk:
+			return None, 'campus_email_already_registered'
+		return user_by_login, None
+
+	if user_by_email is not None:
+		user_by_email.username = login
+		user_by_email.save(update_fields=['username'])
+		return user_by_email, None
+
+	user = User(username=login, email=email or '')
+	user.set_unusable_password()
+	user.save()
+	return user, None
+
 class OAuth42LoginUrlView(APIView):
 	permission_classes = [AllowAny]
 
@@ -331,39 +352,38 @@ class OAuth42CallbackView(APIView):
 			logger.info('Linked campus identity %s to account %s', login, target.pk)
 			return redirect(f"{frontend_url}/?linked=1")
 
-		user, _created = User.objects.get_or_create(
-            username=login,
-            defaults={"email": email},
-        )
+		with transaction.atomic():
+			user, resolve_error = _resolve_user_for_42_login(login, email)
+			if resolve_error:
+				return _redirect_with_error(resolve_error)
 
-		updated_fields = []
+			updated_fields = []
 
-		if email and not user.email:
-			user.email = email
-			updated_fields.append("email")
+			if email and not user.email:
+				user.email = email
+				updated_fields.append("email")
 
-		# A successful 42 callback proves the person controls this identity, so
-		# an account registered but never verified by email is activated here.
-		if not user.is_active:
-			user.is_active = True
-			updated_fields.append("is_active")
+			# A successful 42 callback proves the person controls this identity, so
+			# an account registered but never verified by email is activated here.
+			if not user.is_active:
+				user.is_active = True
+				updated_fields.append("is_active")
 
-			user.set_unusable_password()
-			if "password" not in updated_fields:
-				updated_fields.append("password")
+				user.set_unusable_password()
+				if "password" not in updated_fields:
+					updated_fields.append("password")
 
-		# get_or_create leaves password='', which Django reports as a *usable*
-		# password even though nothing can match it. Record the absence
-		# explicitly so "has this account got a password?" has a truthful answer.
-		if not user.password:
-			user.set_unusable_password()
-			if "password" not in updated_fields:
-				updated_fields.append("password")
+			# Older 42-created rows may have password='', which Django reports as a
+			# usable password even though nothing can match it.
+			if not user.password:
+				user.set_unusable_password()
+				if "password" not in updated_fields:
+					updated_fields.append("password")
 
-		if updated_fields:
-			user.save(update_fields=updated_fields)
+			if updated_fields:
+				user.save(update_fields=updated_fields)
 
-		_upsert_campus_user_from_42_payload(user, user_42)
+			_upsert_campus_user_from_42_payload(user, user_42)
 
 		refresh = RefreshToken.for_user(user)
 		response = redirect(f"{frontend_url}/?auth=1")
