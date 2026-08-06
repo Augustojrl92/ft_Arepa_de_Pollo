@@ -492,6 +492,7 @@ class AuthLogoutView(APIView):
 # Registration answers identically whether or not the address is eligible, so
 # the endpoint cannot be used to enumerate the campus roster.
 GENERIC_REGISTER_DETAIL = 'If your email is eligible, you will receive a verification link shortly.'
+REGISTERED_EMAIL_ERROR = 'Este correo ya está registrado. Inicia sesión o recupera tu contraseña.'
 GENERIC_RESET_DETAIL = 'If an account exists for that email, you will receive a reset link shortly.'
 INVALID_CREDENTIALS_DETAIL = 'Invalid email or password'
 
@@ -557,8 +558,7 @@ class RegisterView(APIView):
 		if existing is not None:
 			# Never modify an existing account from an unauthenticated endpoint.
 			logger.info('Registration attempted for existing account %s', existing.pk)
-			send_existing_account_email(existing)
-			return generic
+			return Response({'error': REGISTERED_EMAIL_ERROR}, status=status.HTTP_409_CONFLICT)
 
 		with transaction.atomic():
 			# Stored under the email: it contains "@", so it can never collide
