@@ -13,7 +13,7 @@ from django.utils import timezone
 
 from sync.models import CampusUser
 from .models import FriendsList, Achievement, UserAchievement
-from .achievement_functions import set_up_achievements
+from .achievement_functions import set_up_achievements, exp_to_lvl_ratio
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,6 @@ time_until_inactivity = 2 * 60
 
 from sync.models import CampusUser
 from .models import FriendsList, Achievement, UserAchievement
-from .achievement_functions import set_up_achievements
 
 time_until_inactivity = 2 * 60
 
@@ -76,7 +75,7 @@ def _serialize_user_details(user_login, request=None):
 		'has_account': has_account,
 		'general_rank': campus_user.general_rank,
 		'achievements': 'none',  # Placeholder for achievements data,
-		'active': active
+		'active': active,
 	}
 
 
@@ -128,7 +127,7 @@ def _serialize_friend_entry(friend_list, request=None):
 		'login': campus_user.login if campus_user else owner.username,
 		'display_name': campus_user.display_name if campus_user else owner.username,
 		'avatar_url': avatar_url,
-		'active': active
+		'active': active,
 	}
 
 
@@ -466,10 +465,16 @@ def get_achivements_for(login) -> list[UserAchievement] | None:
 			continue
 
 		# Set to True to allow value progression after getting the achievement
-		if False or achievement.completion_date == None:
+		completed = achievement.completion_date != None
+		if False or not completed:
 			if check_func(achievement):
 				achievement.completion_date = datetime.now()
-				achievement.save(update_fields=['completion_date'])
+				achievement.save(update_fields=['completion_date', 'progress'])
+
+				if not completed:
+					campus_user.experience += achievement.achievement.experience
+					campus_user.save(update_fields=['experience'])
+				completed = True
 	
 	if missing_func:
 		print('Add the check function inside User/models.py->Achievement.__init__()', end='')

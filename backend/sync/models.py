@@ -86,6 +86,10 @@ class CampusUser(models.Model):
 	created_at = models.DateTimeField()
 	updated_at = models.DateTimeField()
 
+	experience = models.IntegerField(default=0)
+
+	today_rps_wins = models.IntegerField(default=0)
+
 	class Meta:
 		unique_together = ('intra_id', 'user_id')
 

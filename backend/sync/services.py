@@ -1,5 +1,6 @@
 import os
 import time
+from datetime import datetime
 from django.utils import timezone
 from django.core.management.base import BaseCommand
 
@@ -7,6 +8,7 @@ import requests
 from django.utils.dateparse import parse_datetime
 from .models import CampusUser, Coalition, CoalitionScoreSnapshot, CampusUserScoreSnapshot, SyncMetadata
 from users.services import get_achivements_for
+from users.achievement_functions import Achievement, reset_daily_challenges
 
 
 _TOKEN_CACHE = {
@@ -247,6 +249,8 @@ def save_user_score_snapshots(snapshot_date=None):
 		snapshot_date = timezone.localdate()
 
 	created_count = 0
+
+	reset_daily_challenges()
 
 	for user in CampusUser.objects.filter(is_active=True).only('id', 'coalition_user_score', 'coalition_rank', 'general_rank'):
 		_, created = CampusUserScoreSnapshot.objects.get_or_create(

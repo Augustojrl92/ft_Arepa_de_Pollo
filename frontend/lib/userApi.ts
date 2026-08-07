@@ -20,6 +20,21 @@ type UserDetailsResponse = {
 	has_account: boolean;
 }
 
+type UserAchievementResponse = {
+	name: string;
+	description: string;
+	progress: number;
+	completion_progress: number;
+	completion_date: string | null;
+	icon_HTML: string;
+}
+
+type UserAchievementsResponse = {
+	login: string;
+	n_achievements: number;
+	achievements: UserAchievementResponse[];
+}
+
 type FriendEntryResponse = {
 	user_id: number;
 	username: string;
@@ -170,6 +185,12 @@ export async function fetchUserDetails(login: string): Promise<UserDetails> {
 		active: Boolean(payload.active),
 		hasAccount: payload.has_account
 	};
+}
+
+export async function fetchUserAchievements(login: string): Promise<UserAchievementsResponse> {
+	return authFetchJson<UserAchievementsResponse>(`/api/users/achievements/${encodeURIComponent(login)}`, {
+		method: 'GET',
+	}, 'Failed to fetch user achievements');
 }
 
 export async function fetchMyFriends(): Promise<FriendsPayload> {

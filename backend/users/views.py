@@ -34,6 +34,8 @@ from .services import (
 )
 from .events import broadcast_friend_event
 
+from .achievement_functions import exp_to_lvl_ratio
+
 
 logger = logging.getLogger(__name__)
 
@@ -391,7 +393,8 @@ class UserAchievementsView(APIView):
 				{'error': 'User login is required'},
 				status=status.HTTP_400_BAD_REQUEST,
 			)
-		
+
+		campus_user = CampusUser.objects.filter(login=login).first()
 		achvs = get_achivements_for(login)
 		if achvs == None:
 			return Response(
@@ -399,25 +402,41 @@ class UserAchievementsView(APIView):
 				status=status.HTTP_404_NOT_FOUND
 			)
 		
-		serialized = []
+		serialized_achievements = []
+		serialized_daily_challenges = []
 		for achv in achvs:
 			completion_date = achv.completion_date
 			if completion_date != None:
 				completion_date = completion_date.isoformat()
-			serialized.append({
+			serialized_item = {
 				'name': achv.achievement.name,
 				'description': achv.achievement.description,
 				'progress': achv.progress, 
 				'completion_progress': achv.achievement.completion_points,
 				'completion_date': completion_date,
 				'icon_HTML': achv.achievement.icon_HTML
-			})
+			}
+			if achv.achievement.daily:
+				serialized_daily_challenges.append(serialized_item)
+			else:
+				serialized_achievements.append(serialized_item)
+			
 		
 		return Response(
 			{
 				'login': login,
-				'n_achievements': len(achvs),
-				'achievements': serialized
+
+				'total_user_experience': campus_user.experience,
+				'current_level_experience': campus_user.experience % exp_to_lvl_ratio,
+				'total_level_experience': exp_to_lvl_ratio,
+				'level': campus_user.experience / exp_to_lvl_ratio,
+
+				'n_achievements': len(serialized_achievements),
+				'achievements': serialized_achievements,
+
+				'n_daily_challenges': len(serialized_daily_challenges),
+				'daily_challenges': serialized_daily_challenges,
+
 			},
 			status=status.HTTP_200_OK
 		)
